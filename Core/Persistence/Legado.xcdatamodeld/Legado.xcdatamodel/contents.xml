@@ -1,200 +1,113 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>entities</key>
-	<array>
-		<dict>
-			<key>name</key>
-			<string>Book</string>
-			<key>attributes</key>
-			<array>
-				<dict><key>name</key><string>bookId</string><key>attributeType</key><string>UUID</string><key>optional</key><false/><key>primaryKey</key><true/></dict>
-				<dict><key>name</key><string>name</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>author</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>kind</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>coverUrl</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>intro</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>bookUrl</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>tocUrl</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>origin</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>originName</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>latestChapterTitle</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>latestChapterTime</string><key>attributeType</key><string>Integer 64</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>lastCheckTime</string><key>attributeType</key><string>Integer 64</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>lastCheckCount</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>totalChapterNum</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>durChapterTitle</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>durChapterIndex</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>durChapterPos</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>durChapterTime</string><key>attributeType</key><string>Integer 64</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>canUpdate</string><key>attributeType</key><string>Boolean</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>order</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>originOrder</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>customTag</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>group</string><key>attributeType</key><string>Integer 64</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>customCoverUrl</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>customIntro</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>type</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>wordCount</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>variable</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>charset</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>readConfigData</string><key>attributeType</key><string>Binary Data</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>infoHtml</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>tocHtml</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>downloadUrls</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>folderName</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>createdAt</string><key>attributeType</key><string>Date</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>updatedAt</string><key>attributeType</key><string>Date</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>syncTime</string><key>attributeType</key><string>Integer 64</string><key>optional</key><false/></dict>
-			</array>
-			<key>relationships</key>
-			<array>
-				<dict>
-					<key>name</key><string>source</string>
-					<key>destination</key><string>BookSource</string>
-					<key>inverseRelationship</key><string>books</string>
-					<key>maxCount</key><integer>1</integer>
-					<key>deleteRule</key><string>NSNullifyDeleteRule</string>
-				</dict>
-				<dict>
-					<key>name</key><string>chapters</string>
-					<key>destination</key><string>BookChapter</string>
-					<key>inverseRelationship</key><string>book</string>
-					<key>toMany</key><true/>
-					<key>deleteRule</key><string>NSCascadeDeleteRule</string>
-				</dict>
-				<dict>
-					<key>name</key><string>bookmarks</string>
-					<key>destination</key><string>Bookmark</string>
-					<key>inverseRelationship</key><string>book</string>
-					<key>toMany</key><true/>
-					<key>deleteRule</key><string>NSCascadeDeleteRule</string>
-				</dict>
-			</array>
-		</dict>
-		
-		<dict>
-			<key>name</key>
-			<string>BookSource</string>
-			<key>attributes</key>
-			<array>
-				<dict><key>name</key><string>sourceId</string><key>attributeType</key><string>UUID</string><key>optional</key><false/><key>primaryKey</key><true/></dict>
-				<dict><key>name</key><string>bookSourceUrl</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>bookSourceName</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>bookSourceGroup</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>bookSourceType</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>bookUrlPattern</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>customOrder</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>enabled</string><key>attributeType</key><string>Boolean</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>enabledExplore</string><key>attributeType</key><string>Boolean</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>enabledCookieJar</string><key>attributeType</key><string>Boolean</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>concurrentRate</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>header</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>loginUrl</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>loginUi</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>loginCheckJs</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>coverDecodeJs</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>jsLib</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>bookSourceComment</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>variableComment</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>lastUpdateTime</string><key>attributeType</key><string>Integer 64</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>respondTime</string><key>attributeType</key><string>Integer 64</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>weight</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>exploreUrl</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>exploreScreen</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>searchUrl</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>ruleSearchData</string><key>attributeType</key><string>Binary Data</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>ruleExploreData</string><key>attributeType</key><string>Binary Data</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>ruleBookInfoData</string><key>attributeType</key><string>Binary Data</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>ruleTocData</string><key>attributeType</key><string>Binary Data</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>ruleContentData</string><key>attributeType</key><string>Binary Data</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>ruleReviewData</string><key>attributeType</key><string>Binary Data</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>variable</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-			</array>
-			<key>relationships</key>
-			<array>
-				<dict>
-					<key>name</key><string>books</string>
-					<key>destination</key><string>Book</string>
-					<key>inverseRelationship</key><string>source</string>
-					<key>toMany</key><true/>
-					<key>deleteRule</key><string>NSNullifyDeleteRule</string>
-				</dict>
-			</array>
-		</dict>
-		
-		<dict>
-			<key>name</key>
-			<string>BookChapter</string>
-			<key>attributes</key>
-			<array>
-				<dict><key>name</key><string>chapterId</string><key>attributeType</key><string>UUID</string><key>optional</key><false/><key>primaryKey</key><true/></dict>
-				<dict><key>name</key><string>bookId</string><key>attributeType</key><string>UUID</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>chapterUrl</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>index</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>title</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>isVIP</string><key>attributeType</key><string>Boolean</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>isPay</string><key>attributeType</key><string>Boolean</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>wordCount</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>updateTime</string><key>attributeType</key><string>Integer 64</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>isCached</string><key>attributeType</key><string>Boolean</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>cachePath</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>contentHash</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>sourceId</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>tag</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-			</array>
-			<key>relationships</key>
-			<array>
-				<dict>
-					<key>name</key><string>book</string>
-					<key>destination</key><string>Book</string>
-					<key>inverseRelationship</key><string>chapters</string>
-					<key>maxCount</key><integer>1</integer>
-					<key>deleteRule</key><string>NSNullifyDeleteRule</string>
-				</dict>
-			</array>
-		</dict>
-		
-		<dict>
-			<key>name</key>
-			<string>Bookmark</string>
-			<key>attributes</key>
-			<array>
-				<dict><key>name</key><string>bookmarkId</string><key>attributeType</key><string>UUID</string><key>optional</key><false/><key>primaryKey</key><true/></dict>
-				<dict><key>name</key><string>bookId</string><key>attributeType</key><string>UUID</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>chapterIndex</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>chapterTitle</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>content</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>createDate</string><key>attributeType</key><string>Date</string><key>optional</key><false/></dict>
-			</array>
-			<key>relationships</key>
-			<array>
-				<dict>
-					<key>name</key><string>book</string>
-					<key>destination</key><string>Book</string>
-					<key>inverseRelationship</key><string>bookmarks</string>
-					<key>maxCount</key><integer>1</integer>
-					<key>deleteRule</key><string>NSNullifyDeleteRule</string>
-				</dict>
-			</array>
-		</dict>
-		
-		<dict>
-			<key>name</key>
-			<string>ReplaceRule</string>
-			<key>attributes</key>
-			<array>
-				<dict><key>name</key><string>ruleId</string><key>attributeType</key><string>UUID</string><key>optional</key><false/><key>primaryKey</key><true/></dict>
-				<dict><key>name</key><string>name</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>group</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>pattern</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>replacement</string><key>attributeType</key><string>String</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>scope</string><key>attributeType</key><string>String</string><key>optional</key><true/></dict>
-				<dict><key>name</key><string>isEnabled</string><key>attributeType</key><string>Boolean</string><key>optional</key><false/></dict>
-				<dict><key>name</key><string>order</string><key>attributeType</key><string>Integer 32</string><key>optional</key><false/></dict>
-			</array>
-		</dict>
-	</array>
-</dict>
-</plist>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23504" systemVersion="23F79" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="Book" representedClassName="Book" syncable="YES" codeGenerationType="manual/none">
+        <attribute name="bookId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+        <attribute name="author" optional="NO" attributeType="String"/>
+        <attribute name="kind" optional="YES" attributeType="String"/>
+        <attribute name="coverUrl" optional="YES" attributeType="String"/>
+        <attribute name="intro" optional="YES" attributeType="String"/>
+        <attribute name="bookUrl" optional="NO" attributeType="String"/>
+        <attribute name="tocUrl" optional="NO" attributeType="String"/>
+        <attribute name="origin" optional="NO" attributeType="String"/>
+        <attribute name="originName" optional="NO" attributeType="String"/>
+        <attribute name="latestChapterTitle" optional="YES" attributeType="String"/>
+        <attribute name="latestChapterTime" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="lastCheckTime" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="lastCheckCount" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="totalChapterNum" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="durChapterTitle" optional="YES" attributeType="String"/>
+        <attribute name="durChapterIndex" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="durChapterPos" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="durChapterTime" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="canUpdate" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="order" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="originOrder" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="customTag" optional="YES" attributeType="String"/>
+        <attribute name="group" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="customCoverUrl" optional="YES" attributeType="String"/>
+        <attribute name="customIntro" optional="YES" attributeType="String"/>
+        <attribute name="type" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="wordCount" optional="YES" attributeType="String"/>
+        <attribute name="variable" optional="YES" attributeType="String"/>
+        <attribute name="charset" optional="YES" attributeType="String"/>
+        <attribute name="readConfigData" optional="YES" attributeType="Binary"/>
+        <attribute name="infoHtml" optional="YES" attributeType="String"/>
+        <attribute name="tocHtml" optional="YES" attributeType="String"/>
+        <attribute name="downloadUrls" optional="YES" attributeType="String"/>
+        <attribute name="folderName" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="syncTime" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="source" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="BookSource" inverseName="books" inverseEntity="BookSource"/>
+        <relationship name="chapters" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="BookChapter" inverseName="book" inverseEntity="BookChapter"/>
+        <relationship name="bookmarks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Bookmark" inverseName="book" inverseEntity="Bookmark"/>
+    </entity>
+    <entity name="BookSource" representedClassName="BookSource" syncable="YES" codeGenerationType="manual/none">
+        <attribute name="sourceId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="bookSourceUrl" optional="NO" attributeType="String"/>
+        <attribute name="bookSourceName" optional="NO" attributeType="String"/>
+        <attribute name="bookSourceGroup" optional="YES" attributeType="String"/>
+        <attribute name="bookSourceType" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="bookUrlPattern" optional="YES" attributeType="String"/>
+        <attribute name="customOrder" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="enabled" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="enabledExplore" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="enabledCookieJar" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="concurrentRate" optional="YES" attributeType="String"/>
+        <attribute name="header" optional="YES" attributeType="String"/>
+        <attribute name="loginUrl" optional="YES" attributeType="String"/>
+        <attribute name="loginUi" optional="YES" attributeType="String"/>
+        <attribute name="loginCheckJs" optional="YES" attributeType="String"/>
+        <attribute name="coverDecodeJs" optional="YES" attributeType="String"/>
+        <attribute name="jsLib" optional="YES" attributeType="String"/>
+        <attribute name="bookSourceComment" optional="YES" attributeType="String"/>
+        <attribute name="variableComment" optional="YES" attributeType="String"/>
+        <attribute name="lastUpdateTime" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="respondTime" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="weight" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="exploreUrl" optional="YES" attributeType="String"/>
+        <attribute name="exploreScreen" optional="YES" attributeType="String"/>
+        <attribute name="searchUrl" optional="YES" attributeType="String"/>
+        <attribute name="ruleSearchData" optional="YES" attributeType="Binary"/>
+        <attribute name="ruleExploreData" optional="YES" attributeType="Binary"/>
+        <attribute name="ruleBookInfoData" optional="YES" attributeType="Binary"/>
+        <attribute name="ruleTocData" optional="YES" attributeType="Binary"/>
+        <attribute name="ruleContentData" optional="YES" attributeType="Binary"/>
+        <attribute name="ruleReviewData" optional="YES" attributeType="Binary"/>
+        <attribute name="variable" optional="YES" attributeType="String"/>
+        <relationship name="books" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Book" inverseName="source" inverseEntity="Book"/>
+    </entity>
+    <entity name="BookChapter" representedClassName="BookChapter" syncable="YES" codeGenerationType="manual/none">
+        <attribute name="chapterId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="bookId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="chapterUrl" optional="NO" attributeType="String"/>
+        <attribute name="index" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <attribute name="isVIP" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="isPay" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="wordCount" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="updateTime" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="isCached" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="cachePath" optional="YES" attributeType="String"/>
+        <attribute name="contentHash" optional="YES" attributeType="String"/>
+        <attribute name="sourceId" optional="YES" attributeType="String"/>
+        <attribute name="tag" optional="YES" attributeType="String"/>
+        <relationship name="book" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Book" inverseName="chapters" inverseEntity="Book"/>
+    </entity>
+    <entity name="Bookmark" representedClassName="Bookmark" syncable="YES" codeGenerationType="manual/none">
+        <attribute name="bookmarkId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="bookId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="chapterIndex" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="chapterTitle" optional="NO" attributeType="String"/>
+        <attribute name="content" optional="NO" attributeType="String"/>
+        <attribute name="createDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="book" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Book" inverseName="bookmarks" inverseEntity="Book"/>
+    </entity>
+    <elements>
+        <element name="Book" positionX="-63" positionY="-18" width="128" height="704"/>
+        <element name="BookSource" positionX="180" positionY="-18" width="128" height="560"/>
+        <element name="BookChapter" positionX="-316" positionY="-18" width="128" height="320"/>
+        <element name="Bookmark" positionX="-316" positionY="320" width="128" height="220"/>
+    </elements>
+</model>
