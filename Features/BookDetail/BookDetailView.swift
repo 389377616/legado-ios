@@ -101,7 +101,7 @@ struct BookDetailView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     
-                    Button(action: showingChapterList = true) {
+                    Button(action: { showingChapterList = true }) {
                         Label("目录", systemImage: "list.bullet")
                             .frame(maxWidth: .infinity)
                     }
