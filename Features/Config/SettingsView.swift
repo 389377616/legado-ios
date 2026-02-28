@@ -23,7 +23,7 @@ struct SettingsLegacyView: View {
                 
                 Section(header: Text("数据")) {
                     NavigationLink("备份与恢复") {
-                        Text("备份与恢复")
+                        BackupRestoreView()
                     }
                     
                     NavigationLink("清理缓存") {

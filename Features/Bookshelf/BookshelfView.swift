@@ -83,11 +83,10 @@ struct BookshelfView: View {
                 GridItem(.flexible())
             ], spacing: 16) {
                 ForEach(viewModel.books, id: \.bookId) { book in
-                    BookGridItemView(book: book)
-                        .onTapGesture {
-                            // TODO: 打开书籍
-                        }
-                }
+                    NavigationLink(destination: ReaderView(book: book)) {
+                        BookGridItemView(book: book)
+                    }
+                    .buttonStyle(.plain)
                 
                 // 加载更多指示器
                 if viewModel.isLoading {
@@ -114,10 +113,9 @@ struct BookshelfView: View {
     private var bookListView: some View {
         List {
             ForEach(viewModel.books, id: \.bookId) { book in
-                BookListItemView(book: book)
-                    .onTapGesture {
-                        // TODO: 打开书籍
-                    }
+                NavigationLink(destination: ReaderView(book: book)) {
+                    BookListItemView(book: book)
+                }
             }
             .onDelete { indexSet in
                 if let index = indexSet.first {

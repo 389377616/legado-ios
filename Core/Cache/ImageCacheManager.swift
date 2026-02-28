@@ -7,7 +7,7 @@
 
 import UIKit
 import SwiftUI
-import CommonCrypto
+
 
 /// 图片缓存管理器
 class ImageCacheManager: ObservableObject {
@@ -165,14 +165,12 @@ class ImageCacheManager: ObservableObject {
 }
 
 // MARK: - String 扩展（MD5）
+import CryptoKit
+
 extension String {
     func md5() -> String {
         let data = Data(utf8)
-        let hash = data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) -> [UInt8] in
-            var digest = [UInt8](repeating: 0, count: 16)
-            CC_MD5(bytes.baseAddress, CC_LONG(data.count), &digest)
-            return digest
-        }
-        return hash.map { String(format: "%02x", $0) }.joined()
+        let digest = Insecure.MD5.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }
