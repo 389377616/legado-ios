@@ -75,24 +75,20 @@ class SearchViewModel: ObservableObject {
     
     // MARK: - 在单个书源中搜索
     private func searchInSource(keyword: String, source: BookSource) async throws -> [SearchResult] {
-        guard let searchUrl = source.searchUrl else {
-            throw SearchError.invalidSource
+        // 使用 WebBook 进行搜索
+        let results = try await WebBook.searchBook(source: source, key: keyword)
+        
+        return results.map { searchBook in
+            SearchResult(
+                name: searchBook.name,
+                author: searchBook.author,
+                coverUrl: searchBook.coverUrl,
+                intro: searchBook.intro,
+                sourceName: source.bookSourceName,
+                sourceId: source.sourceId,
+                bookUrl: searchBook.bookUrl
+            )
         }
-        
-        // 构建搜索 URL
-        let url = searchUrl.replacingOccurrences(of: "{{key}}", with: keyword)
-        
-        // 发送请求
-        let (data, _) = try await HTTPClient.shared.get(url: url)
-        let html = String(data: data, encoding: .utf8) ?? ""
-        
-        // 使用规则解析搜索结果
-        guard let searchRule = source.getSearchRule() else {
-            throw SearchError.noSearchRule
-        }
-        
-        // TODO: 实现规则解析
-        return []
     }
     
     // MARK: - 添加到书架

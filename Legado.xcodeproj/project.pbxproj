@@ -47,11 +47,13 @@
 		1A0000000000003B /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 1AC0000000000001 /* SwiftSoup */; };
 		1A0000000000003C /* Kanna in Frameworks */ = {isa = PBXBuildFile; productRef = 1AC0000000000002 /* Kanna */; };
 		1A0000000000003D /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 1AC0000000000003 /* ZIPFoundation */; };
+		1A00000000000040 /* AnalyzeUrl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000040 /* AnalyzeUrl.swift */; };
+		1A00000000000041 /* WebBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000041 /* WebBook.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1A10000000000001 /* LegadoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegadoApp.swift; sourceTree = "<group>"; };
-		1A10000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../Legado/ContentView.swift; sourceTree = "<group>"; };
+
 		1A10000000000003 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1A10000000000004 /* Legado.xcdatamodeld */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Legado.xcdatamodeld; sourceTree = "<group>"; };
 		1A10000000000005 /* Legado.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Legado.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -89,6 +91,8 @@
 		1A10000000000038 /* BackupRestoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupRestoreView.swift; sourceTree = "<group>"; };
 		1A10000000000039 /* ReaderSettingsFullView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsFullView.swift; sourceTree = "<group>"; };
 		1A1000000000003A /* ReplaceRuleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplaceRuleView.swift; sourceTree = "<group>"; };
+		1A10000000000040 /* AnalyzeUrl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyzeUrl.swift; sourceTree = "<group>"; };
+		1A10000000000041 /* WebBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebBook.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,7 +125,7 @@
 			children = (
 				1A10000000000001 /* LegadoApp.swift */,
 				1A10000000000030 /* MainTabView.swift */,
-				1A10000000000002 /* ContentView.swift */,
+
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -135,6 +139,7 @@
 				1A30000000000012 /* Network */,
 				1A30000000000016 /* Parser */,
 				1A30000000000013 /* RuleEngine */,
+				1A30000000000017 /* Model */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -174,8 +179,17 @@
 			isa = PBXGroup;
 			children = (
 				1A10000000000016 /* HTTPClient.swift */,
+				1A10000000000040 /* AnalyzeUrl.swift */,
 			);
 			path = Network;
+			sourceTree = "<group>";
+		};
+		1A30000000000017 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				1A10000000000041 /* WebBook.swift */,
+			);
+			path = Model;
 			sourceTree = "<group>";
 		};
 		1A30000000000016 /* Parser */ = {
@@ -402,6 +416,8 @@
 				1A00000000000028 /* SettingsView.swift in Sources */,
 				1A00000000000037 /* LocalBookViewModel.swift in Sources */,
 				1A00000000000029 /* BookDetailView.swift in Sources */,
+				1A00000000000040 /* AnalyzeUrl.swift in Sources */,
+				1A00000000000041 /* WebBook.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

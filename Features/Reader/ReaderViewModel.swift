@@ -141,15 +141,6 @@ class ReaderViewModel: ObservableObject {
     }
     
     // MARK: - 章节导航
-    func prevChapter() {
-        guard currentChapterIndex > 0 else { return }
-        
-        Task {
-            try? await loadChapter(at: currentChapterIndex - 1)
-            saveProgress()
-        }
-    }
-
     func prevChapter() async {
         guard currentChapterIndex > 0 else { return }
         do {
@@ -160,15 +151,6 @@ class ReaderViewModel: ObservableObject {
         }
     }
     
-    func nextChapter() {
-        guard currentChapterIndex < totalChapters - 1 else { return }
-        
-        Task {
-            try? await loadChapter(at: currentChapterIndex + 1)
-            saveProgress()
-        }
-    }
-
     func nextChapter() async {
         guard currentChapterIndex < totalChapters - 1 else { return }
         do {
@@ -236,19 +218,114 @@ class ReaderViewModel: ObservableObject {
     
     // MARK: - 缓存管理
     private func loadCachedChapter(_ chapter: BookChapter) async throws -> String {
-        // TODO: 实现缓存加载
-        throw ReaderError.notCached
+        // 从文件系统加载缓存的章节内容
+        guard chapter.isCached, let cachePath = chapter.cachePath, !cachePath.isEmpty else {
+            throw ReaderError.notCached
+        }
+        
+        let cacheURL: URL
+        if cachePath.hasPrefix("/") {
+            cacheURL = URL(fileURLWithPath: cachePath)
+        } else {
+            let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            cacheURL = documents.appendingPathComponent("chapters").appendingPathComponent(cachePath)
+        }
+        
+        guard FileManager.default.fileExists(atPath: cacheURL.path) else {
+            throw ReaderError.notCached
+        }
+        
+        return try String(contentsOf: cacheURL, encoding: .utf8)
     }
     
     private func fetchChapterContent(_ chapter: BookChapter) async throws -> String {
-        // TODO: 实现从书源获取章节内容
-        // 这里需要调用 RuleEngine 解析书源规则
-        return "章节内容加载中..."
+        guard let book = currentBook else {
+            throw ReaderError.noBook
+        }
+        
+        // 本地书籍直接返回 TXT 切片内容
+        if book.origin == "local" {
+            return try await loadLocalChapterContent(chapter)
+        }
+        
+        // 网络书籍：通过 WebBook 从书源获取
+        guard let sourceId = UUID(uuidString: book.origin) else {
+            throw ReaderError.noSource
+        }
+        
+        // 查找对应书源
+        let request: NSFetchRequest<BookSource> = BookSource.fetchRequest()
+        request.predicate = NSPredicate(format: "sourceId == %@", sourceId as CVarArg)
+        
+        guard let source = try? CoreDataStack.shared.viewContext.fetch(request).first else {
+            throw ReaderError.noSource
+        }
+        
+        return try await WebBook.getContent(source: source, book: book, chapter: chapter)
+    }
+    
+    /// 加载本地 TXT 书籍的章节内容
+    private func loadLocalChapterContent(_ chapter: BookChapter) async throws -> String {
+        guard let book = currentBook else { throw ReaderError.noBook }
+        
+        let fileURL = URL(fileURLWithPath: book.bookUrl)
+        let content = try String(contentsOf: fileURL, encoding: .utf8)
+        
+        // 通过章节索引找到对应的内容段
+        // 使用与 LocalBookViewModel 相同的分章逻辑
+        let chapterPatterns = [
+            #"^第[零一二三四五六七八九十百千万0-9]+[章回卷节部篇]"#,
+            #"^第[0-9]+章"#,
+            #"^Chapter [0-9]+"#,
+            #"^\s*第[0-9一二三四五六七八九十]+节"#
+        ]
+        
+        var chapters: [(title: String, content: String)] = []
+        var currentTitle: String?
+        var currentContent = ""
+        
+        for line in content.components(separatedBy: .newlines) {
+            var isChapterStart = false
+            for pattern in chapterPatterns {
+                if let regex = try? NSRegularExpression(pattern: pattern, options: .anchorsMatchLines) {
+                    let range = NSRange(line.startIndex..., in: line)
+                    if regex.firstMatch(in: line, range: range) != nil {
+                        isChapterStart = true
+                        break
+                    }
+                }
+            }
+            
+            if isChapterStart {
+                if let title = currentTitle { chapters.append((title, currentContent)) }
+                currentTitle = line.trimmingCharacters(in: .whitespaces)
+                currentContent = ""
+            } else {
+                currentContent += line + "\n"
+            }
+        }
+        if let title = currentTitle { chapters.append((title, currentContent)) }
+        if chapters.isEmpty { return content }
+        
+        let idx = Int(chapter.index)
+        guard idx >= 0 && idx < chapters.count else { throw ReaderError.notCached }
+        return chapters[idx].content.trimmingCharacters(in: .whitespaces)
     }
     
     private func cacheChapter(_ chapter: BookChapter, content: String) async throws {
-        // TODO: 实现章节缓存
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let chapterDir = documents.appendingPathComponent("chapters", isDirectory: true)
+        
+        if !FileManager.default.fileExists(atPath: chapterDir.path) {
+            try FileManager.default.createDirectory(at: chapterDir, withIntermediateDirectories: true)
+        }
+        
+        let fileName = "\(chapter.bookId.uuidString)_\(chapter.index).txt"
+        let fileURL = chapterDir.appendingPathComponent(fileName)
+        try content.write(to: fileURL, atomically: true, encoding: .utf8)
+        
         chapter.isCached = true
+        chapter.cachePath = fileName
         try? CoreDataStack.shared.save()
     }
     
@@ -294,6 +371,8 @@ enum ReaderError: LocalizedError {
     case invalidChapterIndex
     case notCached
     case networkFailure
+    case noBook
+    case noSource
     
     var errorDescription: String? {
         switch self {
@@ -301,6 +380,8 @@ enum ReaderError: LocalizedError {
         case .invalidChapterIndex: return "无效的章节索引"
         case .notCached: return "章节未缓存"
         case .networkFailure: return "网络加载失败"
+        case .noBook: return "未找到书籍"
+        case .noSource: return "未找到书源"
         }
     }
 }

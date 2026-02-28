@@ -10,6 +10,17 @@ import JavaScriptCore
 import SwiftSoup
 import Kanna
 
+// MARK: - 元素上下文（用于列表项提取）
+class ElementContext {
+    var element: Any      // SwiftSoup.Element, JSON dict, 或 String
+    var baseUrl: String?
+    
+    init(element: Any, baseUrl: String? = nil) {
+        self.element = element
+        self.baseUrl = baseUrl
+    }
+}
+
 // MARK: - 结果类型
 enum RuleResult {
     case string(String)
@@ -116,6 +127,237 @@ class RuleEngine {
         }
         
         return try executor.execute(rule, context: context)
+    }
+    
+    // MARK: - 从 HTML/JSON 中提取元素列表
+    
+    /// 提取元素列表（用于书籍列表、章节列表等）
+    /// - Parameters:
+    ///   - ruleStr: 列表规则，如 CSS 选择器 "div.book-item" 或 JSONPath "$.list"
+    ///   - body: HTML 或 JSON 字符串
+    ///   - baseUrl: 基础 URL
+    /// - Returns: 元素上下文数组
+    func getElements(ruleStr: String?, body: String, baseUrl: String?) throws -> [ElementContext] {
+        guard let ruleStr = ruleStr, !ruleStr.isEmpty else { return [] }
+        
+        let isJson = body.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{") ||
+                     body.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("[")
+        
+        if isJson {
+            return try getJsonElements(ruleStr: ruleStr, body: body)
+        } else {
+            return try getHtmlElements(ruleStr: ruleStr, body: body, baseUrl: baseUrl)
+        }
+    }
+    
+    /// 从 HTML 提取元素列表
+    private func getHtmlElements(ruleStr: String, body: String, baseUrl: String?) throws -> [ElementContext] {
+        let doc = try SwiftSoup.parse(body)
+        if let base = baseUrl { try? doc.setBaseUri(base) }
+        
+        // 处理反向列表（以 - 开头）
+        var rule = ruleStr
+        var reverse = false
+        if rule.hasPrefix("-") {
+            reverse = true
+            rule = String(rule.dropFirst())
+        }
+        if rule.hasPrefix("+") {
+            rule = String(rule.dropFirst())
+        }
+        
+        // 支持 XPath 和 CSS
+        var elements: [ElementContext]
+        if rule.hasPrefix("//") {
+            // XPath
+            let kannaDoc = try Kanna.HTML(html: body, encoding: .utf8)
+            elements = kannaDoc.xpath(rule).compactMap { node -> ElementContext? in
+                guard let html = node.toHTML else { return nil }
+                return ElementContext(element: html, baseUrl: baseUrl)
+            }
+        } else {
+            // CSS
+            let selected = try doc.select(rule)
+            elements = selected.array().map { ElementContext(element: $0, baseUrl: baseUrl) }
+        }
+        
+        if reverse { elements.reverse() }
+        return elements
+    }
+    
+    /// 从 JSON 提取元素列表
+    private func getJsonElements(ruleStr: String, body: String) throws -> [ElementContext] {
+        guard let data = body.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) else {
+            throw RuleError.noDocument
+        }
+        
+        let path = ruleStr.replacingOccurrences(of: "$.", with: "")
+        let keys = path.split(separator: ".").map { String($0) }
+        
+        var current: Any? = json
+        for key in keys {
+            if let dict = current as? [String: Any] {
+                current = dict[key]
+            } else if let array = current as? [Any], let index = Int(key) {
+                current = index < array.count ? array[index] : nil
+            } else {
+                break
+            }
+        }
+        
+        if let array = current as? [[String: Any]] {
+            return array.map { ElementContext(element: $0) }
+        } else if let array = current as? [Any] {
+            return array.map { ElementContext(element: $0) }
+        }
+        
+        return []
+    }
+    
+    // MARK: - 在元素上下文中提取字符串
+    
+    /// 从单个元素中提取字符串（用于从列表项中提取书名、作者等）
+    func getString(ruleStr: String?, elementContext: ElementContext, baseUrl: String? = nil) -> String {
+        guard let ruleStr = ruleStr, !ruleStr.isEmpty else { return "" }
+        
+        // 支持 && 连接（串联多个规则结果）
+        if ruleStr.contains("&&") {
+            let parts = ruleStr.components(separatedBy: "&&")
+            return parts.compactMap { getString(ruleStr: $0.trimmingCharacters(in: .whitespaces), elementContext: elementContext, baseUrl: baseUrl) }
+                       .filter { !$0.isEmpty }
+                       .joined(separator: "\n")
+        }
+        
+        // 支持 || 连接（取第一个非空结果）
+        if ruleStr.contains("||") {
+            let parts = ruleStr.components(separatedBy: "||")
+            for part in parts {
+                let result = getString(ruleStr: part.trimmingCharacters(in: .whitespaces), elementContext: elementContext, baseUrl: baseUrl)
+                if !result.isEmpty { return result }
+            }
+            return ""
+        }
+        
+        do {
+            if let element = elementContext.element as? SwiftSoup.Element {
+                return try getStringFromElement(ruleStr: ruleStr, element: element, baseUrl: baseUrl)
+            } else if let dict = elementContext.element as? [String: Any] {
+                return getStringFromJson(ruleStr: ruleStr, json: dict)
+            } else if let html = elementContext.element as? String {
+                let context = ExecutionContext()
+                context.document = try SwiftSoup.parse(html)
+                context.baseURL = baseUrl.flatMap { URL(string: $0) }
+                let result = try executeSingle(rule: ruleStr, context: context)
+                return result.string ?? ""
+            }
+        } catch {
+            print("getString 错误 [\(ruleStr)]: \(error)")
+        }
+        
+        return ""
+    }
+    
+    /// 从 SwiftSoup Element 中提取字符串
+    private func getStringFromElement(ruleStr: String, element: SwiftSoup.Element, baseUrl: String?) throws -> String {
+        // 解析 CSS 选择器和属性
+        var rule = ruleStr
+        var attr = "text"
+        
+        // 检查 @attr 后缀
+        if let atRange = rule.range(of: "@", options: .backwards) {
+            let possibleAttr = String(rule[atRange.upperBound...])
+            // 确保不是 CSS 选择器中的 @ 符号
+            if !possibleAttr.contains(" ") && !possibleAttr.contains(".") {
+                attr = possibleAttr
+                rule = String(rule[..<atRange.lowerBound])
+            }
+        }
+        
+        // 空选择器直接从当前元素取
+        if rule.isEmpty {
+            return try extractAttr(element: element, attr: attr, baseUrl: baseUrl)
+        }
+        
+        // 执行选择器
+        guard let found = try element.select(rule).first() else {
+            return ""
+        }
+        
+        return try extractAttr(element: found, attr: attr, baseUrl: baseUrl)
+    }
+    
+    /// 从元素提取指定属性
+    private func extractAttr(element: SwiftSoup.Element, attr: String, baseUrl: String?) throws -> String {
+        switch attr.lowercased() {
+        case "text":
+            return try element.text()
+        case "textnodes":
+            return element.textNodes().map { $0.text() }.joined(separator: "\n")
+        case "html", "innerhtml":
+            return try element.html()
+        case "outerhtml":
+            return try element.outerHtml()
+        case "href":
+            let href = try element.attr("href")
+            return resolveUrl(href, baseUrl: baseUrl)
+        case "src":
+            let src = try element.attr("src")
+            return resolveUrl(src, baseUrl: baseUrl)
+        case "abs:href":
+            return try element.attr("abs:href")
+        case "abs:src":
+            return try element.attr("abs:src")
+        default:
+            return try element.attr(attr)
+        }
+    }
+    
+    /// 从 JSON 字典中提取字符串
+    private func getStringFromJson(ruleStr: String, json: [String: Any]) -> String {
+        let path = ruleStr.replacingOccurrences(of: "$.", with: "")
+        let keys = path.split(separator: ".").map { String($0) }
+        
+        var current: Any? = json
+        for key in keys {
+            if let dict = current as? [String: Any] {
+                current = dict[key]
+            } else {
+                return ""
+            }
+        }
+        
+        if let str = current as? String { return str }
+        if let num = current as? NSNumber { return num.stringValue }
+        return ""
+    }
+    
+    /// 解析相对 URL
+    private func resolveUrl(_ url: String, baseUrl: String?) -> String {
+        if url.hasPrefix("http") { return url }
+        guard let base = baseUrl, let baseURL = URL(string: base) else { return url }
+        return URL(string: url, relativeTo: baseURL)?.absoluteString ?? url
+    }
+    
+    // MARK: - 获取字符串列表
+    
+    /// 获取字符串列表（用于目录列表等）
+    func getStringList(ruleStr: String?, body: String, baseUrl: String?) throws -> [String] {
+        guard let ruleStr = ruleStr, !ruleStr.isEmpty else { return [] }
+        
+        let context = ExecutionContext()
+        let isJson = body.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{") ||
+                     body.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("[")
+        
+        if isJson {
+            context.jsonString = body
+        } else {
+            context.document = try SwiftSoup.parse(body)
+        }
+        context.baseURL = baseUrl.flatMap { URL(string: $0) }
+        
+        let result = try executeSingle(rule: ruleStr, context: context)
+        return result.list ?? (result.string.map { [$0] } ?? [])
     }
 }
 

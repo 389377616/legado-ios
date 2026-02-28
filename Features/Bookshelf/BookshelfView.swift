@@ -236,18 +236,17 @@ struct BookCoverView: View {
             }
         }
         .task {
-            if let urlString = url, let url = URL(string: urlString) {
-                await loadImage(from: url)
+            if let urlString = url, !urlString.isEmpty {
+                await loadImage(urlString: urlString)
             }
         }
     }
     
-    private func loadImage(from url: URL) async {
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            imageData = data
-        } catch {
-            print("加载封面失败：\(error)")
+    private func loadImage(urlString: String) async {
+        // 使用 ImageCacheManager 实现内存+磁盘缓存
+        let cached = await ImageCacheManager.shared.loadImage(for: urlString)
+        if let cached = cached {
+            imageData = cached
         }
     }
 }

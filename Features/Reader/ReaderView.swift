@@ -44,8 +44,8 @@ struct ReaderView: View {
                     ReaderBottomBar(
                         currentChapter: viewModel.currentChapterIndex,
                         totalChapters: viewModel.totalChapters,
-                        onPrevChapter: { viewModel.prevChapter() },
-                        onNextChapter: { viewModel.nextChapter() },
+                        onPrevChapter: { Task { await viewModel.prevChapter() } },
+                        onNextChapter: { Task { await viewModel.nextChapter() } },
                         onSliderChange: { viewModel.jumpToChapter($0) }
                     )
                     .opacity(showUI ? 1.0 : 0.0)
@@ -189,9 +189,9 @@ struct ReaderBottomBar: View {
         }
         .padding()
         .background(Color.black.opacity(0.3))
-        .onChange(of: currentChapter) { newValue in
+        .onChange(of: currentChapter, perform: { newValue in
             sliderValue = Double(newValue)
-        }
+        })
     }
 }
 

@@ -89,7 +89,7 @@ class EPUBParser {
             
             guard let itemId = extractFirstMatch(in: attributes, pattern: #"idref="([^"]+)""#) else { continue }
             
-            let itemPattern = #"id="\Q\(itemId)\E"[^>]*href="([^"]+)"[^>]*media-type="text/html""#
+            let itemPattern = #"id="\Q\(itemId)\E"[^>]*href="([^"]+)"[^>]*media-type="(?:application/xhtml\+xml|text/html)""#
             if let href = extractFirstMatch(in: content, pattern: itemPattern) {
                 let chapterPath = basePath.deletingLastPathComponent().appendingPathComponent(href)
                 
