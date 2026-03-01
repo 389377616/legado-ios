@@ -87,6 +87,7 @@ struct BookshelfView: View {
                         BookGridItemView(book: book)
                     }
                     .buttonStyle(.plain)
+                }
                 
                 // 加载更多指示器
                 if viewModel.isLoading {
