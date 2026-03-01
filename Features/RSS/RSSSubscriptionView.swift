@@ -22,8 +22,8 @@ struct RSSSource: Identifiable, Codable {
 
 struct RSSArticle: Identifiable {
     var id = UUID()
-    var title: String
-    var link: String
+    var title: String = ""
+    var link: String = ""
     var description: String?
     var pubDate: Date?
     var author: String?
