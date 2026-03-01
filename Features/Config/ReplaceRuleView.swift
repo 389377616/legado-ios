@@ -6,193 +6,225 @@
 //
 
 import SwiftUI
-import CoreData
 
-struct ReplaceRuleView: View {
-    @StateObject private var viewModel = ReplaceRuleViewModel()
-    @State private var showingEdit = false
-    @State private var selectedRule: ReplaceRule?
+// MARK: - 替换规则模型
+struct ReplaceRuleItem: Identifiable, Codable {
+    var id = UUID()
+    var name: String = ""
+    var pattern: String = ""
+    var replacement: String = ""
+    var scope: String = "global"
+    var scopeId: String?
+    var isRegex: Bool = true
+    var enabled: Bool = true
+    var priority: Int = 0
+}
+
+// MARK: - 替换规则 ViewModel
+@MainActor
+class ReplaceRuleViewModel: ObservableObject {
+    @Published var rules: [ReplaceRuleItem] = []
     
-    var body: some View {
-        NavigationView {
-            List {
-                if viewModel.rules.isEmpty {
-                    EmptyStateView(
-                        title: "暂无替换规则",
-                        subtitle: "点击右上角添加替换规则",
-                        imageName: "text.badge.checkmark"
-                    )
-                } else {
-                    ForEach(viewModel.rules, id: \.ruleId) { rule in
-                        ReplaceRuleItemView(rule: rule)
-                            .swipeActions {
-                                Button(role: .destructive) {
-                                    viewModel.deleteRule(rule)
-                                } label: {
-                                    Label("删除", systemImage: "trash")
-                                }
-                                
-                                Button {
-                                    selectedRule = rule
-                                    showingEdit = true
-                                } label: {
-                                    Label("编辑", systemImage: "pencil")
-                                }
-                                .tint(.blue)
-                                
-                                Button {
-                                    viewModel.toggleRule(rule)
-                                } label: {
-                                    Label(rule.enabled ? "禁用" : "启用", systemImage: rule.enabled ? "xmark.circle" : "checkmark.circle")
-                                }
-                            }
-                    }
-                    .onMove { source, destination in
-                        viewModel.moveRule(from: source, to: destination)
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle("替换规则")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        selectedRule = nil
-                        showingEdit = true
-                    }) {
-                        Image(systemName: "plus")
-                    }
-                }
-            }
-            .sheet(isPresented: $showingEdit) {
-                if let rule = selectedRule {
-                    ReplaceRuleEditView(rule: rule, viewModel: viewModel)
-                } else {
-                    ReplaceRuleEditView(rule: nil, viewModel: viewModel)
-                }
-            }
-            .task {
-                await viewModel.loadRules()
-            }
+    private let storageKey = "replace_rules"
+    
+    init() {
+        loadRules()
+    }
+    
+    func loadRules() {
+        if let data = UserDefaults.standard.data(forKey: storageKey),
+           let decoded = try? JSONDecoder().decode([ReplaceRuleItem].self, from: data) {
+            rules = decoded
+        }
+    }
+    
+    func saveRules() {
+        if let data = try? JSONEncoder().encode(rules) {
+            UserDefaults.standard.set(data, forKey: storageKey)
+        }
+    }
+    
+    func addRule(_ rule: ReplaceRuleItem) {
+        rules.append(rule)
+        saveRules()
+    }
+    
+    func removeRules(at offsets: IndexSet) {
+        rules.remove(atOffsets: offsets)
+        saveRules()
+    }
+    
+    func moveRule(from source: IndexSet, to destination: Int) {
+        rules.move(fromOffsets: source, toOffset: destination)
+        saveRules()
+    }
+    
+    func toggleRule(_ rule: ReplaceRuleItem) {
+        if let idx = rules.firstIndex(where: { $0.id == rule.id }) {
+            rules[idx].enabled.toggle()
+            saveRules()
+        }
+    }
+    
+    func updateRule(_ rule: ReplaceRuleItem) {
+        if let idx = rules.firstIndex(where: { $0.id == rule.id }) {
+            rules[idx] = rule
+            saveRules()
         }
     }
 }
 
-// MARK: - 规则列表项
-struct ReplaceRuleItemView: View {
-    let rule: ReplaceRule
+// MARK: - 替换规则管理视图
+struct ReplaceRuleView: View {
+    @StateObject private var viewModel = ReplaceRuleViewModel()
+    @State private var showingAdd = false
+    @State private var editingRule: ReplaceRuleItem?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(rule.name)
-                    .font(.body)
-                    .fontWeight(.medium)
-                
-                Spacer()
-                
-                Circle()
-                    .fill(rule.enabled ? Color.green : Color.gray)
-                    .frame(width: 8, height: 8)
-            }
-            
-            Text(rule.pattern)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-                .monospaced()
-            
-            HStack {
-                Text(rule.scope == "global" ? "全局" : "书源")
-                    .font(.caption2)
-                    .foregroundColor(.blue)
-                
-                Spacer()
-                
-                Text("优先级：\(rule.priority)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+        List {
+            if viewModel.rules.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "text.badge.checkmark")
+                        .font(.system(size: 40))
+                        .foregroundColor(.gray.opacity(0.5))
+                    Text("暂无替换规则")
+                        .font(.headline)
+                    Text("点击右上角添加替换规则")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+                .listRowBackground(Color.clear)
+            } else {
+                ForEach(viewModel.rules) { rule in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(rule.name.isEmpty ? "未命名规则" : rule.name)
+                                    .font(.body)
+                                    .fontWeight(.medium)
+                                
+                                if rule.isRegex {
+                                    Text("正则")
+                                        .font(.caption2)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(Color.purple.opacity(0.1))
+                                        .foregroundColor(.purple)
+                                        .cornerRadius(3)
+                                }
+                            }
+                            
+                            HStack(spacing: 8) {
+                                Text(rule.pattern)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                                
+                                Image(systemName: "arrow.right")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                
+                                Text(rule.replacement.isEmpty ? "(删除)" : rule.replacement)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Toggle("", isOn: Binding(
+                            get: { rule.enabled },
+                            set: { _ in viewModel.toggleRule(rule) }
+                        ))
+                        .labelsHidden()
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        editingRule = rule
+                    }
+                }
+                .onDelete(perform: viewModel.removeRules)
+                .onMove(perform: viewModel.moveRule)
             }
         }
-        .padding(.vertical, 4)
+        .listStyle(.insetGrouped)
+        .navigationTitle("替换规则")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack {
+                    EditButton()
+                    Button(action: { showingAdd = true }) {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingAdd) {
+            ReplaceRuleEditView(viewModel: viewModel, rule: nil)
+        }
+        .sheet(item: $editingRule) { rule in
+            ReplaceRuleEditView(viewModel: viewModel, rule: rule)
+        }
     }
 }
 
 // MARK: - 编辑界面
 struct ReplaceRuleEditView: View {
-    let rule: ReplaceRule?
     @ObservedObject var viewModel: ReplaceRuleViewModel
+    let rule: ReplaceRuleItem?
     @Environment(\.dismiss) var dismiss
     
     @State private var name = ""
     @State private var pattern = ""
     @State private var replacement = ""
-    @State private var scope: String = "global"
-    @State private var scopeId: String = ""
     @State private var isRegex = true
     @State private var enabled = true
-    @State private var priority: Int32 = 0
+    @State private var scope = "global"
     
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("规则信息")) {
+                Section("规则信息") {
                     TextField("规则名称", text: $name)
-                    
                     TextField("匹配模式", text: $pattern)
-                        .font(.system(.caption, design: .monospaced))
-                    
-                    TextField("替换为", text: $replacement)
-                        .font(.system(.caption, design: .monospaced))
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    TextField("替换内容（留空则删除匹配内容）", text: $replacement)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
                 }
                 
-                Section(header: Text("作用范围")) {
-                    Picker("范围", selection: $scope) {
-                        Text("全局").tag("global")
-                        Text("书源").tag("source")
-                        Text("书籍").tag("book")
-                    }
-                    
-                    if scope != "global" {
-                        TextField("范围 ID", text: $scopeId)
-                    }
-                }
-                
-                Section(header: Text("高级选项")) {
+                Section("设置") {
                     Toggle("正则表达式", isOn: $isRegex)
-                    
-                    Stepper("优先级：\(priority)", value: $priority, in: -10...10)
-                    
                     Toggle("启用", isOn: $enabled)
+                    Picker("作用域", selection: $scope) {
+                        Text("全局").tag("global")
+                        Text("正文").tag("content")
+                        Text("标题").tag("title")
+                    }
                 }
                 
-                Section {
-                    Text("正则表达式示例：")
+                Section("示例") {
+                    Text("• \\s+ → 匹配空白字符\n• <.*?> → 匹配 HTML 标签\n• 广告.+?广告 → 匹配广告文本")
                         .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text("• \\\\s+ - 匹配空白字符")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    Text("• <.*?> - 匹配 HTML 标签")
-                        .font(.caption2)
                         .foregroundColor(.secondary)
                 }
             }
             .navigationTitle(rule == nil ? "新建规则" : "编辑规则")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
-                        dismiss()
-                    }
+                    Button("取消") { dismiss() }
                 }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("保存") {
                         save()
+                        dismiss()
                     }
-                    .disabled(name.isEmpty || pattern.isEmpty)
+                    .disabled(pattern.isEmpty)
                 }
             }
             .onAppear {
@@ -200,136 +232,33 @@ struct ReplaceRuleEditView: View {
                     name = rule.name
                     pattern = rule.pattern
                     replacement = rule.replacement
-                    scope = rule.scope
-                    scopeId = rule.scopeId ?? ""
                     isRegex = rule.isRegex
                     enabled = rule.enabled
-                    priority = rule.priority
+                    scope = rule.scope
                 }
             }
         }
     }
     
     private func save() {
-        if let rule = rule {
-            viewModel.updateRule(
-                rule,
-                name: name,
-                pattern: pattern,
-                replacement: replacement,
-                scope: scope,
-                scopeId: scopeId.isEmpty ? nil : scopeId,
-                isRegex: isRegex,
-                enabled: enabled,
-                priority: priority
-            )
+        if var existing = rule {
+            existing.name = name
+            existing.pattern = pattern
+            existing.replacement = replacement
+            existing.isRegex = isRegex
+            existing.enabled = enabled
+            existing.scope = scope
+            viewModel.updateRule(existing)
         } else {
-            viewModel.createRule(
+            let newRule = ReplaceRuleItem(
                 name: name,
                 pattern: pattern,
                 replacement: replacement,
                 scope: scope,
-                scopeId: scopeId.isEmpty ? nil : scopeId,
                 isRegex: isRegex,
-                enabled: enabled,
-                priority: priority
+                enabled: enabled
             )
-        }
-        dismiss()
-    }
-}
-
-// MARK: - ViewModel
-class ReplaceRuleViewModel: ObservableObject {
-    @Published var rules: [ReplaceRule] = []
-    
-    func loadRules() async {
-        do {
-            let request: NSFetchRequest<ReplaceRule> = ReplaceRule.fetchRequest()
-            request.sortDescriptors = [
-                NSSortDescriptor(key: "scope", ascending: true),
-                NSSortDescriptor(key: "priority", ascending: false),
-                NSSortDescriptor(key: "order", ascending: true)
-            ]
-            
-            rules = try CoreDataStack.shared.viewContext.fetch(request)
-        } catch {
-            print("加载规则失败：\(error)")
+            viewModel.addRule(newRule)
         }
     }
-    
-    func createRule(
-        name: String,
-        pattern: String,
-        replacement: String,
-        scope: String,
-        scopeId: String?,
-        isRegex: Bool,
-        enabled: Bool,
-        priority: Int32
-    ) {
-        let context = CoreDataStack.shared.viewContext
-        let rule = ReplaceRule.create(in: context)
-        
-        rule.name = name
-        rule.pattern = pattern
-        rule.replacement = replacement
-        rule.scope = scope
-        rule.scopeId = scopeId
-        rule.isRegex = isRegex
-        rule.enabled = enabled
-        rule.priority = priority
-        
-        try? CoreDataStack.shared.save()
-        Task {
-            await loadRules()
-        }
-    }
-    
-    func updateRule(
-        _ rule: ReplaceRule,
-        name: String,
-        pattern: String,
-        replacement: String,
-        scope: String,
-        scopeId: String?,
-        isRegex: Bool,
-        enabled: Bool,
-        priority: Int32
-    ) {
-        rule.name = name
-        rule.pattern = pattern
-        rule.replacement = replacement
-        rule.scope = scope
-        rule.scopeId = scopeId
-        rule.isRegex = isRegex
-        rule.enabled = enabled
-        rule.priority = priority
-        
-        try? CoreDataStack.shared.save()
-        Task {
-            await loadRules()
-        }
-    }
-    
-    func deleteRule(_ rule: ReplaceRule) {
-        CoreDataStack.shared.viewContext.delete(rule)
-        try? CoreDataStack.shared.save()
-        Task {
-            await loadRules()
-        }
-    }
-    
-    func toggleRule(_ rule: ReplaceRule) {
-        rule.enabled.toggle()
-        try? CoreDataStack.shared.save()
-    }
-    
-    func moveRule(from source: IndexSet, to destination: Int) {
-        // TODO: 实现排序
-    }
-}
-
-#Preview {
-    ReplaceRuleView()
 }

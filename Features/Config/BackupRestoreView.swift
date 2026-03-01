@@ -14,7 +14,6 @@ struct BackupRestoreView: View {
     @State private var showingImport = false
     
     var body: some View {
-        NavigationView {
             Form {
                 Section(header: Label("备份", systemImage: "square.and.arrow.up")) {
                     Button(action: { showingExport = true }) {
@@ -78,7 +77,6 @@ struct BackupRestoreView: View {
             } message: {
                 Text(viewModel.alertMessage ?? "")
             }
-        }
     }
 }
 

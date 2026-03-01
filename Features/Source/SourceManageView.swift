@@ -15,7 +15,6 @@ struct SourceManageView: View {
     @State private var selectedSource: BookSource?
     
     var body: some View {
-        NavigationView {
             List {
                 if viewModel.sources.isEmpty {
                     EmptyStateView(
@@ -96,7 +95,6 @@ struct SourceManageView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "未知错误")
             }
-        }
     }
 }
 

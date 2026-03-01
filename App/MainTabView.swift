@@ -72,7 +72,7 @@ struct SettingsView: View {
                     }
                     
                     NavigationLink("主题") {
-                        Text("主题选择")
+                        ThemeSettingsView()
                     }
                 }
                 
@@ -87,7 +87,7 @@ struct SettingsView: View {
                     }
                     
                     NavigationLink("清理缓存") {
-                        Text("缓存清理功能待实现")
+                        CacheCleanView()
                     }
                 }
                 
@@ -277,4 +277,175 @@ struct AboutSectionCard<Content: View>: View {
 
 #Preview {
     MainTabView()
+}
+
+// MARK: - 主题设置视图
+struct ThemeSettingsView: View {
+    @AppStorage("app_theme") private var selectedTheme = "system"
+    
+    var body: some View {
+        List {
+            Section("外观模式") {
+                ForEach([
+                    ("system", "跟随系统", "iphone"),
+                    ("light", "浅色模式", "sun.max"),
+                    ("dark", "深色模式", "moon")
+                ], id: \.0) { (value, label, icon) in
+                    Button(action: { selectedTheme = value }) {
+                        HStack {
+                            Image(systemName: icon)
+                                .frame(width: 24)
+                                .foregroundColor(.blue)
+                            Text(label)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            if selectedTheme == value {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Section("阅读背景") {
+                ForEach([
+                    ("白色", Color.white),
+                    ("米黄", Color(red: 0.98, green: 0.95, blue: 0.88)),
+                    ("浅绿", Color(red: 0.8, green: 0.93, blue: 0.8)),
+                    ("深灰", Color(white: 0.2))
+                ], id: \.0) { (name, color) in
+                    HStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(color)
+                            .frame(width: 40, height: 30)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .strokeBorder(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        Text(name)
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("主题")
+    }
+}
+
+// MARK: - 缓存清理视图
+struct CacheCleanView: View {
+    @State private var imageCacheSize: String = "计算中..."
+    @State private var chapterCacheSize: String = "计算中..."
+    @State private var isClearing = false
+    @State private var showingAlert = false
+    @State private var alertMessage = ""
+    
+    var body: some View {
+        List {
+            Section("缓存占用") {
+                HStack {
+                    Label("图片缓存", systemImage: "photo")
+                    Spacer()
+                    Text(imageCacheSize)
+                        .foregroundColor(.secondary)
+                }
+                HStack {
+                    Label("章节缓存", systemImage: "doc.text")
+                    Spacer()
+                    Text(chapterCacheSize)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Section {
+                Button(action: clearImageCache) {
+                    HStack {
+                        Image(systemName: "photo.badge.minus")
+                        Text("清理图片缓存")
+                    }
+                }
+                
+                Button(action: clearChapterCache) {
+                    HStack {
+                        Image(systemName: "doc.badge.minus")
+                        Text("清理章节缓存")
+                    }
+                }
+                
+                Button(role: .destructive, action: clearAll) {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text("清理全部缓存")
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("清理缓存")
+        .task { calculateCacheSize() }
+        .alert("提示", isPresented: $showingAlert) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text(alertMessage)
+        }
+    }
+    
+    private func calculateCacheSize() {
+        // 图片缓存
+        let imgDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("ImageCache")
+        imageCacheSize = folderSize(imgDir)
+        
+        // 章节缓存
+        let chapterDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("ChapterCache")
+        chapterCacheSize = folderSize(chapterDir)
+    }
+    
+    private func folderSize(_ url: URL?) -> String {
+        guard let url = url else { return "0 B" }
+        let fm = FileManager.default
+        guard let items = try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: [.fileSizeKey]) else { return "0 B" }
+        var total: Int64 = 0
+        for item in items {
+            if let size = try? item.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+                total += Int64(size)
+            }
+        }
+        return ByteCountFormatter.string(fromByteCount: total, countStyle: .file)
+    }
+    
+    private func clearImageCache() {
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("ImageCache")
+        clearDir(dir)
+        ImageCacheManager.shared.clearCache()
+        calculateCacheSize()
+        alertMessage = "图片缓存已清理"
+        showingAlert = true
+    }
+    
+    private func clearChapterCache() {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("ChapterCache")
+        clearDir(dir)
+        calculateCacheSize()
+        alertMessage = "章节缓存已清理"
+        showingAlert = true
+    }
+    
+    private func clearAll() {
+        clearImageCache()
+        clearChapterCache()
+        alertMessage = "全部缓存已清理"
+        showingAlert = true
+    }
+    
+    private func clearDir(_ url: URL?) {
+        guard let url = url else { return }
+        try? FileManager.default.removeItem(at: url)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+    }
 }

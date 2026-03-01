@@ -20,9 +20,28 @@ struct QRCodeScanView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // 摄像头预览
-                QRCameraPreview(viewModel: viewModel)
-                    .edgesIgnoringSafeArea(.all)
+                if viewModel.cameraReady {
+                    // 摄像头预览
+                    QRCameraPreview(viewModel: viewModel)
+                        .edgesIgnoringSafeArea(.all)
+                } else {
+                    // 等待权限或无权限提示
+                    Color.black.edgesIgnoringSafeArea(.all)
+                    VStack(spacing: 16) {
+                        if !viewModel.cameraAuthorized {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(.white.opacity(0.5))
+                            Text("请在设置中允许相机权限")
+                                .foregroundColor(.white)
+                        } else {
+                            ProgressView()
+                                .tint(.white)
+                            Text("初始化相机...")
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
                 
                 // 扫描框
                 VStack {
@@ -109,6 +128,9 @@ struct QRCodeScanView: View {
                     }
                 }
             }
+            .onAppear {
+                viewModel.checkAndSetupCamera()
+            }
         }
     }
 }
@@ -133,16 +155,35 @@ class QRCodeScanViewModel: NSObject, ObservableObject {
     @Published var isImporting = false
     @Published var showResult = false
     @Published var resultMessage = ""
+    @Published var cameraAuthorized = false
+    @Published var cameraReady = false
     
     var captureSession: AVCaptureSession?
     private var hasProcessed = false
     
     override init() {
         super.init()
-        setupCamera()
+        // 不在 init 中访问相机，等权限授权后再初始化
     }
     
-    func setupCamera() {
+    func checkAndSetupCamera() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            cameraAuthorized = true
+            setupCamera()
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                Task { @MainActor in
+                    self?.cameraAuthorized = granted
+                    if granted { self?.setupCamera() }
+                }
+            }
+        default:
+            cameraAuthorized = false
+        }
+    }
+    
+    private func setupCamera() {
         let session = AVCaptureSession()
         
         guard let device = AVCaptureDevice.default(for: .video),
@@ -162,6 +203,7 @@ class QRCodeScanViewModel: NSObject, ObservableObject {
         }
         
         captureSession = session
+        cameraReady = true
     }
     
     func startScanning() {
