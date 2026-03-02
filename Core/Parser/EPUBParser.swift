@@ -108,7 +108,7 @@ class EPUBParser {
     private static func parseContainer(at url: URL) throws -> String {
         let content = try String(contentsOf: url, encoding: .utf8)
         
-        guard let opfPath = extractFirstMatch(in: content, pattern: #"full-path="([^"]+)""#) else {
+        guard let opfPath = extractFirstMatch(in: content, pattern: "full-path=\"([^\"]+)\"") else {
             throw EPUBError.parseFailed("找不到 content.opf")
         }
         
@@ -133,7 +133,7 @@ class EPUBParser {
         
         // 解析 manifest
         var manifest: [String: ManifestItem] = [:]
-        let itemPattern = #"<item\s+([^>]+)/?>"#
+        let itemPattern = "<item\\s+([^>]+)/?>"
         let itemRegex = try NSRegularExpression(pattern: itemPattern)
         let items = itemRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
         
@@ -150,8 +150,8 @@ class EPUBParser {
         
         // 解析 spine（阅读顺序）
         var spine: [String] = []
-        if let spineContent = extractFirstMatch(in: content, pattern: #"<spine[^>]*>(.*?)</spine>"#) {
-            let idrefPattern = #"idref="([^"]+)""#
+        if let spineContent = extractFirstMatch(in: content, pattern: "<spine[^>]*>(.*?)</spine>") {
+            let idrefPattern = "idref=\"([^\"]+)\""
             let idrefRegex = try NSRegularExpression(pattern: idrefPattern)
             let idrefs = idrefRegex.matches(in: spineContent, range: NSRange(spineContent.startIndex..., in: spineContent))
             
@@ -190,7 +190,7 @@ class EPUBParser {
         var items: [TOCItem] = []
         
         // 提取 navPoint
-        let navPointPattern = #"<navPoint[^>]*>(.*?)</navPoint>"#
+        let navPointPattern = "<navPoint[^>]*>(.*?)</navPoint>"
         let navPointRegex = try NSRegularExpression(pattern: navPointPattern, options: [.dotMatchesLineSeparators])
         let navPoints = navPointRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
         
@@ -198,8 +198,8 @@ class EPUBParser {
             guard let range = Range(match.range(at: 1), in: content) else { continue }
             let navPointContent = String(content[range])
             
-            if let title = extractFirstMatch(in: navPointContent, pattern: #"<text[^>]*>([^<]+)</text>"#),
-               let href = extractFirstMatch(in: navPointContent, pattern: #"src="([^"]+)""#) {
+            if let title = extractFirstMatch(in: navPointContent, pattern: "<text[^>]*>([^<]+)</text>"),
+               let href = extractFirstMatch(in: navPointContent, pattern: "src=\"([^\"]+)\"") {
                 items.append(TOCItem(title: title, href: href, level: 1, children: []))
             }
         }
@@ -213,7 +213,7 @@ class EPUBParser {
         var items: [TOCItem] = []
         
         // 提取 nav 中的链接
-        let linkPattern = #"<a[^>]+href="([^"]+)"[^>]*>([^<]+)</a>"#
+        let linkPattern = "<a[^>]+href=\"([^\"]+)\"[^>]*>([^<]+)</a>"
         let linkRegex = try NSRegularExpression(pattern: linkPattern)
         let links = linkRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
         
@@ -245,9 +245,9 @@ class EPUBParser {
                 let htmlContent = try String(contentsOf: chapterPath, encoding: .utf8)
                 
                 // 提取标题
-                if let title = extractFirstMatch(in: htmlContent, pattern: #"<title[^>]*>([^<]+)</title>"#) {
+                if let title = extractFirstMatch(in: htmlContent, pattern: "<title[^>]*>([^<]+)</title>") {
                     chapterTitle = title
-                } else if let h1 = extractFirstMatch(in: htmlContent, pattern: #"<h1[^>]*>([^<]+)</h1>"#) {
+                } else if let h1 = extractFirstMatch(in: htmlContent, pattern: "<h1[^>]*>([^<]+)</h1>") {
                     chapterTitle = h1
                 }
                 
@@ -296,17 +296,17 @@ class EPUBParser {
     private static func htmlToText(html: String) -> String {
         // 1. 移除 script 和 style
         var text = html
-        text = text.replacingOccurrences(of: #"<script[^>]*>.*?</script>"#, with: "", options: .regularExpression)
-        text = text.replacingOccurrences(of: #"<style[^>]*>.*?</style>"#, with: "", options: .regularExpression)
+        text = text.replacingOccurrences(of: "<script[^>]*>.*?</script>", with: "", options: .regularExpression)
+        text = text.replacingOccurrences(of: "<style[^>]*>.*?</style>", with: "", options: .regularExpression)
         
         // 2. 将块级标签转换为换行
         let blockTags = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "br", "li"]
         for tag in blockTags {
-            text = text.replacingOccurrences(of: #"</\#(tag)>"#, with: "\n", options: .regularExpression)
+            text = text.replacingOccurrences(of: "</\(tag)>", with: "\n", options: .regularExpression)
         }
         
         // 3. 移除所有 HTML 标签
-        text = text.replacingOccurrences(of: #"<[^>]+>"#, with: "", options: .regularExpression)
+        text = text.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
         
         // 4. 解码 HTML 实体
         text = decodeHTMLEntities(text)
@@ -321,37 +321,33 @@ class EPUBParser {
     // MARK: - 解码 HTML 实体
     private static func decodeHTMLEntities(_ text: String) -> String {
         var result = text
-        let entities = [
-            "&amp;": "&",
-            "&lt;": "<",
-            "&gt;": ">",
-            "&quot;": """,
-            "&apos;": "'",
-            "&nbsp;": " ",
-            "&#8212;": "—",
-            "&#8211;": "–",
-            "&#8216;": """,
-            "&#8217;": "'",
-            "&#8220;": """,
-            "&#8221;": """,
-            "&#8230;": "…"
+        
+        // 常见 HTML 实体映射
+        let entityMap: [(String, String)] = [
+            ("&amp;", "&"),
+            ("&lt;", "<"),
+            ("&gt;", ">"),
+            ("&quot;", "\""),
+            ("&apos;", "'"),
+            ("&nbsp;", " ")
         ]
         
-        for (entity, char) in entities {
+        for (entity, char) in entityMap {
             result = result.replacingOccurrences(of: entity, with: char)
         }
         
         // 解码数字实体
         let decimalPattern = "&#(\\d+);"
         if let decimalRegex = try? NSRegularExpression(pattern: decimalPattern) {
-            let decimalRange = NSRange(result.startIndex..., in: result)
-            let decimalMatches = decimalRegex.matches(in: result, range: decimalRange).reversed()
+            let nsRange = NSRange(result.startIndex..., in: result)
+            let matches = decimalRegex.matches(in: result, range: nsRange)
             
-            for match in decimalMatches {
-                guard let range = Range(match.range(at: 1), in: result),
-                      let code = Int(result[range]),
+            // 从后向前替换，避免索引偏移
+            for match in matches.reversed() {
+                guard let groupRange = Range(match.range(at: 1), in: result),
+                      let fullRange = Range(match.range, in: result),
+                      let code = Int(result[groupRange]),
                       let scalar = UnicodeScalar(code) else { continue }
-                let fullRange = Range(match.range, in: result)
                 result.replaceSubrange(fullRange, with: String(Character(scalar)))
             }
         }
