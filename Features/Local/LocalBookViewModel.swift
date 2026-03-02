@@ -140,6 +140,9 @@ class LocalBookViewModel: ObservableObject {
         }
         
         // 保存元数据
+        if let description = epubBook.metadata.description {
+            book.intro = description
+        }
         if let description = epubBook.metadata["description"] {
             book.intro = description
         }
