@@ -14,69 +14,69 @@ struct BackupRestoreView: View {
     @State private var showingImport = false
     
     var body: some View {
-            Form {
-                Section(header: Label("备份", systemImage: "square.and.arrow.up")) {
-                    Button(action: { showingExport = true }) {
-                        HStack {
-                            Image(systemName: "square.and.arrow.up")
-                            Text("导出数据")
-                        }
-                    }
-                    
-                    Button(action: viewModel.backupAll) {
-                        HStack {
-                            Image(systemName: "doc")
-                            Text("完整备份")
-                        }
+        Form {
+            Section(header: Label("备份", systemImage: "square.and.arrow.up")) {
+                Button(action: { showingExport = true }) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("导出数据")
                     }
                 }
                 
-                Section(header: Label("恢复", systemImage: "square.and.arrow.down")) {
-                    Button(action: { showingImport = true }) {
-                        HStack {
-                            Image(systemName: "square.and.arrow.down")
-                            Text("导入数据")
-                        }
+                Button(action: viewModel.backupAll) {
+                    HStack {
+                        Image(systemName: "doc")
+                        Text("完整备份")
                     }
-                    
-                    Button(action: viewModel.restoreFromBackup) {
-                        HStack {
-                            Image(systemName: "arrow.uturn.backward")
-                            Text("从备份恢复")
-                        }
+                }
+            }
+            
+            Section(header: Label("恢复", systemImage: "square.and.arrow.down")) {
+                Button(action: { showingImport = true }) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.down")
+                        Text("导入数据")
                     }
                 }
                 
-                Section(header: Label("云同步", systemImage: "cloud")) {
-                    Toggle("iCloud 同步", isOn: .constant(false))
-                    
-                    Text("iCloud 同步功能开发中")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Section {
-                    Button(role: .destructive, action: viewModel.clearAllData) {
-                        HStack {
-                            Image(systemName: "trash")
-                            Text("清空所有数据")
-                        }
+                Button(action: viewModel.restoreFromBackup) {
+                    HStack {
+                        Image(systemName: "arrow.uturn.backward")
+                        Text("从备份恢复")
                     }
                 }
             }
-            .listStyle(.insetGrouped)
-            .navigationTitle("备份与恢复")
-            .sheet(isPresented: $showingExport) {
-                ExportDataView(viewModel: viewModel)
+            
+            Section(header: Label("云同步", systemImage: "cloud")) {
+                Toggle("iCloud 同步", isOn: .constant(false))
+                
+                Text("iCloud 同步功能开发中")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            .sheet(isPresented: $showingImport) {
-                ImportDataView(viewModel: viewModel)
+            
+            Section {
+                Button(role: .destructive, action: viewModel.clearAllData) {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text("清空所有数据")
+                    }
+                }
             }
-            .alert("提示", isPresented: $viewModel.showingAlert) {
-                Button("确定", role: .cancel) {}
-            } message: {
-                Text(viewModel.alertMessage ?? "")
-            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("备份与恢复")
+        .sheet(isPresented: $showingExport) {
+            ExportDataView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingImport) {
+            ImportDataView(viewModel: viewModel)
+        }
+        .alert("提示", isPresented: $viewModel.showingAlert) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text(viewModel.alertMessage ?? "")
+        }
     }
 }
 
@@ -87,20 +87,25 @@ class BackupRestoreViewModel: ObservableObject {
     @Published var showingAlert = false
     @Published var alertMessage: String?
     
+    private let context = CoreDataStack.shared.viewContext
+    
     // MARK: - 备份所有数据
     func backupAll() {
         isBackingUp = true
         
         do {
-            // ReplaceRule 使用 UserDefaults 存储，从 UserDefaults 获取
-            let rulesData = UserDefaults.standard.data(forKey: "replace_rules")
-            let rules = (try? JSONDecoder().decode([ReplaceRuleItem].self, from: rulesData ?? Data())) ?? []
+            // 从 CoreData 获取数据
+            let books = try context.fetch(Book.fetchRequest())
+            let sources = try context.fetch(BookSource.fetchRequest())
+            let rules = try context.fetch(ReplaceRule.fetchRequest())
+            
             var dataDict: [String: Any] = [
                 "version": "1.0",
                 "timestamp": Date().timeIntervalSince1970,
                 "books": books.map { bookToDict($0) },
                 "sources": sources.map { sourceToDict($0) },
-                "rules": rules.map { ruleItemToDict($0) }
+                "rules": rules.map { ruleToDict($0) }
+            ]
             
             let jsonData = try JSONSerialization.data(withJSONObject: dataDict, options: .prettyPrinted)
             
@@ -129,10 +134,9 @@ class BackupRestoreViewModel: ObservableObject {
     
     // MARK: - 清空所有数据
     func clearAllData() {
-        let context = CoreDataStack.shared.viewContext
-        
         // 删除所有实体
-        let entities = ["Book", "BookSource", "BookChapter", "Bookmark"]
+        let entities = ["Book", "BookSource", "BookChapter", "Bookmark", "ReplaceRule"]
+        
         for entityName in entities {
             let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: entityName)
             if let objects = try? context.fetch(fetchRequest) {
@@ -169,16 +173,21 @@ class BackupRestoreViewModel: ObservableObject {
         ]
     }
     
-    private func ruleItemToDict(_ rule: ReplaceRuleItem) -> [String: Any] {
+    private func ruleToDict(_ rule: ReplaceRule) -> [String: Any] {
         return [
+            "ruleId": rule.ruleId.uuidString,
             "name": rule.name,
             "pattern": rule.pattern,
             "replacement": rule.replacement,
+            "scope": rule.scope,
+            "scopeId": rule.scopeId ?? "",
             "isRegex": rule.isRegex,
             "enabled": rule.enabled,
-            "scope": rule.scope
+            "priority": rule.priority,
+            "order": rule.order
         ]
     }
+    
     private func saveExportFile(data: Data, filename: String) {
         // 保存到 Documents 目录
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -270,6 +279,7 @@ struct ImportDataView: View {
     }
 }
 
+// MARK: - 预览
 #Preview {
     BackupRestoreView()
 }

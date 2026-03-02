@@ -104,10 +104,23 @@
         <attribute name="createDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="book" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Book" inverseName="bookmarks" inverseEntity="Book"/>
     </entity>
+    <entity name="ReplaceRule" representedClassName="ReplaceRule" syncable="YES" codeGenerationType="none">
+        <attribute name="ruleId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+        <attribute name="pattern" optional="NO" attributeType="String"/>
+        <attribute name="replacement" optional="NO" attributeType="String"/>
+        <attribute name="scope" optional="NO" attributeType="String" defaultValueString="global"/>
+        <attribute name="scopeId" optional="YES" attributeType="String"/>
+        <attribute name="isRegex" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="enabled" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="priority" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="order" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+    </entity>
     <elements>
         <element name="Book" positionX="-63" positionY="-18" width="128" height="704"/>
         <element name="BookSource" positionX="180" positionY="-18" width="128" height="560"/>
         <element name="BookChapter" positionX="-316" positionY="-18" width="128" height="320"/>
         <element name="Bookmark" positionX="-316" positionY="320" width="128" height="220"/>
     </elements>
+        <element name="ReplaceRule" positionX="180" positionY="600" width="128" height="223"/>
 </model>

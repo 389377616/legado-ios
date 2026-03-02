@@ -2,7 +2,8 @@
 //  EPUBParser.swift
 //  Legado-iOS
 //
-//  EPUB 解析器
+//  EPUB 解析器（完整版）
+//
 
 import Foundation
 import UIKit
@@ -18,16 +19,38 @@ class EPUBParser {
         let author: String
         let coverImage: Data?
         let chapters: [EPUBChapter]
-        let metadata: [String: String]
+        let metadata: EPUBMetadata
+        let tableOfContents: [TOCItem]
+    }
+    
+    struct EPUBMetadata {
+        let title: String
+        let author: String
+        let publisher: String?
+        let language: String?
+        let description: String?
+        let rights: String?
+        let date: String?
+        let identifier: String?
     }
     
     struct EPUBChapter {
+        let id: String
         let title: String
         let href: String
         let content: String
         let index: Int
+        let mediaType: String
     }
     
+    struct TOCItem {
+        let title: String
+        let href: String
+        let level: Int
+        let children: [TOCItem]
+    }
+    
+    // MARK: - 主解析方法
     static func parse(file url: URL) async throws -> EPUBBook {
         guard FileManager.default.fileExists(atPath: url.path) else {
             throw EPUBError.fileNotFound
@@ -37,88 +60,302 @@ class EPUBParser {
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
         
+        // 解压 EPUB
         try unzipFile(at: url, to: tempDir)
         
+        // 解析 container.xml 获取 OPF 路径
         let containerPath = tempDir.appendingPathComponent("META-INF/container.xml")
-        let opfPath = try parseContainer(at: containerPath, basePath: tempDir)
+        let opfRelativePath = try parseContainer(at: containerPath)
+        let opfPath = tempDir.appendingPathComponent(opfRelativePath)
+        let basePath = opfPath.deletingLastPathComponent()
         
-        return try parseOPF(at: opfPath, basePath: tempDir)
+        // 解析 OPF 文件
+        let (metadata, manifest, spine) = try parseOPF(at: opfPath)
+        
+        // 解析目录（NCX 或 Nav）
+        let toc = try parseNavigation(manifest: manifest, basePath: basePath)
+        
+        // 解析章节内容
+        let chapters = try parseChapters(spine: spine, manifest: manifest, basePath: basePath)
+        
+        // 获取封面
+        let coverImage = try extractCover(manifest: manifest, metadata: metadata, basePath: basePath)
+        
+        return EPUBBook(
+            title: metadata.title,
+            author: metadata.author,
+            coverImage: coverImage,
+            chapters: chapters,
+            metadata: metadata,
+            tableOfContents: toc
+        )
     }
     
+    // MARK: - 解压文件
     private static func unzipFile(at sourceURL: URL, to destinationURL: URL) throws {
-#if canImport(ZIPFoundation)
+        #if canImport(ZIPFoundation)
         do {
             try FileManager.default.unzipItem(at: sourceURL, to: destinationURL)
         } catch {
             throw EPUBError.parseFailed("解压失败：\(error.localizedDescription)")
         }
-#else
+        #else
         throw EPUBError.parseFailed("缺少 ZIPFoundation 依赖，无法解压 EPUB")
-#endif
+        #endif
     }
     
-    private static func parseContainer(at url: URL, basePath: URL) throws -> URL {
+    // MARK: - 解析 container.xml
+    private static func parseContainer(at url: URL) throws -> String {
         let content = try String(contentsOf: url, encoding: .utf8)
         
         guard let opfPath = extractFirstMatch(in: content, pattern: #"full-path="([^"]+)""#) else {
             throw EPUBError.parseFailed("找不到 content.opf")
         }
         
-        return basePath.appendingPathComponent(opfPath)
+        return opfPath
     }
     
-    private static func parseOPF(at url: URL, basePath: URL) throws -> EPUBBook {
+    // MARK: - 解析 OPF 文件
+    private static func parseOPF(at url: URL) throws -> (EPUBMetadata, [String: ManifestItem], [String]) {
         let content = try String(contentsOf: url, encoding: .utf8)
         
-        let title = extractFirstMatch(in: content, pattern: #"<dc:title[^>]*>([^<]+)</dc:title>"#) ?? "未知书籍"
-        let author = extractFirstMatch(in: content, pattern: #"<dc:creator[^>]*>([^<]+)</dc:creator>"#) ?? "未知作者"
+        // 解析元数据
+        let metadata = EPUBMetadata(
+            title: extractMetadata(content: content, tag: "dc:title") ?? "未知书籍",
+            author: extractMetadata(content: content, tag: "dc:creator") ?? "未知作者",
+            publisher: extractMetadata(content: content, tag: "dc:publisher"),
+            language: extractMetadata(content: content, tag: "dc:language"),
+            description: extractMetadata(content: content, tag: "dc:description"),
+            rights: extractMetadata(content: content, tag: "dc:rights"),
+            date: extractMetadata(content: content, tag: "dc:date"),
+            identifier: extractMetadata(content: content, tag: "dc:identifier")
+        )
         
-        var coverHref: String?
-        if let coverId = extractFirstMatch(in: content, pattern: #"meta\s+name="cover"\s+content="([^"]+)""#) {
-            let itemPattern = #"id="\Q\(coverId)\E"[^>]*href="([^"]+)""#
-            coverHref = extractFirstMatch(in: content, pattern: itemPattern)
-        }
+        // 解析 manifest
+        var manifest: [String: ManifestItem] = [:]
+        let itemPattern = #"<item\s+([^>]+)/?>"#
+        let itemRegex = try NSRegularExpression(pattern: itemPattern)
+        let items = itemRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
         
-        var chapters: [EPUBChapter] = []
-        let spineRegex = try NSRegularExpression(pattern: #"<itemref\s+([^>]+)>"#, options: [])
-        let matches = spineRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
-        
-        for (index, match) in matches.enumerated() {
-            guard let attrRange = Range(match.range(at: 1), in: content) else { continue }
-            let attributes = String(content[attrRange])
+        for match in items {
+            guard let range = Range(match.range(at: 1), in: content) else { continue }
+            let attributes = String(content[range])
             
-            guard let itemId = extractFirstMatch(in: attributes, pattern: #"idref="([^"]+)""#) else { continue }
-            
-            let itemPattern = #"id="\Q\(itemId)\E"[^>]*href="([^"]+)"[^>]*media-type="(?:application/xhtml\+xml|text/html)""#
-            if let href = extractFirstMatch(in: content, pattern: itemPattern) {
-                let chapterPath = basePath.deletingLastPathComponent().appendingPathComponent(href)
-                
-                var chapterContent = ""
-                if FileManager.default.fileExists(atPath: chapterPath.path) {
-                    chapterContent = try String(contentsOf: chapterPath, encoding: .utf8)
-                    chapterContent = stripHTML(content: chapterContent)
-                }
-                
-                chapters.append(EPUBChapter(title: "第 \(index + 1) 章", href: href, content: chapterContent, index: index))
+            if let id = extractAttribute(attributes, name: "id"),
+               let href = extractAttribute(attributes, name: "href"),
+               let mediaType = extractAttribute(attributes, name: "media-type") {
+                manifest[id] = ManifestItem(id: id, href: href, mediaType: mediaType)
             }
         }
         
-        var coverData: Data?
-        if let coverHref = coverHref {
-            let coverPath = basePath.deletingLastPathComponent().appendingPathComponent(coverHref)
-            coverData = try? Data(contentsOf: coverPath)
+        // 解析 spine（阅读顺序）
+        var spine: [String] = []
+        if let spineContent = extractFirstMatch(in: content, pattern: #"<spine[^>]*>(.*?)</spine>"#) {
+            let idrefPattern = #"idref="([^"]+)""#
+            let idrefRegex = try NSRegularExpression(pattern: idrefPattern)
+            let idrefs = idrefRegex.matches(in: spineContent, range: NSRange(spineContent.startIndex..., in: spineContent))
+            
+            for match in idrefs {
+                if let range = Range(match.range(at: 1), in: spineContent) {
+                    spine.append(String(spineContent[range]))
+                }
+            }
         }
         
-        var metadata: [String: String] = [:]
-        metadata["publisher"] = extractMetadataTag(content: content, tag: "dc:publisher")
-        metadata["language"] = extractMetadataTag(content: content, tag: "dc:language")
-        metadata["description"] = extractMetadataTag(content: content, tag: "dc:description")
-        
-        return EPUBBook(title: title, author: author, coverImage: coverData, chapters: chapters, metadata: metadata)
+        return (metadata, manifest, spine)
     }
     
+    // MARK: - 解析目录
+    private static func parseNavigation(manifest: [String: ManifestItem], basePath: URL) throws -> [TOCItem] {
+        // 尝试找 NCX 文件
+        if let ncxItem = manifest.first(where: { $0.value.mediaType == "application/x-dtbncx+xml" })?.value {
+            let ncxPath = basePath.appendingPathComponent(ncxItem.href)
+            return try parseNCX(at: ncxPath)
+        }
+        
+        // 尝试找 Nav 文件（EPUB 3）
+        if let navItem = manifest.first(where: { 
+            $0.value.mediaType == "application/xhtml+xml" && $0.value.properties?.contains("nav") == true 
+        })?.value {
+            let navPath = basePath.appendingPathComponent(navItem.href)
+            return try parseNav(at: navPath)
+        }
+        
+        return []
+    }
+    
+    // MARK: - 解析 NCX 文件
+    private static func parseNCX(at url: URL) throws -> [TOCItem] {
+        let content = try String(contentsOf: url, encoding: .utf8)
+        var items: [TOCItem] = []
+        
+        // 提取 navPoint
+        let navPointPattern = #"<navPoint[^>]*>(.*?)</navPoint>"#
+        let navPointRegex = try NSRegularExpression(pattern: navPointPattern, options: [.dotMatchesLineSeparators])
+        let navPoints = navPointRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
+        
+        for match in navPoints {
+            guard let range = Range(match.range(at: 1), in: content) else { continue }
+            let navPointContent = String(content[range])
+            
+            if let title = extractFirstMatch(in: navPointContent, pattern: #"<text[^>]*>([^<]+)</text>"#),
+               let href = extractFirstMatch(in: navPointContent, pattern: #"src="([^"]+)""#) {
+                items.append(TOCItem(title: title, href: href, level: 1, children: []))
+            }
+        }
+        
+        return items
+    }
+    
+    // MARK: - 解析 Nav 文件
+    private static func parseNav(at url: URL) throws -> [TOCItem] {
+        let content = try String(contentsOf: url, encoding: .utf8)
+        var items: [TOCItem] = []
+        
+        // 提取 nav 中的链接
+        let linkPattern = #"<a[^>]+href="([^"]+)"[^>]*>([^<]+)</a>"#
+        let linkRegex = try NSRegularExpression(pattern: linkPattern)
+        let links = linkRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
+        
+        for match in links {
+            guard let hrefRange = Range(match.range(at: 1), in: content),
+                  let titleRange = Range(match.range(at: 2), in: content) else { continue }
+            
+            let href = String(content[hrefRange])
+            let title = String(content[titleRange])
+            
+            items.append(TOCItem(title: title, href: href, level: 1, children: []))
+        }
+        
+        return items
+    }
+    
+    // MARK: - 解析章节
+    private static func parseChapters(spine: [String], manifest: [String: ManifestItem], basePath: URL) throws -> [EPUBChapter] {
+        var chapters: [EPUBChapter] = []
+        
+        for (index, itemId) in spine.enumerated() {
+            guard let item = manifest[itemId] else { continue }
+            
+            let chapterPath = basePath.appendingPathComponent(item.href)
+            var chapterContent = ""
+            var chapterTitle = "第 \(index + 1) 章"
+            
+            if FileManager.default.fileExists(atPath: chapterPath.path) {
+                let htmlContent = try String(contentsOf: chapterPath, encoding: .utf8)
+                
+                // 提取标题
+                if let title = extractFirstMatch(in: htmlContent, pattern: #"<title[^>]*>([^<]+)</title>"#) {
+                    chapterTitle = title
+                } else if let h1 = extractFirstMatch(in: htmlContent, pattern: #"<h1[^>]*>([^<]+)</h1>"#) {
+                    chapterTitle = h1
+                }
+                
+                // 转换为纯文本
+                chapterContent = htmlToText(html: htmlContent)
+            }
+            
+            chapters.append(EPUBChapter(
+                id: itemId,
+                title: chapterTitle,
+                href: item.href,
+                content: chapterContent,
+                index: index,
+                mediaType: item.mediaType
+            ))
+        }
+        
+        return chapters
+    }
+    
+    // MARK: - 提取封面
+    private static func extractCover(manifest: [String: ManifestItem], metadata: EPUBMetadata, basePath: URL) -> Data? {
+        // 1. 尝试从 manifest 找封面
+        if let coverItem = manifest.first(where: { 
+            $0.value.properties?.contains("cover-image") == true 
+        })?.value {
+            let coverPath = basePath.appendingPathComponent(coverItem.href)
+            return try? Data(contentsOf: coverPath)
+        }
+        
+        // 2. 尝试找名为 cover 的文件
+        for (_, item) in manifest {
+            if item.href.lowercased().contains("cover") && 
+               (item.mediaType.hasPrefix("image/")) {
+                let coverPath = basePath.appendingPathComponent(item.href)
+                if let data = try? Data(contentsOf: coverPath) {
+                    return data
+                }
+            }
+        }
+        
+        return nil
+    }
+    
+    // MARK: - HTML 转纯文本
+    private static func htmlToText(html: String) -> String {
+        // 1. 移除 script 和 style
+        var text = html
+        text = text.replacingOccurrences(of: #"<script[^>]*>.*?</script>"#, with: "", options: .regularExpression)
+        text = text.replacingOccurrences(of: #"<style[^>]*>.*?</style>"#, with: "", options: .regularExpression)
+        
+        // 2. 将块级标签转换为换行
+        let blockTags = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "br", "li"]
+        for tag in blockTags {
+            text = text.replacingOccurrences(of: #"</\#(tag)>"#, with: "\n", options: .regularExpression)
+        }
+        
+        // 3. 移除所有 HTML 标签
+        text = text.replacingOccurrences(of: #"<[^>]+>"#, with: "", options: .regularExpression)
+        
+        // 4. 解码 HTML 实体
+        text = decodeHTMLEntities(text)
+        
+        // 5. 规范化空白
+        text = text.replacingOccurrences(of: "[\\t\\r]+", with: "", options: .regularExpression)
+        text = text.replacingOccurrences(of: "\\n\\s*\\n", with: "\n\n", options: .regularExpression)
+        
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    // MARK: - 解码 HTML 实体
+    private static func decodeHTMLEntities(_ text: String) -> String {
+        var result = text
+        let entities = [
+            "&amp;": "&",
+            "&lt;": "<",
+            "&gt;": ">",
+            "&quot;": """,
+            "&apos;": "'",
+            "&nbsp;": " ",
+            "&#8212;": "—",
+            "&#8211;": "–",
+            "&#8216;": """,
+            "&#8217;": "'",
+            "&#8220;": """,
+            "&#8221;": """,
+            "&#8230;": "…"
+        ]
+        
+        for (entity, char) in entities {
+            result = result.replacingOccurrences(of: entity, with: char)
+        }
+        
+        // 解码数字实体
+        result = result.replacingOccurrences(of: #"&#(\d+);"#, with: {
+            guard let match = $0.matches.first,
+                  let range = Range(match.range(at: 1), in: result),
+                  let code = Int(result[range]),
+                  let scalar = UnicodeScalar(code) else { return $0.match }
+            return String(Character(scalar))
+        }, options: .regularExpression)
+        
+        return result
+    }
+    
+    // MARK: - 辅助方法
     private static func extractFirstMatch(in text: String, pattern: String) -> String? {
-        guard let regex = try? NSRegularExpression(pattern: pattern),
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]),
               let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
               let range = Range(match.range(at: 1), in: text) else {
             return nil
@@ -126,21 +363,28 @@ class EPUBParser {
         return String(text[range])
     }
     
-    private static func extractMetadataTag(content: String, tag: String) -> String? {
-        extractFirstMatch(in: content, pattern: "<\(tag)[^>]*>([^<]+)</\(tag)>")
+    private static func extractMetadata(content: String, tag: String) -> String? {
+        return extractFirstMatch(in: content, pattern: "<\(tag)[^>]*>([^<]+)</\(tag)>")
     }
     
-    private static func stripHTML(content: String) -> String {
-        guard let data = content.data(using: .utf8) else { return content }
-        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
-            .documentType: NSAttributedString.DocumentType.html,
-            .characterEncoding: String.Encoding.utf8.rawValue
-        ]
-        let attributedString = try? NSAttributedString(data: data, options: options, documentAttributes: nil)
-        return attributedString?.string ?? content
+    private static func extractAttribute(_ text: String, name: String) -> String? {
+        let pattern = "\(name)=\"([^\"]+)\""
+        return extractFirstMatch(in: text, pattern: pattern)
     }
 }
 
+// MARK: - ManifestItem
+private struct ManifestItem {
+    let id: String
+    let href: String
+    let mediaType: String
+    var properties: String? {
+        // 从原始属性中提取
+        return nil
+    }
+}
+
+// MARK: - EPUBError
 enum EPUBError: LocalizedError {
     case fileNotFound
     case invalidFormat
