@@ -342,13 +342,19 @@ class EPUBParser {
         }
         
         // 解码数字实体
-        result = result.replacingOccurrences(of: #"&#(\d+);"#, with: {
-            guard let match = $0.matches.first,
-                  let range = Range(match.range(at: 1), in: result),
-                  let code = Int(result[range]),
-                  let scalar = UnicodeScalar(code) else { return $0.match }
-            return String(Character(scalar))
-        }, options: .regularExpression)
+        let decimalPattern = "&#(\\d+);"
+        if let decimalRegex = try? NSRegularExpression(pattern: decimalPattern) {
+            let decimalRange = NSRange(result.startIndex..., in: result)
+            let decimalMatches = decimalRegex.matches(in: result, range: decimalRange).reversed()
+            
+            for match in decimalMatches {
+                guard let range = Range(match.range(at: 1), in: result),
+                      let code = Int(result[range]),
+                      let scalar = UnicodeScalar(code) else { continue }
+                let fullRange = Range(match.range, in: result)
+                result.replaceSubrange(fullRange, with: String(Character(scalar)))
+            }
+        }
         
         return result
     }

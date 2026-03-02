@@ -213,7 +213,7 @@ private class XMLFeedParser: NSObject, XMLParserDelegate {
     }
     
     private func extractImageFromHtml(_ html: String) -> String? {
-        if let regex = try? NSRegularExpression(pattern: #"<img[^>]+src="([^"]+)""#),
+        if let regex = try? NSRegularExpression(pattern: "<img[^>]+src=\"([^\"]+)\""),
            let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
            let range = Range(match.range(at: 1), in: html) {
             return String(html[range])
@@ -296,112 +296,98 @@ struct RSSSubscriptionView: View {
         List {
             if viewModel.sources.isEmpty {
                 VStack(spacing: 12) {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.system(size: 40))
-                            .foregroundColor(.orange.opacity(0.6))
-                        Text("还没有订阅源")
-                            .font(.headline)
-                        Text("点击右上角 + 添加 RSS 订阅")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
-                    .listRowBackground(Color.clear)
-                } else {
-                    // 订阅源列表
-                    Section("订阅源") {
-                        ForEach(viewModel.sources) { source in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(source.name)
-                                        .font(.headline)
-                                    Text(source.url)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(1)
-                                }
-                                Spacer()
-                                Circle()
-                                    .fill(source.enabled ? Color.green : Color.gray)
-                                    .frame(width: 8, height: 8)
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.system(size: 40))
+                        .foregroundColor(.orange.opacity(0.6))
+                    Text("还没有订阅源")
+                        .font(.headline)
+                    Text("点击右上角 + 添加 RSS 订阅")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+                .listRowBackground(Color.clear)
+            } else {
+                // 订阅源列表
+                Section("订阅源") {
+                    ForEach(viewModel.sources) { source in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(source.name)
+                                    .font(.headline)
+                                Text(source.url)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
                             }
-                        }
-                        .onDelete { indexSet in
-                            if let index = indexSet.first {
-                                viewModel.removeSource(at: index)
-                            }
+                            Spacer()
+                            Circle()
+                                .fill(source.enabled ? Color.green : Color.gray)
+                                .frame(width: 8, height: 8)
                         }
                     }
-                    
-                    // 文章列表
-                    if !viewModel.articles.isEmpty {
-                        Section("最新文章") {
-                            ForEach(viewModel.articles.prefix(50)) { article in
-                                Link(destination: URL(string: article.link) ?? URL(string: "about:blank")!) {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text(article.title)
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.primary)
-                                            .lineLimit(2)
+                    .onDelete { indexSet in
+                        if let index = indexSet.first {
+                            viewModel.removeSource(at: index)
+                        }
+                    }
+                }
+                
+                // 文章列表
+                if !viewModel.articles.isEmpty {
+                    Section("最新文章") {
+                        ForEach(viewModel.articles.prefix(50)) { article in
+                            Link(destination: URL(string: article.link) ?? URL(string: "about:blank")!) {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(article.title)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.primary)
+                                        .lineLimit(2)
+                                    
+                                    HStack {
+                                        Text(article.sourceName)
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
                                         
-                                        HStack {
-                                            Text(article.sourceName)
-                                                .font(.caption2)
-                                                .foregroundColor(.blue)
-                                            
-                                            if let date = article.pubDate {
-                                                Text("·")
-                                                    .foregroundColor(.secondary)
-                                                Text(date, style: .relative)
-                                                    .font(.caption2)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                        }
-                                        
-                                        if let desc = article.description, !desc.isEmpty {
-                                            Text(desc)
-                                                .font(.caption)
+                                        if let date = article.pubDate {
+                                            Text("·")
                                                 .foregroundColor(.secondary)
-                                                .lineLimit(2)
+                                            Text(date, style: .relative)
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
                                         }
                                     }
-                                    .padding(.vertical, 2)
+                                    
+                                    if let desc = article.description, !desc.isEmpty {
+                                        Text(desc)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(2)
+                                    }
                                 }
+                                .padding(.vertical, 2)
                             }
                         }
                     }
                 }
             }
-            .listStyle(.insetGrouped)
-            .navigationTitle("订阅源")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddSource = true }) {
-                        Image(systemName: "plus")
-                    }
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { Task { await viewModel.refreshAll() } }) {
-                        if viewModel.isLoading {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                    }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("订阅源")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showingAddSource = true }) {
+                    Image(systemName: "plus")
                 }
             }
-            .task {
-                await viewModel.refreshAll()
-            }
-            .alert("添加订阅源", isPresented: $showingAddSource) {
-                TextField("名称", text: $newSourceName)
-                TextField("RSS URL", text: $newSourceUrl)
-                    .textInputAutocapitalization(.never)
-                Button("取消", role: .cancel) { }
-                Button("添加") {
-                        Task { await viewModel.refreshAll() }
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: { Task { await viewModel.refreshAll() } }) {
+                    if viewModel.isLoading {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "arrow.clockwise")
                     }
                 }
             }
@@ -409,10 +395,25 @@ struct RSSSubscriptionView: View {
         .task {
             await viewModel.refreshAll()
         }
+        .alert("添加订阅源", isPresented: $showingAddSource) {
+            TextField("名称", text: $newSourceName)
+            TextField("RSS URL", text: $newSourceUrl)
+                .textInputAutocapitalization(.never)
+            Button("取消", role: .cancel) {
+                newSourceName = ""
+                newSourceUrl = ""
+            }
+            Button("添加") {
+                if !newSourceName.isEmpty && !newSourceUrl.isEmpty {
+                    viewModel.addSource(name: newSourceName, url: newSourceUrl)
+                    newSourceName = ""
+                    newSourceUrl = ""
+                    Task { await viewModel.refreshAll() }
+                }
+            }
+        }
     }
 }
-
-// MARK: - 错误类型
 
 // MARK: - 错误类型
 enum RSSError: LocalizedError {

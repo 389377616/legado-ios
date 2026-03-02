@@ -135,7 +135,6 @@ struct SettingsView: View {
             }
         }
     }
-}
 
 // MARK: - 关于视图
 struct AboutView: View {

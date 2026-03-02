@@ -246,14 +246,6 @@ struct ReplaceRuleView: View {
 
 // MARK: - 编辑界面
 struct ReplaceRuleEditView: View {
-    var viewModel: ReplaceRuleViewModel
-    let rule: ReplaceRuleItem?
-    @Environment(\.dismiss) var dismiss
-struct ReplaceRuleEditView: View {
-    var viewModel: ReplaceRuleViewModel
-    let rule: ReplaceRuleItem?
-    @Environment(\.dismiss) var dismiss
-struct ReplaceRuleEditView: View {
     @ObservedObject var viewModel: ReplaceRuleViewModel
     let rule: ReplaceRuleItem?
     @Environment(\.dismiss) var dismiss

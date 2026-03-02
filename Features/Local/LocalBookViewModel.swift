@@ -143,9 +143,6 @@ class LocalBookViewModel: ObservableObject {
         if let description = epubBook.metadata.description {
             book.intro = description
         }
-        if let description = epubBook.metadata["description"] {
-            book.intro = description
-        }
         
         // 设置第一章
         book.durChapterIndex = 0
@@ -187,10 +184,10 @@ class LocalBookViewModel: ObservableObject {
     private func splitChapters(content: String) -> [(title: String, content: String)] {
         // 章节匹配正则
         let chapterPatterns = [
-            #"^第 [零一二三四五六七八九十百千万 0-9]+[章回卷节部篇]"#,
-            #"^第 [0-9]+ 章"#,
-            #"^Chapter [0-9]+"#,
-            #"^\s*第 [0-9 一二三四五六七八九十]+节"#
+            "^第[零一二三四五六七八九十百千万 0-9]+[章回卷节部篇]",
+            "^第[0-9]+章",
+            "^Chapter[0-9]+",
+            "^\\s*第[0-9一二三四五六七八九十]+节"
         ]
         
         var chapters: [(title: String, content: String)] = []
@@ -297,13 +294,13 @@ struct LocalBookView: View {
         Group {
             if viewModel.localBooks.isEmpty {
                 EmptyStateView(
-                        title: "暂无本地书籍",
-                        subtitle: "点击右上角导入 TXT 或 EPUB 文件",
-                        imageName: "book.closed"
-                    )
-                } else {
-                    List {
-                        ForEach(viewModel.localBooks, id: \.bookId) { book in
+                    title: "暂无本地书籍",
+                    subtitle: "点击右上角导入 TXT 或 EPUB 文件",
+                    imageName: "book.closed"
+                )
+            } else {
+                List {
+                    ForEach(viewModel.localBooks, id: \.bookId) { book in
                         HStack {
                             BookCoverView(url: book.coverUrl)
                                 .frame(width: 50, height: 70)
@@ -326,50 +323,49 @@ struct LocalBookView: View {
                             
                             Spacer()
                         }
-                            .swipeActions {
-                                Button(role: .destructive) {
-                                    viewModel.deleteBook(book)
-                                } label: {
-                                    Label("删除", systemImage: "trash")
-                                }
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                viewModel.deleteBook(book)
+                            } label: {
+                                Label("删除", systemImage: "trash")
                             }
                         }
                     }
                 }
             }
-            .navigationTitle("本地书籍")
-            .toolbar {
-                ToolbarItem {
-                    Button(action: { showingFilePicker = true }) {
-                        Label("导入", systemImage: "plus")
-                    }
+        }
+        .navigationTitle("本地书籍")
+        .toolbar {
+            ToolbarItem {
+                Button(action: { showingFilePicker = true }) {
+                    Label("导入", systemImage: "plus")
                 }
             }
-            .fileImporter(
-                isPresented: $showingFilePicker,
-                allowedContentTypes: [.plainText, .epub],
-                allowsMultipleSelection: true
-            ) { result in
-                switch result {
-                case .success(let urls):
-                    for url in urls {
-                        Task {
-                            let granted = url.startAccessingSecurityScopedResource()
-                            defer {
-                                if granted {
-                                    url.stopAccessingSecurityScopedResource()
-                                }
+        }
+        .fileImporter(
+            isPresented: $showingFilePicker,
+            allowedContentTypes: [.plainText, .epub],
+            allowsMultipleSelection: true
+        ) { result in
+            switch result {
+            case .success(let urls):
+                for url in urls {
+                    Task {
+                        let granted = url.startAccessingSecurityScopedResource()
+                        defer {
+                            if granted {
+                                url.stopAccessingSecurityScopedResource()
                             }
-                            try? await viewModel.importBook(url: url)
                         }
+                        try? await viewModel.importBook(url: url)
                     }
-                case .failure(let error):
-                    print("导入失败：\(error)")
                 }
+            case .failure(let error):
+                print("导入失败：\(error)")
             }
-            .task {
-                await viewModel.loadLocalBooks()
-            }
+        }
+        .task {
+            await viewModel.loadLocalBooks()
         }
     }
 }

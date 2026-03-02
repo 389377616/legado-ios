@@ -26,53 +26,40 @@ struct BookshelfView: View {
             }
         }
         .navigationTitle("书架")
-        Group {
-            if viewModel.books.isEmpty && !viewModel.isLoading {
-                EmptyStateView(
-                        title: "书架空空如也",
-                        subtitle: "点击右上角添加书籍或导入书源",
-                        imageName: "books.vertical"
-                    )
-                } else {
-                    bookshelfContent
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Picker("", selection: $viewModel.viewMode) {
+                    Image(systemName: "square.grid.2x2")
+                        .tag(BookshelfViewModel.ViewMode.grid)
+                    Image(systemName: "list.bullet")
+                        .tag(BookshelfViewModel.ViewMode.list)
                 }
+                .pickerStyle(.segmented)
             }
-            .navigationTitle("书架")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Picker("", selection: $viewModel.viewMode) {
-                        Image(systemName: "square.grid.2x2")
-                            .tag(BookshelfViewModel.ViewMode.grid)
-                        Image(systemName: "list.bullet")
-                            .tag(BookshelfViewModel.ViewMode.list)
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 12) {
+                    Button(action: { showingSourceManage = true }) {
+                        Image(systemName: "gearshape")
                     }
-                    .pickerStyle(.segmented)
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 12) {
-                        Button(action: { showingSourceManage = true }) {
-                            Image(systemName: "gearshape")
-                        }
-                        
-                        Button(action: { showingAddBook = true }) {
-                            Image(systemName: "plus")
-                        }
+                    
+                    Button(action: { showingAddBook = true }) {
+                        Image(systemName: "plus")
                     }
                 }
             }
-            .sheet(isPresented: $showingSourceManage) {
-                SourceManageView()
-            }
-            .sheet(isPresented: $showingAddBook) {
-                AddBookView()
-            }
-            .task {
-                await viewModel.loadBooks()
-            }
-            .refreshable {
-                await viewModel.refreshBooks()
-            }
+        }
+        .sheet(isPresented: $showingSourceManage) {
+            SourceManageView()
+        }
+        .sheet(isPresented: $showingAddBook) {
+            AddBookView()
+        }
+        .task {
+            await viewModel.loadBooks()
+        }
+        .refreshable {
+            await viewModel.refreshBooks()
         }
     }
     
