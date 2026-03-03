@@ -27,58 +27,6 @@ struct ReplaceRuleGroup: Identifiable, Codable {
     }
 }
 
-// MARK: - 替换规则项（用于导入导出）
-
-struct ReplaceRuleItem: Identifiable, Codable {
-    let id: UUID
-    var name: String
-    var pattern: String
-    var replacement: String
-    var scope: String // global, book, chapter
-    var scopeId: String? // 书籍 ID 或章节 ID
-    var isRegex: Bool
-    var enabled: Bool
-    var priority: Int
-    var order: Int
-    
-    init(
-        name: String,
-        pattern: String,
-        replacement: String,
-        scope: String = "global",
-        scopeId: String? = nil,
-        isRegex: Bool = false,
-        enabled: Bool = true,
-        priority: Int = 0,
-        order: Int = 0
-    ) {
-        self.id = UUID()
-        self.name = name
-        self.pattern = pattern
-        self.replacement = replacement
-        self.scope = scope
-        self.scopeId = scopeId
-        self.isRegex = isRegex
-        self.enabled = enabled
-        self.priority = priority
-        self.order = order
-    }
-    
-    /// 从 CoreData 实体创建
-    init(from rule: ReplaceRule) {
-        self.id = rule.ruleId
-        self.name = rule.name
-        self.pattern = rule.pattern
-        self.replacement = rule.replacement
-        self.scope = rule.scope
-        self.scopeId = rule.scopeId
-        self.isRegex = rule.isRegex
-        self.enabled = rule.enabled
-        self.priority = Int(rule.priority)
-        self.order = Int(rule.order)
-    }
-}
-
 // MARK: - 替换引擎增强版
 
 class ReplaceEngineEnhanced {
@@ -113,6 +61,19 @@ class ReplaceEngineEnhanced {
         
         return result
     }
+
+    func applyForReader(
+        text: String,
+        bookId: UUID,
+        chapterId: UUID,
+        context: NSManagedObjectContext? = nil
+    ) -> String {
+        var rules: [ReplaceRuleItem] = []
+        rules.append(contentsOf: getRules(scope: "global", scopeId: nil, context: context))
+        rules.append(contentsOf: getRules(scope: "book", scopeId: bookId.uuidString, context: context))
+        rules.append(contentsOf: getRules(scope: "chapter", scopeId: chapterId.uuidString, context: context))
+        return baseEngine.apply(text: text, items: rules)
+    }
     
     /// 应用书籍级规则
     func applyBookRules(text: String, bookId: UUID, context: NSManagedObjectContext? = nil) -> String {
@@ -138,7 +99,7 @@ class ReplaceEngineEnhanced {
         rules.append(contentsOf: getRules(scope: "global", scopeId: nil, context: context))
         
         // 书籍级规则
-        if scope != "global", let id = scopeId {
+        if scope == "book", let id = scopeId {
             rules.append(contentsOf: getRules(scope: "book", scopeId: id, context: context))
         }
         

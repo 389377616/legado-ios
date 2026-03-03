@@ -10,12 +10,18 @@ import SwiftUI
 
 struct PagedReaderView: View {
     @ObservedObject var viewModel: ReaderViewModel
-    @AppStorage("pageAnimation") var pageAnimationRaw: String = PageAnimationType.slide.rawValue
+    @AppStorage("pageAnimation") var pageAnimationRaw: String = PageAnimationType.cover.rawValue
     let onTap: () -> Void
     
     @State private var pages: [String] = []
-    @State private var currentPage: Int = 0
     @State private var containerSize: CGSize = .zero
+
+    private var currentPageBinding: Binding<Int> {
+        Binding(
+            get: { viewModel.currentPageIndex },
+            set: { viewModel.currentPageIndex = $0 }
+        )
+    }
     
     private var pageAnimation: PageAnimationType {
         PageAnimationType(rawValue: pageAnimationRaw) ?? .slide
@@ -77,7 +83,7 @@ struct PagedReaderView: View {
             CoverPageView(
                 viewModel: viewModel,
                 pages: pages,
-                currentPage: $currentPage,
+                currentPage: currentPageBinding,
                 onTap: onTap
             )
             
@@ -85,7 +91,7 @@ struct PagedReaderView: View {
             SlidePageView(
                 viewModel: viewModel,
                 pages: pages,
-                currentPage: $currentPage,
+                currentPage: currentPageBinding,
                 onTap: onTap
             )
             
@@ -93,10 +99,10 @@ struct PagedReaderView: View {
             scrollView
             
         case .simulation:
-            SlidePageView(
+            CurlPageView(
                 viewModel: viewModel,
                 pages: pages,
-                currentPage: $currentPage,
+                currentPage: currentPageBinding,
                 onTap: onTap
             )
             
@@ -104,7 +110,7 @@ struct PagedReaderView: View {
             InstantPageView(
                 viewModel: viewModel,
                 pages: pages,
-                currentPage: $currentPage,
+                currentPage: currentPageBinding,
                 onTap: onTap
             )
         }
@@ -132,7 +138,7 @@ struct PagedReaderView: View {
     
     private var pageIndicator: some View {
         HStack(spacing: 4) {
-            Text("\(currentPage + 1) / \(pages.count)")
+            Text("\(min(viewModel.currentPageIndex + 1, pages.count)) / \(pages.count)")
                 .font(.caption2)
                 .foregroundColor(.secondary)
             
@@ -179,15 +185,14 @@ struct PagedReaderView: View {
         // 使用缓存分页
         let result = PageSplitCache.shared.getOrSplit(text: content, config: config)
         
-        let oldPage = currentPage
+        let oldPage = viewModel.currentPageIndex
         pages = result.pages
         viewModel.totalPages = result.totalPages
         
         // 保持页码在有效范围内
         if oldPage >= pages.count {
-            currentPage = max(0, pages.count - 1)
+            viewModel.currentPageIndex = max(0, pages.count - 1)
         }
-        viewModel.currentPageIndex = currentPage
     }
     
     private func invalidateAndResplit() {

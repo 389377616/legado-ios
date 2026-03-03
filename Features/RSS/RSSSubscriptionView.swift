@@ -338,7 +338,7 @@ struct RSSSubscriptionView: View {
                 if !viewModel.articles.isEmpty {
                     Section("最新文章") {
                         ForEach(viewModel.articles.prefix(50)) { article in
-                            Link(destination: URL(string: article.link) ?? URL(string: "about:blank")!) {
+                            NavigationLink(destination: RSSArticleDetailView(article: article)) {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(article.title)
                                         .font(.subheadline)
@@ -412,6 +412,105 @@ struct RSSSubscriptionView: View {
                 }
             }
         }
+    }
+}
+
+struct RSSArticleDetailView: View {
+    let article: RSSArticle
+
+    @State private var isFetching = false
+    @State private var fetchError: String?
+    @State private var fullText: FullTextResult?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(article.title)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                HStack(spacing: 8) {
+                    Text(article.sourceName)
+                        .font(.caption)
+                        .foregroundColor(.blue)
+
+                    if let date = article.pubDate {
+                        Text("·")
+                            .foregroundColor(.secondary)
+                        Text(date, style: .date)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if let desc = article.description, !desc.isEmpty {
+                    Text(desc)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+
+                Divider()
+
+                HStack(spacing: 12) {
+                    if let url = URL(string: article.link) {
+                        Link("打开原文", destination: url)
+                    }
+
+                    Button(isFetching ? "抓取中..." : "抓取全文") {
+                        Task { @MainActor in
+                            await fetchFullText()
+                        }
+                    }
+                    .disabled(isFetching)
+                }
+
+                if isFetching {
+                    ProgressView()
+                }
+
+                if let err = fetchError {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+
+                if let full = fullText {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(full.title)
+                            .font(.headline)
+
+                        if let author = full.author, !author.isEmpty {
+                            Text(author)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Text(full.content)
+                            .font(.body)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("正文")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func fetchFullText() async {
+        guard !isFetching else { return }
+        isFetching = true
+        fetchError = nil
+        fullText = nil
+
+        do {
+            let result = try await FullTextFetcher.shared.fetchFullText(from: article.link)
+            fullText = result
+        } catch {
+            fetchError = error.localizedDescription
+        }
+
+        isFetching = false
     }
 }
 

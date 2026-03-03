@@ -54,6 +54,7 @@ extension ReplaceRule {
         rule.isRegex = item.isRegex
         rule.enabled = item.enabled
         rule.priority = Int32(item.priority)
+        rule.order = Int32(item.order)
         return rule
     }
 }
@@ -69,6 +70,7 @@ struct ReplaceRuleItem: Identifiable, Codable {
     var isRegex: Bool = true
     var enabled: Bool = true
     var priority: Int = 0
+    var order: Int = 0
     
     init(from rule: ReplaceRule) {
         self.id = rule.ruleId
@@ -80,11 +82,12 @@ struct ReplaceRuleItem: Identifiable, Codable {
         self.isRegex = rule.isRegex
         self.enabled = rule.enabled
         self.priority = Int(rule.priority)
+        self.order = Int(rule.order)
     }
     
     init(id: UUID = UUID(), name: String, pattern: String, replacement: String = "", 
          scope: String = "global", scopeId: String? = nil, isRegex: Bool = true, 
-         enabled: Bool = true, priority: Int = 0) {
+         enabled: Bool = true, priority: Int = 0, order: Int = 0) {
         self.id = id
         self.name = name
         self.pattern = pattern
@@ -94,5 +97,6 @@ struct ReplaceRuleItem: Identifiable, Codable {
         self.isRegex = isRegex
         self.enabled = enabled
         self.priority = priority
+        self.order = order
     }
 }

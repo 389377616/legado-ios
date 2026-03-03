@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 struct TTSControlsView: View {
     @ObservedObject var ttsManager: TTSManager
@@ -304,7 +305,7 @@ struct VoicePickerView: View {
                 // 可用声音列表
                 ForEach(groupedVoices.keys.sorted(), id: \.self) { language in
                     Section(header: Text(languageDisplayName(language))) {
-                        ForEach(groupedVoices[language] ?? []) { voice in
+                        ForEach(groupedVoices[language] ?? [], id: \.identifier) { voice in
                             Button {
                                 ttsManager.setVoice(voice)
                                 isPresented = false

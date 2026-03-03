@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct MainTabView: View {
     @State private var selectedTab = 0
@@ -13,28 +14,28 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             // 书架
-            BookshelfView()
+            NavigationStack { BookshelfView() }
                 .tabItem {
                     Label("书架", systemImage: "books.vertical.fill")
                 }
                 .tag(0)
             
             // 发现
-            DiscoveryView()
+            NavigationStack { DiscoveryView() }
                 .tabItem {
                     Label("发现", systemImage: "safari")
                 }
                 .tag(1)
             
             // 本地
-            LocalBookView()
+            NavigationStack { LocalBookView() }
                 .tabItem {
                     Label("本地", systemImage: "folder.fill")
                 }
                 .tag(2)
             
             // 订阅
-            RSSSubscriptionView()
+            NavigationStack { RSSSubscriptionView() }
                 .tabItem {
                     Label("订阅", systemImage: "dot.radiowaves.left.and.right")
                 }
@@ -83,6 +84,10 @@ struct SettingsView: View {
                     NavigationLink("阅读统计") {
                         ReadingStatisticsView()
                     }
+
+                    NavigationLink("数据迁移") {
+                        DataMigrationView()
+                    }
                     
                     NavigationLink("词典规则") {
                         DictRuleView()
@@ -97,6 +102,10 @@ struct SettingsView: View {
                 Section(header: Label("书源", systemImage: "square.grid.2x2")) {
                     NavigationLink("书源管理") {
                         SourceManageView()
+                    }
+
+                    NavigationLink("书源订阅") {
+                        SourceSubscriptionView()
                     }
 
                     NavigationLink("书源调试") {
@@ -453,6 +462,279 @@ struct CacheCleanView: View {
         guard let url = url else { return }
         try? FileManager.default.removeItem(at: url)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+    }
+}
+
+struct DataMigrationView: View {
+    @StateObject private var manager = DataMigrationManager()
+    @State private var selectedType: MigrationType = .legadoAndroid
+    @State private var showingImporter = false
+
+    @State private var includeBooks = true
+    @State private var includeSources = true
+    @State private var includeBookmarks = true
+    @State private var includeRules = true
+    @State private var showingExporter = false
+    @State private var exportDocument = JSONDataDocument()
+
+    var body: some View {
+        List {
+            Section("导入") {
+                Picker("类型", selection: $selectedType) {
+                    ForEach(MigrationType.allCases, id: \.self) { type in
+                        Text(type.displayName).tag(type)
+                    }
+                }
+
+                Button("选择文件导入") {
+                    showingImporter = true
+                }
+                .disabled(manager.isMigrating)
+
+                if manager.isMigrating {
+                    ProgressView(value: manager.migrationProgress)
+                }
+            }
+
+            Section("导出") {
+                Toggle("包含书籍", isOn: $includeBooks)
+                Toggle("包含书源", isOn: $includeSources)
+                Toggle("包含书签", isOn: $includeBookmarks)
+                Toggle("包含替换规则", isOn: $includeRules)
+
+                Button("导出备份") {
+                    exportBackup()
+                }
+            }
+
+            if let result = manager.migrationResult {
+                Section("结果") {
+                    Text(result.summary)
+
+                    if !result.errors.isEmpty {
+                        Text("错误：")
+                            .font(.headline)
+                        ForEach(result.errors, id: \.self) { err in
+                            Text(err)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("数据迁移")
+        .fileImporter(
+            isPresented: $showingImporter,
+            allowedContentTypes: [.json, .zip, .plainText, .data],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                Task { @MainActor in
+                    let granted = url.startAccessingSecurityScopedResource()
+                    defer {
+                        if granted {
+                            url.stopAccessingSecurityScopedResource()
+                        }
+                    }
+                    _ = await manager.migrateFromFile(url, type: selectedType)
+                }
+            case .failure:
+                break
+            }
+        }
+        .fileExporter(
+            isPresented: $showingExporter,
+            document: exportDocument,
+            contentType: .json,
+            defaultFilename: "legado-ios-backup"
+        ) { _ in }
+    }
+
+    private func exportBackup() {
+        guard let data = manager.exportData(
+            includeBooks: includeBooks,
+            includeSources: includeSources,
+            includeBookmarks: includeBookmarks,
+            includeRules: includeRules
+        ) else {
+            return
+        }
+
+        exportDocument = JSONDataDocument(data: data)
+        showingExporter = true
+    }
+}
+
+struct JSONDataDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.json] }
+
+    var data: Data
+
+    init(data: Data = Data()) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        data = configuration.file.regularFileContents ?? Data()
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
+}
+
+struct SourceSubscriptionView: View {
+    @StateObject private var manager = SourceSubscriptionManager()
+    @State private var showingAdd = false
+    @State private var newName = ""
+    @State private var newUrl = ""
+
+    var body: some View {
+        List {
+            Section {
+                if manager.subscriptions.isEmpty {
+                    Text("暂无订阅")
+                        .foregroundColor(.secondary)
+                } else {
+                    ForEach(manager.subscriptions) { sub in
+                        subscriptionRow(sub)
+                    }
+                    .onDelete { indexSet in
+                        if let index = indexSet.first {
+                            manager.removeSubscription(at: index)
+                        }
+                    }
+                }
+            } header: {
+                Text("订阅列表")
+            }
+
+            Section("操作") {
+                Button("更新所有订阅") {
+                    Task { @MainActor in
+                        await manager.updateAllSubscriptions()
+                    }
+                }
+
+                if manager.isUpdating {
+                    ProgressView(value: manager.updateProgress)
+                }
+
+                if let err = manager.lastUpdateError {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+            }
+        }
+        .navigationTitle("书源订阅")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showingAdd = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .alert("添加订阅", isPresented: $showingAdd) {
+            TextField("名称", text: $newName)
+            TextField("订阅 URL", text: $newUrl)
+                .textInputAutocapitalization(.never)
+            Button("取消", role: .cancel) {
+                newName = ""
+                newUrl = ""
+            }
+            Button("添加") {
+                let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+                let url = newUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !name.isEmpty, !url.isEmpty {
+                    manager.addSubscription(name: name, url: url)
+                }
+                newName = ""
+                newUrl = ""
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func subscriptionRow(_ sub: SourceSubscription) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(sub.name)
+                    .font(.headline)
+
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { sub.enabled },
+                    set: { newValue in
+                        var updated = sub
+                        updated.enabled = newValue
+                        manager.updateSubscription(updated)
+                    }
+                ))
+                .labelsHidden()
+            }
+
+            Text(sub.url)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+
+            HStack(spacing: 8) {
+                Toggle("自动更新", isOn: Binding(
+                    get: { sub.autoUpdate },
+                    set: { newValue in
+                        var updated = sub
+                        updated.autoUpdate = newValue
+                        manager.updateSubscription(updated)
+                    }
+                ))
+                .font(.caption)
+
+                Spacer()
+
+                if let last = sub.lastUpdateTime {
+                    Text("上次：\(last.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("从未更新")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            HStack {
+                Button("立即更新") {
+                    Task { @MainActor in
+                        try? await manager.updateSubscription(id: sub.id)
+                    }
+                }
+                .font(.caption)
+
+                Spacer()
+
+                Menu {
+                    ForEach([3600.0, 21600.0, 43200.0, 86400.0, 172800.0], id: \.self) { seconds in
+                        Button("每 \(Int(seconds / 3600)) 小时") {
+                            var updated = sub
+                            updated.updateInterval = seconds
+                            manager.updateSubscription(updated)
+                        }
+                    }
+                } label: {
+                    Text("间隔：\(Int(sub.updateInterval / 3600))h")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 

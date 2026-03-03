@@ -12,6 +12,7 @@ struct BookshelfView: View {
     @StateObject private var viewModel = BookshelfViewModel()
     @State private var showingSourceManage = false
     @State private var showingAddBook = false
+    @State private var showingSearch = false
     
     var body: some View {
         Group {
@@ -39,6 +40,10 @@ struct BookshelfView: View {
             
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 12) {
+                    Button(action: { showingSearch = true }) {
+                        Image(systemName: "magnifyingglass")
+                    }
+
                     Button(action: { showingSourceManage = true }) {
                         Image(systemName: "gearshape")
                     }
@@ -54,6 +59,9 @@ struct BookshelfView: View {
         }
         .sheet(isPresented: $showingAddBook) {
             AddBookView()
+        }
+        .sheet(isPresented: $showingSearch) {
+            NavigationStack { SearchResultView() }
         }
         .task {
             await viewModel.loadBooks()

@@ -9,9 +9,16 @@ import SwiftUI
 import CoreData
 
 struct ReaderView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ReaderViewModel()
+    @StateObject private var ttsManager = TTSManager()
+    @StateObject private var autoPageTurnManager = AutoPageTurnManager()
+    @StateObject private var readingEnhancementManager = ReadingEnhancementManager()
+
     @State private var showingSettings = false
     @State private var showingChapterList = false
+    @State private var showingTTSControls = false
+    @State private var showingAutoPageTurn = false
     @State private var showUI = true
     
     let book: Book
@@ -25,6 +32,7 @@ struct ReaderView: View {
                 
                 // 内容区域
                 PagedReaderView(viewModel: viewModel) {
+                    autoPageTurnManager.handleTouch()
                     withAnimation { showUI.toggle() }
                 }
                 
@@ -33,8 +41,13 @@ struct ReaderView: View {
                     ReaderTopBar(
                         title: book.name,
                         chapterTitle: viewModel.currentChapter?.title ?? "",
-                        onBack: { viewModel.goBack() },
+                        onBack: {
+                            viewModel.saveProgress()
+                            dismiss()
+                        },
                         onChapterList: { showingChapterList = true },
+                        onTTS: { showingTTSControls = true },
+                        onAutoPage: { showingAutoPageTurn = true },
                         onSettings: { showingSettings = true }
                     )
                     .opacity(showUI ? 1.0 : 0.0)
@@ -59,6 +72,18 @@ struct ReaderView: View {
                     ReaderSettingsView(viewModel: viewModel, isPresented: $showingSettings)
                         .transition(.move(edge: .bottom))
                 }
+
+                if showingTTSControls {
+                    TTSControlsView(ttsManager: ttsManager, viewModel: viewModel, isPresented: $showingTTSControls)
+                        .transition(.opacity)
+                }
+
+                if showingAutoPageTurn {
+                    AutoPageTurnControlsView(manager: autoPageTurnManager, isPresented: $showingAutoPageTurn)
+                        .transition(.opacity)
+                }
+
+                AutoPageTurnOverlay(manager: autoPageTurnManager)
                 
                 // 加载指示器
                 if viewModel.isLoading {
@@ -88,9 +113,39 @@ struct ReaderView: View {
             }
             .onAppear {
                 viewModel.loadBook(book)
+                autoPageTurnManager.onTurnPage = { viewModel.turnToNextPage() }
+                autoPageTurnManager.onChapterComplete = {
+                    Task { @MainActor in
+                        await viewModel.nextChapter()
+                    }
+                }
+                readingEnhancementManager.onNightModeChanged = { isNight in
+                    viewModel.applyTheme(isNight ? .dark : .light)
+                }
+                readingEnhancementManager.startReadingSession()
             }
             .onDisappear {
                 viewModel.saveProgress()
+                ttsManager.stop()
+                autoPageTurnManager.stop()
+                readingEnhancementManager.endReadingSession()
+            }
+            .onChange(of: viewModel.currentPageIndex) { _ in
+                autoPageTurnManager.reset()
+            }
+            .alert("阅读提醒", isPresented: Binding(
+                get: { readingEnhancementManager.showReminder },
+                set: { newValue in
+                    if !newValue {
+                        readingEnhancementManager.dismissReminder()
+                    }
+                }
+            )) {
+                Button("知道了") {
+                    readingEnhancementManager.dismissReminder()
+                }
+            } message: {
+                Text("阅读一段时间了，休息一下眼睛。")
             }
             .sheet(isPresented: $showingChapterList) {
                 ChapterListView(viewModel: viewModel, book: book)
@@ -107,6 +162,8 @@ struct ReaderTopBar: View {
     let chapterTitle: String
     let onBack: () -> Void
     let onChapterList: () -> Void
+    let onTTS: () -> Void
+    let onAutoPage: () -> Void
     let onSettings: () -> Void
     
     var body: some View {
@@ -129,6 +186,16 @@ struct ReaderTopBar: View {
             
             Button(action: onChapterList) {
                 Image(systemName: "list.bullet")
+                    .font(.title2)
+            }
+
+            Button(action: onTTS) {
+                Image(systemName: "speaker.wave.2")
+                    .font(.title2)
+            }
+
+            Button(action: onAutoPage) {
+                Image(systemName: "timer")
                     .font(.title2)
             }
             

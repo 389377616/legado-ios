@@ -9,6 +9,17 @@ import SwiftUI
 
 struct ReaderSettingsFullView: View {
     @Environment(\.dismiss) var dismiss
+
+    @AppStorage("reader.fontSize") private var storedFontSize: Double = 18
+    @AppStorage("reader.lineSpacing") private var storedLineSpacing: Double = 8
+    @AppStorage("reader.paragraphSpacing") private var storedParagraphSpacing: Double = 12
+    @AppStorage("reader.pageMargin") private var storedPageMargin: Double = 16
+    @AppStorage("reader.brightness") private var storedBrightness: Double = 1.0
+    @AppStorage("reader.theme") private var storedTheme: String = ReaderThemeType.light.rawValue
+    @AppStorage("pageAnimation") private var storedPageAnimation: String = PageAnimation.cover.rawValue
+    @AppStorage("reader.fontFamily") private var storedFontFamily: String = "System"
+    @AppStorage("reader.showStatusBar") private var storedShowStatusBar: Bool = false
+    @AppStorage("reader.clickToFlip") private var storedClickToFlip: Bool = true
     
     // 阅读配置
     @State private var fontSize: Double = 18
@@ -126,6 +137,9 @@ struct ReaderSettingsFullView: View {
                     }
                 }
             }
+            .onAppear {
+                loadSettings()
+            }
     }
     
     private func resetToDefault() {
@@ -140,8 +154,29 @@ struct ReaderSettingsFullView: View {
     }
     
     private func saveSettings() {
-        // TODO: 保存到 UserDefaults 或数据库
-        print("保存设置")
+        storedFontSize = fontSize
+        storedLineSpacing = lineSpacing
+        storedParagraphSpacing = paragraphSpacing
+        storedPageMargin = pageMargin
+        storedBrightness = brightness
+        storedTheme = theme.rawValue
+        storedPageAnimation = pageAnimation.rawValue
+        storedFontFamily = fontFamily
+        storedShowStatusBar = showStatusBar
+        storedClickToFlip = clickToFlip
+    }
+
+    private func loadSettings() {
+        fontSize = storedFontSize
+        lineSpacing = storedLineSpacing
+        paragraphSpacing = storedParagraphSpacing
+        pageMargin = storedPageMargin
+        brightness = storedBrightness
+        theme = ReaderThemeType(rawValue: storedTheme) ?? .light
+        pageAnimation = PageAnimation(rawValue: storedPageAnimation) ?? .cover
+        fontFamily = storedFontFamily
+        showStatusBar = storedShowStatusBar
+        clickToFlip = storedClickToFlip
     }
 }
 

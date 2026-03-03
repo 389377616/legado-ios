@@ -17,6 +17,19 @@ class SearchViewModel: ObservableObject {
     @Published var selectedSources: [BookSource] = []
     
     private var ruleEngine: RuleEngine = RuleEngine()
+
+    init() {
+        loadDefaultSources()
+    }
+
+    private func loadDefaultSources() {
+        do {
+            let sources = try CoreDataStack.shared.viewContext.fetch(BookSource.fetchRequest())
+            selectedSources = sources.filter { $0.enabled && $0.searchUrl != nil }
+        } catch {
+            selectedSources = []
+        }
+    }
     
     // MARK: - 搜索结果
     struct SearchResult: Identifiable {

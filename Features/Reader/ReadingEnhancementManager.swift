@@ -178,6 +178,10 @@ class ReadingEnhancementManager: ObservableObject {
         currentReadingTime = 0
         UserDefaults.standard.set(0, forKey: "currentReadingTime")
     }
+
+    func dismissReminder() {
+        showReminder = false
+    }
     
     /// 获取今日阅读时间
     func getTodayReadingTime() -> TimeInterval {

@@ -28,15 +28,68 @@ class ReaderViewModel: ObservableObject {
     @Published var totalPages: Int = 0
     
     // MARK: - 阅读设置
-    @Published var fontSize: CGFloat = 18
-    @Published var lineSpacing: CGFloat = 8
-    @Published var pagePadding: EdgeInsets = EdgeInsets(top: 20, leading: 16, bottom: 20, trailing: 16)
+    @Published var fontSize: CGFloat = 18 {
+        didSet {
+            UserDefaults.standard.set(Double(fontSize), forKey: "reader.fontSize")
+        }
+    }
+    @Published var lineSpacing: CGFloat = 8 {
+        didSet {
+            UserDefaults.standard.set(Double(lineSpacing), forKey: "reader.lineSpacing")
+        }
+    }
+    @Published var pagePadding: EdgeInsets = EdgeInsets(top: 20, leading: 16, bottom: 20, trailing: 16) {
+        didSet {
+            UserDefaults.standard.set(Double(pagePadding.leading), forKey: "reader.pageMargin")
+        }
+    }
     @Published var backgroundColor: Color = .white
     @Published var textColor: Color = .black
     
     // MARK: - 私有属性
     private var ruleEngine: RuleEngine = RuleEngine()
     private var loadTask: Task<Void, Never>?
+
+    init() {
+        loadReaderPreferences()
+    }
+
+    private func loadReaderPreferences() {
+        let defaults = UserDefaults.standard
+
+        let storedFontSize = defaults.double(forKey: "reader.fontSize")
+        if storedFontSize > 0 {
+            fontSize = CGFloat(storedFontSize)
+        }
+
+        let storedLineSpacing = defaults.double(forKey: "reader.lineSpacing")
+        if storedLineSpacing > 0 {
+            lineSpacing = CGFloat(storedLineSpacing)
+        }
+
+        let storedMargin = defaults.double(forKey: "reader.pageMargin")
+        if storedMargin > 0 {
+            let margin = CGFloat(storedMargin)
+            pagePadding = EdgeInsets(top: 20, leading: margin, bottom: 20, trailing: margin)
+        }
+
+        if let storedTheme = defaults.string(forKey: "reader.theme") {
+            applyTheme(themeFromStorage(storedTheme))
+        }
+    }
+
+    private func themeFromStorage(_ raw: String) -> ReaderTheme {
+        switch raw {
+        case "暗色":
+            return .dark
+        case "羊皮纸":
+            return .sepia
+        case "护眼":
+            return .eyeProtection
+        default:
+            return .light
+        }
+    }
     
     // MARK: - 颜色主题
     enum ReaderTheme {
@@ -120,18 +173,19 @@ class ReaderViewModel: ObservableObject {
         isLoading = true
         currentChapterIndex = index
         currentChapter = chapters[index]
+        currentPageIndex = 0
         
         do {
             // 尝试从缓存加载
             if let cachedContent = try? await loadCachedChapter(chapters[index]) {
-                chapterContent = cachedContent
+                chapterContent = applyReplaceRulesIfNeeded(cachedContent, chapter: chapters[index])
                 isLoading = false
                 return
             }
             
             // 从网络加载
             let content = try await fetchChapterContent(chapters[index])
-            chapterContent = content
+            chapterContent = applyReplaceRulesIfNeeded(content, chapter: chapters[index])
             
             // 缓存章节
             try await cacheChapter(chapters[index], content: content)
@@ -199,7 +253,7 @@ class ReaderViewModel: ObservableObject {
         // TODO: 实现翻页动画
         
         // 应用主题
-        applyTheme(.light)  // 默认亮色主题
+        applyTheme(themeFromStorage(UserDefaults.standard.string(forKey: "reader.theme") ?? "亮色"))
         
         // 应用其他设置
         // TODO: 实现更多配置项
@@ -209,6 +263,45 @@ class ReaderViewModel: ObservableObject {
         self.theme = theme
         backgroundColor = theme.backgroundColor
         textColor = theme.textColor
+
+        UserDefaults.standard.set(storageThemeValue(theme), forKey: "reader.theme")
+    }
+
+    private func storageThemeValue(_ theme: ReaderTheme) -> String {
+        switch theme {
+        case .light:
+            return "亮色"
+        case .dark:
+            return "暗色"
+        case .sepia:
+            return "羊皮纸"
+        case .eyeProtection:
+            return "护眼"
+        }
+    }
+
+    private func applyReplaceRulesIfNeeded(_ text: String, chapter: BookChapter) -> String {
+        guard let book = currentBook else { return text }
+        return ReplaceEngineEnhanced.shared.applyForReader(
+            text: text,
+            bookId: book.bookId,
+            chapterId: chapter.chapterId,
+            context: CoreDataStack.shared.viewContext
+        )
+    }
+
+    func turnToNextPage() -> Bool {
+        guard totalPages > 0 else { return false }
+        guard currentPageIndex + 1 < totalPages else { return false }
+        currentPageIndex += 1
+        return true
+    }
+
+    func turnToPreviousPage() -> Bool {
+        guard totalPages > 0 else { return false }
+        guard currentPageIndex > 0 else { return false }
+        currentPageIndex -= 1
+        return true
     }
 
     func setTheme(_ theme: ReaderTheme) async {
