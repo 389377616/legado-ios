@@ -231,11 +231,17 @@ class ReadingStatisticsManager: ObservableObject {
     // MARK: - 私有方法
     
     private func startSessionTimer() {
-        sessionTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.updateSessionDuration()
-            }
-        }
+        sessionTimer = Timer.scheduledTimer(
+            timeInterval: 1.0,
+            target: self,
+            selector: #selector(handleSessionTimerTick),
+            userInfo: nil,
+            repeats: true
+        )
+    }
+
+    @objc private func handleSessionTimerTick() {
+        updateSessionDuration()
     }
     
     private func stopSessionTimer() {

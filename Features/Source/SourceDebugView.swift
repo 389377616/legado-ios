@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct SourceDebugView: View {
     @ObservedObject var viewModel: SourceDebugViewModel

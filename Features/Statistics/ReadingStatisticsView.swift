@@ -243,7 +243,7 @@ private struct ChartView: View {
                 VStack(spacing: 4) {
                     Rectangle()
                         .fill(Color.blue.opacity(0.7))
-                        .frame(width: 30, height: CGFloat(item.minutes) / maxMinutes * 100)
+                        .frame(width: 30, height: (CGFloat(item.minutes) / CGFloat(maxMinutes)) * 100)
                         .cornerRadius(4)
                     
                     Text(item.day)

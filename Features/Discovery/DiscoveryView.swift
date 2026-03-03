@@ -397,19 +397,19 @@ class DiscoveryViewModel: ObservableObject {
             var bookUrl = ""
             
             if let nameRule = rule.name {
-                bookName = try? ruleEngine.executeSingle(rule: nameRule, context: itemContext).string ?? ""
+                bookName = (try? ruleEngine.executeSingle(rule: nameRule, context: itemContext))?.string ?? ""
             }
             
             if let authorRule = rule.author {
-                bookAuthor = try? ruleEngine.executeSingle(rule: authorRule, context: itemContext).string ?? ""
+                bookAuthor = (try? ruleEngine.executeSingle(rule: authorRule, context: itemContext))?.string ?? ""
             }
             
             if let coverRule = rule.coverUrl {
-                bookCover = try? ruleEngine.executeSingle(rule: coverRule, context: itemContext).string
+                bookCover = (try? ruleEngine.executeSingle(rule: coverRule, context: itemContext))?.string
             }
             
             if let urlRule = rule.bookUrl {
-                bookUrl = try? ruleEngine.executeSingle(rule: urlRule, context: itemContext).string ?? ""
+                bookUrl = (try? ruleEngine.executeSingle(rule: urlRule, context: itemContext))?.string ?? ""
             }
             
             if !bookName.isEmpty && !bookUrl.isEmpty {
@@ -425,13 +425,7 @@ class DiscoveryViewModel: ObservableObject {
             }
         }
         
-        // 提取分类
-        if let classifyRule = rule.classify {
-            let classifyResult = try? ruleEngine.executeSingle(rule: classifyRule, context: context)
-            if case .list(let cats) = classifyResult {
-                categories = cats.map { $0.trimmingCharacters(in: .whitespaces) }
-            }
-        }
+        categories = []
         
         return (books, categories)
     }
