@@ -71,7 +71,7 @@ struct ReplaceRuleDebugView: View {
             
             // 操作按钮
             Section {
-                Button(action: viewModel.testRule) {
+                Button(action: { viewModel.testRule() }) {
                     HStack {
                         Image(systemName: "play.fill")
                         Text("测试规则")
@@ -79,7 +79,7 @@ struct ReplaceRuleDebugView: View {
                 }
                 .disabled(viewModel.pattern.isEmpty)
                 
-                Button(action: viewModel.clearAll) {
+                Button(action: { viewModel.clearAll() }) {
                     HStack {
                         Image(systemName: "xmark.circle")
                         Text("清空所有")
@@ -87,7 +87,7 @@ struct ReplaceRuleDebugView: View {
                     .foregroundColor(.red)
                 }
                 
-                Button(action: viewModel.loadExample) {
+                Button(action: { viewModel.loadExample() }) {
                     HStack {
                         Image(systemName: "doc.text")
                         Text("加载示例")
@@ -135,9 +135,9 @@ class ReplaceRuleDebugViewModel: ObservableObject {
         ExampleRule(name: "删除 HTML 标签", pattern: "<[^>]+>", replacement: "", isRegex: true),
         ExampleRule(name: "合并多个空格", pattern: "\\s+", replacement: " ", isRegex: true),
         ExampleRule(name: "删除广告文本", pattern: "广告|推广|赞助商", replacement: "", isRegex: true),
-        ExampleRule(name: "替换繁体"臺"", pattern: "臺", replacement: "台", isRegex: false),
+        ExampleRule(name: "替换繁体字", pattern: "臺", replacement: "台", isRegex: false),
         ExampleRule(name: "删除版权声明", pattern: "©|版权所有|All Rights Reserved", replacement: "", isRegex: true),
-        ExampleRule(name: "标准化引号", pattern: """["""]""", replacement: """""", isRegex: true),
+        ExampleRule(name: "标准化引号", pattern: "[\u{201c}\u{201d}]", replacement: "\"", isRegex: true),
         ExampleRule(name: "删除 URL", pattern: "https?://[^\\s]+", replacement: "", isRegex: true)
     ]
     
@@ -172,22 +172,20 @@ class ReplaceRuleDebugViewModel: ObservableObject {
     
     func loadExample() {
         testInput = """
-        第一章 开始
-        
-        这是正文内容，包含一些广告文字。
-        
-        广告：购买我们的产品！
-        
-        继续正文...访问 https://example.com 获取更多信息。
-        
-        版权声明 © 2024 All Rights Reserved.
-        
-        "臺"湾是中国的一部分。
-        
-        
-        
-        结束。
-        """
+第一章 开始
+
+这是正文内容，包含一些广告文字。
+
+广告：购买我们的产品！
+
+继续正文...访问 https://example.com 获取更多信息。
+
+版权声明 © 2024 All Rights Reserved.
+
+台湾是中国的一部分。
+
+结束。
+"""
     }
     
     func applyExample(_ rule: ExampleRule) {
