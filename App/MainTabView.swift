@@ -53,15 +53,14 @@ struct MainTabView: View {
 
 // MARK: - 设置视图（完善版）
 struct SettingsView: View {
-    @State private var showingReplaceRules = false
     @State private var showingAbout = false
-    @State private var showingBackup = false
     @State private var showingQRScanner = false
     
     var body: some View {
-        List {
-            // 阅读设置
-            Section(header: Label("阅读", systemImage: "book")) {
+        NavigationView {
+            List {
+                // 阅读设置
+                Section(header: Label("阅读", systemImage: "book")) {
                     NavigationLink("阅读设置") {
                         ReaderSettingsFullView()
                     }
@@ -135,6 +134,7 @@ struct SettingsView: View {
             }
         }
     }
+}
 
 // MARK: - 关于视图
 struct AboutView: View {
@@ -273,10 +273,6 @@ struct AboutSectionCard<Content: View>: View {
         .background(Color.gray.opacity(0.05))
         .cornerRadius(8)
     }
-}
-
-#Preview {
-    MainTabView()
 }
 
 // MARK: - 主题设置视图
@@ -450,4 +446,8 @@ struct CacheCleanView: View {
         try? FileManager.default.removeItem(at: url)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     }
+}
+
+#Preview {
+    MainTabView()
 }
