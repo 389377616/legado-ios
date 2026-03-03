@@ -42,11 +42,16 @@ class TemplateEngine {
 
     static func parsePut(_ rule: String) -> [(key: String, rule: String)]? {
         let trimmed = rule.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.hasPrefix("@put:{"), trimmed.hasSuffix("}") else { return nil }
+        guard trimmed.hasPrefix("@put:{") else { return nil }
 
-        let start = trimmed.index(trimmed.startIndex, offsetBy: 6)
-        let end = trimmed.index(before: trimmed.endIndex)
-        guard start <= end else { return nil }
+        let openIndex = trimmed.index(trimmed.startIndex, offsetBy: 5)
+        guard let closeIndex = matchingBraceIndex(in: trimmed, from: openIndex),
+              closeIndex == trimmed.index(before: trimmed.endIndex) else {
+            return nil
+        }
+
+        let start = trimmed.index(after: openIndex)
+        let end = closeIndex
 
         let payload = String(trimmed[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !payload.isEmpty else { return nil }
@@ -258,6 +263,52 @@ class TemplateEngine {
                 }
             default:
                 break
+            }
+        }
+
+        return nil
+    }
+
+    private static func matchingBraceIndex(in input: String, from openIndex: String.Index) -> String.Index? {
+        guard input[openIndex] == "{" else { return nil }
+
+        var depth = 0
+        var inSingleQuote = false
+        var inDoubleQuote = false
+        var escaping = false
+
+        for index in input[openIndex...].indices {
+            let char = input[index]
+
+            if escaping {
+                escaping = false
+                continue
+            }
+
+            if char == "\\" {
+                escaping = true
+                continue
+            }
+
+            if char == "\"", !inSingleQuote {
+                inDoubleQuote.toggle()
+                continue
+            }
+
+            if char == "'", !inDoubleQuote {
+                inSingleQuote.toggle()
+                continue
+            }
+
+            if inSingleQuote || inDoubleQuote { continue }
+
+            if char == "{" {
+                depth += 1
+            } else if char == "}" {
+                depth -= 1
+                if depth == 0 {
+                    return index
+                }
             }
         }
 

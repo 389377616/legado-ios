@@ -297,7 +297,6 @@ private struct WebDAVPropfindNode {
 private final class WebDAVPropfindParser: NSObject, XMLParserDelegate {
     private var nodes: [WebDAVPropfindNode] = []
     private var currentNode: WebDAVPropfindNode?
-    private var currentElement: String = ""
     private var currentText: String = ""
     private var insideResponse = false
     private let dateParser: (String) -> Date?
@@ -316,7 +315,6 @@ private final class WebDAVPropfindParser: NSObject, XMLParserDelegate {
                 namespaceURI: String?, qualifiedName qName: String?,
                 attributes attributeDict: [String: String] = [:]) {
         let localName = localElementName(elementName)
-        currentElement = localName
         currentText = ""
 
         if localName == "response" {
@@ -344,7 +342,6 @@ private final class WebDAVPropfindParser: NSObject, XMLParserDelegate {
         let value = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard insideResponse else {
-            currentElement = ""
             currentText = ""
             return
         }
@@ -370,7 +367,6 @@ private final class WebDAVPropfindParser: NSObject, XMLParserDelegate {
             break
         }
 
-        currentElement = ""
         currentText = ""
     }
 

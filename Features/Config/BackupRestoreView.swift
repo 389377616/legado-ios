@@ -48,6 +48,15 @@ struct BackupRestoreView: View {
             }
             
             Section(header: Label("云同步", systemImage: "cloud")) {
+                NavigationLink {
+                    WebDAVConfigView()
+                } label: {
+                    HStack {
+                        Image(systemName: "externaldrive.badge.wifi")
+                        Text("WebDAV 同步")
+                    }
+                }
+
                 Toggle("iCloud 同步", isOn: .constant(false))
                 
                 Text("iCloud 同步功能开发中")

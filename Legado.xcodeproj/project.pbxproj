@@ -66,6 +66,12 @@
 		1A0000000000004F /* BookInfoRuleSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000004F /* BookInfoRuleSection.swift */; };
 		1A00000000000050 /* TocRuleSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000050 /* TocRuleSection.swift */; };
 		1A00000000000051 /* ContentRuleSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000051 /* ContentRuleSection.swift */; };
+		1A00000000000052 /* WebDAVCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000052 /* WebDAVCredentials.swift */; };
+		1A00000000000053 /* WebDAVFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000053 /* WebDAVFile.swift */; };
+		1A00000000000054 /* BackupInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000054 /* BackupInfo.swift */; };
+		1A00000000000055 /* WebDAVClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000055 /* WebDAVClient.swift */; };
+		1A00000000000056 /* WebDAVSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000056 /* WebDAVSyncManager.swift */; };
+		1A00000000000057 /* WebDAVConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000057 /* WebDAVConfigView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -127,6 +133,12 @@
 		1A1000000000004F /* BookInfoRuleSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookInfoRuleSection.swift; sourceTree = "<group>"; };
 		1A10000000000050 /* TocRuleSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TocRuleSection.swift; sourceTree = "<group>"; };
 		1A10000000000051 /* ContentRuleSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentRuleSection.swift; sourceTree = "<group>"; };
+		1A10000000000052 /* WebDAVCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebDAVCredentials.swift; sourceTree = "<group>"; };
+		1A10000000000053 /* WebDAVFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebDAVFile.swift; sourceTree = "<group>"; };
+		1A10000000000054 /* BackupInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupInfo.swift; sourceTree = "<group>"; };
+		1A10000000000055 /* WebDAVClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebDAVClient.swift; sourceTree = "<group>"; };
+		1A10000000000056 /* WebDAVSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebDAVSyncManager.swift; sourceTree = "<group>"; };
+		1A10000000000057 /* WebDAVConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebDAVConfigView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -173,6 +185,7 @@
 				1A30000000000012 /* Network */,
 				1A30000000000016 /* Parser */,
 				1A30000000000013 /* RuleEngine */,
+				1A30000000000060 /* Sync */,
 				1A30000000000017 /* Model */,
 			);
 			path = Core;
@@ -217,6 +230,27 @@
 				1A10000000000040 /* AnalyzeUrl.swift */,
 			);
 			path = Network;
+			sourceTree = "<group>";
+		};
+		1A30000000000060 /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				1A10000000000055 /* WebDAVClient.swift */,
+				1A10000000000056 /* WebDAVSyncManager.swift */,
+				1A10000000000057 /* WebDAVConfigView.swift */,
+				1A30000000000061 /* Models */,
+			);
+			path = Sync;
+			sourceTree = "<group>";
+		};
+		1A30000000000061 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				1A10000000000052 /* WebDAVCredentials.swift */,
+				1A10000000000053 /* WebDAVFile.swift */,
+				1A10000000000054 /* BackupInfo.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		1A30000000000017 /* Model */ = {
@@ -464,6 +498,12 @@
 				1A00000000000032 /* AppConstants.swift in Sources */,
 				1A00000000000033 /* ImageCacheManager.swift in Sources */,
 				1A00000000000016 /* HTTPClient.swift in Sources */,
+				1A00000000000055 /* WebDAVClient.swift in Sources */,
+				1A00000000000056 /* WebDAVSyncManager.swift in Sources */,
+				1A00000000000057 /* WebDAVConfigView.swift in Sources */,
+				1A00000000000052 /* WebDAVCredentials.swift in Sources */,
+				1A00000000000053 /* WebDAVFile.swift in Sources */,
+				1A00000000000054 /* BackupInfo.swift in Sources */,
 				1A00000000000034 /* EPUBParser.swift in Sources */,
 				1A00000000000017 /* RuleEngine.swift in Sources */,
 				1A00000000000018 /* ReplaceEngine.swift in Sources */,
