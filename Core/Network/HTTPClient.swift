@@ -59,6 +59,20 @@ class HTTPClient {
         
         return (data: data, response: httpResponse)
     }
+
+    func getHtml(urlString: String, headers: [String: String]? = nil) async throws -> (String, HTTPURLResponse) {
+        let (data, response) = try await get(url: urlString, headers: headers)
+
+        if let html = String(data: data, encoding: .utf8) {
+            return (html, response)
+        }
+
+        if let html = String(data: data, encoding: .unicode) {
+            return (html, response)
+        }
+
+        throw NetworkError.invalidResponse
+    }
     
     /// POST 请求
     func post(
