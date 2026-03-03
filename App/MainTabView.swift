@@ -20,7 +20,7 @@ struct MainTabView: View {
                 .tag(0)
             
             // 发现
-            SearchResultView()
+            DiscoveryView()
                 .tabItem {
                     Label("发现", systemImage: "safari")
                 }
@@ -79,6 +79,10 @@ struct SettingsView: View {
                     NavigationLink("备份与恢复") {
                         BackupRestoreView()
                     }
+
+                    NavigationLink("阅读统计") {
+                        ReadingStatisticsView()
+                    }
                     
                     NavigationLink("词典规则") {
                         DictRuleView()
@@ -93,6 +97,10 @@ struct SettingsView: View {
                 Section(header: Label("书源", systemImage: "square.grid.2x2")) {
                     NavigationLink("书源管理") {
                         SourceManageView()
+                    }
+
+                    NavigationLink("书源调试") {
+                        SourceDebugView(viewModel: SourceDebugViewModel(source: nil))
                     }
                     
                     Button(action: { showingQRScanner = true }) {
