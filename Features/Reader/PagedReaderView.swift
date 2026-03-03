@@ -93,7 +93,7 @@ struct PagedReaderView: View {
             scrollView
             
         case .simulation:
-            CurlPageView(
+            SlidePageView(
                 viewModel: viewModel,
                 pages: pages,
                 currentPage: $currentPage,
