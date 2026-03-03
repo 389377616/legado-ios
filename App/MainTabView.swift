@@ -20,7 +20,7 @@ struct MainTabView: View {
                 .tag(0)
             
             // 发现
-            DiscoveryView()
+            SearchResultView()
                 .tabItem {
                     Label("发现", systemImage: "safari")
                 }
@@ -80,10 +80,6 @@ struct SettingsView: View {
                         BackupRestoreView()
                     }
 
-                    NavigationLink("阅读统计") {
-                        ReadingStatisticsView()
-                    }
-                    
                     NavigationLink("词典规则") {
                         DictRuleView()
                     }
@@ -99,10 +95,6 @@ struct SettingsView: View {
                         SourceManageView()
                     }
 
-                    NavigationLink("书源调试") {
-                        SourceDebugView(viewModel: SourceDebugViewModel(source: nil))
-                    }
-                    
                     Button(action: { showingQRScanner = true }) {
                         HStack {
                             Text("扫码导入书源")

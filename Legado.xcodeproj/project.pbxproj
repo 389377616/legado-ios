@@ -76,12 +76,6 @@
 		1A00000000000059 /* PageSplitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000059 /* PageSplitter.swift */; };
 		1A0000000000005A /* CoverPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000005A /* CoverPageView.swift */; };
 		1A0000000000005B /* SlidePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000005B /* SlidePageView.swift */; };
-		1A0000000000005C /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000005C /* DiscoveryView.swift */; };
-		1A0000000000005D /* ReadingStatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000005D /* ReadingStatisticsView.swift */; };
-		1A0000000000005E /* ReadingStatisticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000005E /* ReadingStatisticsManager.swift */; };
-		1A0000000000005F /* SourceDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000005F /* SourceDebugView.swift */; };
-		1A00000000000060 /* SourceDebugViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000060 /* SourceDebugViewModel.swift */; };
-		1A00000000000061 /* RuleDebugger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000061 /* RuleDebugger.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -153,12 +147,6 @@
 		1A10000000000059 /* PageSplitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageSplitter.swift"; sourceTree = "<group>"; };
 		1A1000000000005A /* CoverPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageViews/CoverPageView.swift"; sourceTree = "<group>"; };
 		1A1000000000005B /* SlidePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageViews/SlidePageView.swift"; sourceTree = "<group>"; };
-		1A1000000000005C /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Discovery/DiscoveryView.swift"; sourceTree = "<group>"; };
-		1A1000000000005D /* ReadingStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Statistics/ReadingStatisticsView.swift"; sourceTree = "<group>"; };
-		1A1000000000005E /* ReadingStatisticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Statistics/ReadingStatisticsManager.swift"; sourceTree = "<group>"; };
-		1A1000000000005F /* SourceDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceDebugView.swift; sourceTree = "<group>"; };
-		1A10000000000060 /* SourceDebugViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceDebugViewModel.swift; sourceTree = "<group>"; };
-		1A10000000000061 /* RuleDebugger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleDebugger.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -207,7 +195,6 @@
 				1A30000000000013 /* RuleEngine */,
 				1A30000000000060 /* Sync */,
 				1A30000000000017 /* Model */,
-				1A1000000000005E /* ReadingStatisticsManager.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -298,7 +285,6 @@
 				1A10000000000019 /* RuleSplitter.swift */,
 				1A10000000000047 /* TemplateEngine.swift */,
 				1A10000000000048 /* JSBridge.swift */,
-				1A10000000000061 /* RuleDebugger.swift */,
 			);
 			path = RuleEngine;
 			sourceTree = "<group>";
@@ -314,8 +300,6 @@
 				1A30000000000027 /* Local */,
 				1A30000000000026 /* BookDetail */,
 				1A30000000000028 /* RSS */,
-				1A1000000000005C /* DiscoveryView.swift */,
-				1A1000000000005D /* ReadingStatisticsView.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -357,8 +341,6 @@
 				1A10000000000027 /* SourceViewModel.swift */,
 				1A10000000000049 /* SourceEditView.swift */,
 				1A1000000000004A /* SourceEditViewModel.swift */,
-				1A1000000000005F /* SourceDebugView.swift */,
-				1A10000000000060 /* SourceDebugViewModel.swift */,
 				1A30000000000029 /* Components */,
 				1A10000000000043 /* QRCodeScanView.swift */,
 			);
@@ -546,12 +528,6 @@
 				1A00000000000059 /* PageSplitter.swift in Sources */,
 				1A0000000000005A /* CoverPageView.swift in Sources */,
 				1A0000000000005B /* SlidePageView.swift in Sources */,
-				1A0000000000005C /* DiscoveryView.swift in Sources */,
-				1A0000000000005D /* ReadingStatisticsView.swift in Sources */,
-				1A0000000000005E /* ReadingStatisticsManager.swift in Sources */,
-				1A0000000000005F /* SourceDebugView.swift in Sources */,
-				1A00000000000060 /* SourceDebugViewModel.swift in Sources */,
-				1A00000000000061 /* RuleDebugger.swift in Sources */,
 				1A00000000000035 /* SearchResultView.swift in Sources */,
 				1A00000000000024 /* SearchView.swift in Sources */,
 				1A00000000000025 /* SearchViewModel.swift in Sources */,
