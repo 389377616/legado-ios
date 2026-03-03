@@ -21,6 +21,7 @@
 		1A00000000000016 /* HTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000016 /* HTTPClient.swift */; };
 		1A00000000000017 /* RuleEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000017 /* RuleEngine.swift */; };
 		1A00000000000018 /* ReplaceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000018 /* ReplaceEngine.swift */; };
+		1A00000000000019 /* RuleSplitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000019 /* RuleSplitter.swift */; };
 		
 		// Features
 		1A00000000000020 /* BookshelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000020 /* BookshelfView.swift */; };
@@ -73,6 +74,7 @@
 		1A10000000000016 /* HTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPClient.swift; sourceTree = "<group>"; };
 		1A10000000000017 /* RuleEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleEngine.swift; sourceTree = "<group>"; };
 		1A10000000000018 /* ReplaceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplaceEngine.swift; sourceTree = "<group>"; };
+		1A10000000000019 /* RuleSplitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleSplitter.swift; sourceTree = "<group>"; };
 		
 		// Features
 		1A10000000000020 /* BookshelfView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshelfView.swift; sourceTree = "<group>"; };
@@ -216,6 +218,7 @@
 			children = (
 				1A10000000000017 /* RuleEngine.swift */,
 				1A10000000000018 /* ReplaceEngine.swift */,
+				1A10000000000019 /* RuleSplitter.swift */,
 			);
 			path = RuleEngine;
 			sourceTree = "<group>";
@@ -423,6 +426,7 @@
 				1A00000000000034 /* EPUBParser.swift in Sources */,
 				1A00000000000017 /* RuleEngine.swift in Sources */,
 				1A00000000000018 /* ReplaceEngine.swift in Sources */,
+				1A00000000000019 /* RuleSplitter.swift in Sources */,
 				1A00000000000036 /* AddBookView.swift in Sources */,
 				1A00000000000020 /* BookshelfView.swift in Sources */,
 				1A00000000000021 /* BookshelfViewModel.swift in Sources */,

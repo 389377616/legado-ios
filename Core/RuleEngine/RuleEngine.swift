@@ -103,12 +103,8 @@ class RuleEngine {
         var lastResult: RuleResult = .none
         
         for rule in rules {
-            guard let executor = executors.first(where: { $0.canExecute(rule) }) else {
-                continue
-            }
-            
             do {
-                lastResult = try executor.execute(rule, context: context)
+                lastResult = try executeWithSplit(rule, context: context)
                 context.lastResult = lastResult
             } catch {
                 print("规则执行错误 [\(rule)]: \(error)")
@@ -122,11 +118,150 @@ class RuleEngine {
         rule: String,
         context: ExecutionContext
     ) throws -> RuleResult {
-        guard let executor = executors.first(where: { $0.canExecute(rule) }) else {
-            throw RuleError.unsupportedRule(rule)
+        let result = try executeWithSplit(rule, context: context)
+        context.lastResult = result
+        return result
+    }
+
+    private func executeWithSplit(_ rule: String, context: ExecutionContext) throws -> RuleResult {
+        let trimmed = rule.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return .none }
+
+        let operators = RuleSplitter.parseOperators(trimmed)
+
+        if let segments = operators.first(where: { $0.operator == .or })?.segments,
+           segments.count > 1 {
+            return try executeOr(segments: segments, context: context)
         }
-        
-        return try executor.execute(rule, context: context)
+
+        if let segments = operators.first(where: { $0.operator == .and })?.segments,
+           segments.count > 1 {
+            return try executeAnd(segments: segments, context: context)
+        }
+
+        if let segments = operators.first(where: { $0.operator == .format })?.segments,
+           segments.count > 1 {
+            return try executeFormat(segments: segments, context: context)
+        }
+
+        guard let splitRule = RuleSplitter.split(trimmed).first else {
+            throw RuleError.unsupportedRule(trimmed)
+        }
+
+        return try executeSplitRule(splitRule, context: context)
+    }
+
+    private func executeSplitRule(_ splitRule: SplitRule, context: ExecutionContext) throws -> RuleResult {
+        let executor = executors.first(where: { $0.kind == splitRule.type })
+            ?? executors.first(where: { $0.canExecute(splitRule.rule) })
+
+        guard let executor else {
+            throw RuleError.unsupportedRule(splitRule.rule)
+        }
+
+        let result = try executor.execute(splitRule.rule, context: context)
+        return try applyReplace(splitRule.replace, to: result)
+    }
+
+    private func executeAnd(segments: [String], context: ExecutionContext) throws -> RuleResult {
+        var values: [String] = []
+
+        for segment in segments {
+            let result = try executeWithSplit(segment, context: context)
+            values.append(contentsOf: flatten(result))
+            context.lastResult = result
+        }
+
+        if values.isEmpty { return .none }
+        return .string(values.joined())
+    }
+
+    private func executeOr(segments: [String], context: ExecutionContext) throws -> RuleResult {
+        for segment in segments {
+            let result = try executeWithSplit(segment, context: context)
+            context.lastResult = result
+            if !isEmpty(result) {
+                return result
+            }
+        }
+
+        return .none
+    }
+
+    private func executeFormat(segments: [String], context: ExecutionContext) throws -> RuleResult {
+        guard let source = segments.first else { return .none }
+
+        let sourceResult = try executeWithSplit(source, context: context)
+        var value = flatten(sourceResult).joined()
+
+        if value.isEmpty {
+            return .none
+        }
+
+        for template in segments.dropFirst() {
+            value = applyFormat(template, value: value)
+        }
+
+        return value.isEmpty ? .none : .string(value)
+    }
+
+    private func applyFormat(_ template: String, value: String) -> String {
+        if template.contains("{0}") {
+            return template.replacingOccurrences(of: "{0}", with: value)
+        }
+        if template.contains("{{result}}") {
+            return template.replacingOccurrences(of: "{{result}}", with: value)
+        }
+        if template.contains("%@") {
+            return String(format: template, value)
+        }
+        if template.contains("%s") {
+            return template.replacingOccurrences(of: "%s", with: value)
+        }
+        return template + value
+    }
+
+    private func applyReplace(
+        _ replace: (pattern: String, replacement: String, group: Int?)?,
+        to result: RuleResult
+    ) throws -> RuleResult {
+        guard let replace else { return result }
+
+        guard let regex = try? NSRegularExpression(pattern: replace.pattern) else {
+            throw RuleError.invalidRule("无效替换正则：\(replace.pattern)")
+        }
+
+        let replacement = replace.replacement
+
+        switch result {
+        case .string(let value):
+            let range = NSRange(value.startIndex..., in: value)
+            let replaced = regex.stringByReplacingMatches(in: value, range: range, withTemplate: replacement)
+            return .string(replaced)
+        case .list(let values):
+            let replacedValues = values.map { item in
+                let range = NSRange(item.startIndex..., in: item)
+                return regex.stringByReplacingMatches(in: item, range: range, withTemplate: replacement)
+            }
+            return .list(replacedValues)
+        case .none:
+            return .none
+        }
+    }
+
+    private func flatten(_ result: RuleResult) -> [String] {
+        switch result {
+        case .string(let value):
+            return value.isEmpty ? [] : [value]
+        case .list(let values):
+            return values.filter { !$0.isEmpty }
+        case .none:
+            return []
+        }
+    }
+
+    private func isEmpty(_ result: RuleResult) -> Bool {
+        flatten(result).isEmpty
     }
     
     // MARK: - 从 HTML/JSON 中提取元素列表
