@@ -56,6 +56,7 @@ class ReaderViewModel: ObservableObject {
     // MARK: - 私有属性
     private var ruleEngine: RuleEngine = RuleEngine()
     private var loadTask: Task<Void, Never>?
+    let cacheManager = ChapterCacheManager()
 
     init() {
         loadReaderPreferences()
@@ -242,6 +243,15 @@ class ReaderViewModel: ObservableObject {
             try await cacheChapter(chapters[index], content: content)
             
             isLoading = false
+            
+            // 预加载前后章节
+            if let book = currentBook {
+                cacheManager.preloadAroundChapter(
+                    index: index,
+                    chapters: chapters,
+                    book: book
+                )
+            }
         } catch {
             errorMessage = "加载章节失败：\(error.localizedDescription)"
             isLoading = false

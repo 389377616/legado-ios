@@ -112,6 +112,9 @@
 		1A00000000000080 /* TableOfContentsParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000080 /* TableOfContentsParser.swift */; };
 		1A00000000000081 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000081 /* ContentView.swift */; };
 		1A00000000000082 /* Chapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000082 /* Chapter.swift */; };
+		1A00000000000083 /* ChangeSourceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000083 /* ChangeSourceSheet.swift */; };
+		1A00000000000084 /* BookmarkSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000084 /* BookmarkSheet.swift */; };
+		1A00000000000085 /* ChapterCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000085 /* ChapterCacheManager.swift */; };
 	/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -219,6 +222,9 @@
 		1A10000000000080 /* TableOfContentsParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TableOfContentsParser.swift"; sourceTree = "<group>"; };
 		1A10000000000081 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ContentView.swift"; sourceTree = "<group>"; };
 		1A10000000000082 /* Chapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chapter.swift"; sourceTree = "<group>"; };
+		1A10000000000083 /* ChangeSourceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeSourceSheet.swift; sourceTree = "<group>"; };
+		1A10000000000084 /* BookmarkSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkSheet.swift; sourceTree = "<group>"; };
+		1A10000000000085 /* ChapterCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterCacheManager.swift; sourceTree = "<group>"; };
 	/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -308,6 +314,7 @@
 			isa = PBXGroup;
 			children = (
 				1A10000000000033 /* ImageCacheManager.swift */,
+				1A10000000000085 /* ChapterCacheManager.swift */,
 			);
 			path = Cache;
 			sourceTree = "<group>";
@@ -413,6 +420,8 @@
 				1A10000000000039 /* ReaderSettingsFullView.swift */,
 				1A10000000000022 /* ReaderView.swift */,
 				1A10000000000023 /* ReaderViewModel.swift */,
+				1A10000000000083 /* ChangeSourceSheet.swift */,
+				1A10000000000084 /* BookmarkSheet.swift */,
 			);
 			path = Reader;
 			sourceTree = "<group>";
@@ -685,6 +694,9 @@
 				1A00000000000080 /* TableOfContentsParser.swift in Sources */,
 				1A00000000000081 /* ContentView.swift in Sources */,
 				1A00000000000082 /* Chapter.swift in Sources */,
+				1A00000000000083 /* ChangeSourceSheet.swift in Sources */,
+				1A00000000000084 /* BookmarkSheet.swift in Sources */,
+				1A00000000000085 /* ChapterCacheManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

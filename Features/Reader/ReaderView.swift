@@ -19,6 +19,8 @@ struct ReaderView: View {
     @State private var showingChapterList = false
     @State private var showingTTSControls = false
     @State private var showingAutoPageTurn = false
+    @State private var showingChangeSource = false
+    @State private var showingBookmarks = false
     @State private var showUI = true
     
     let book: Book
@@ -46,6 +48,8 @@ struct ReaderView: View {
                             dismiss()
                         },
                         onChapterList: { showingChapterList = true },
+                        onChangeSource: { showingChangeSource = true },
+                        onBookmarks: { showingBookmarks = true },
                         onTTS: { showingTTSControls = true },
                         onAutoPage: { showingAutoPageTurn = true },
                         onSettings: { showingSettings = true }
@@ -150,6 +154,15 @@ struct ReaderView: View {
             .sheet(isPresented: $showingChapterList) {
                 ChapterListView(viewModel: viewModel, book: book)
             }
+            .sheet(isPresented: $showingChangeSource) {
+                ChangeSourceSheet(isPresented: $showingChangeSource, book: book) {
+                    // 换源成功后重新加载
+                    viewModel.loadBook(book)
+                }
+            }
+            .sheet(isPresented: $showingBookmarks) {
+                BookmarkSheet(viewModel: viewModel, book: book)
+            }
         }
         .navigationBarHidden(true)
         .statusBar(hidden: !showUI)
@@ -162,6 +175,8 @@ struct ReaderTopBar: View {
     let chapterTitle: String
     let onBack: () -> Void
     let onChapterList: () -> Void
+    let onChangeSource: () -> Void
+    let onBookmarks: () -> Void
     let onTTS: () -> Void
     let onAutoPage: () -> Void
     let onSettings: () -> Void
@@ -186,6 +201,16 @@ struct ReaderTopBar: View {
             
             Button(action: onChapterList) {
                 Image(systemName: "list.bullet")
+                    .font(.title2)
+            }
+
+            Button(action: onChangeSource) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.title2)
+            }
+
+            Button(action: onBookmarks) {
+                Image(systemName: "bookmark")
                     .font(.title2)
             }
 
