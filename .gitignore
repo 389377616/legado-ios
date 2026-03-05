@@ -24,3 +24,4 @@ __pycache__/
 .env.*.local
 *.log
 .ace-tool/
+node_modules/
