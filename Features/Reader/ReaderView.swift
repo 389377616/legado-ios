@@ -14,7 +14,6 @@ struct ReaderView: View {
     @StateObject private var ttsManager = TTSManager()
     @StateObject private var autoPageTurnManager = AutoPageTurnManager()
     @StateObject private var readingEnhancementManager = ReadingEnhancementManager()
-    @StateObject private var textSelectionCoordinator = TextSelectionCoordinator()
     
     @State private var showingSettings = false
     @State private var showingChapterList = false
@@ -23,15 +22,6 @@ struct ReaderView: View {
     @State private var showingChangeSource = false
     @State private var showingBookmarks = false
     @State private var showUI = true
-    
-    // Phase 1 新增状态
-    @State private var showingBrightness = false
-    @State private var showingBgTextConfig = false
-    @State private var showingReadStyle = false
-    @State private var showingTipConfig = false
-    @State private var showingContentEdit = false
-    @State private var showingEffectiveReplaces = false
-    @State private var hideTimer: Timer?
     
     let book: Book
     
@@ -46,43 +36,99 @@ struct ReaderView: View {
                 PagedReaderView(viewModel: viewModel) {
                     autoPageTurnManager.handleTouch()
                     withAnimation { showUI.toggle() }
-                    resetHideTimer()
                 }
                 
                 // 顶部工具栏
                 VStack {
-                    ReaderTopBar(
-                        title: book.name,
-                        chapterTitle: viewModel.currentChapter?.title ?? "",
-                        onBack: {
+                    HStack {
+                        Button(action: {
                             viewModel.saveProgress()
                             dismiss()
-                        },
-                        onChapterList: { showingChapterList = true },
-                        onChangeSource: { showingChangeSource = true },
-                        onBookmarks: { showingBookmarks = true },
-                        onTTS: { showingTTSControls = true },
-                        onAutoPage: { showingAutoPageTurn = true },
-                        onSettings: { showingSettings = true },
-                        onContentEdit: { showingContentEdit = true },
-                        onReplaces: { showingEffectiveReplaces = true }
-                    )
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.title2)
+                        }
+                        
+                        VStack(alignment: .leading) {
+                            Text(book.name)
+                                .font(.caption)
+                                .lineLimit(1)
+                            Text(viewModel.currentChapter?.title ?? "")
+                                .font(.caption2)
+                                .lineLimit(1)
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: { showingChapterList = true }) {
+                            Image(systemName: "list.bullet")
+                                .font(.title2)
+                        }
+                        
+                        Button(action: { showingChangeSource = true }) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.title2)
+                        }
+                        
+                        Button(action: { showingBookmarks = true }) {
+                            Image(systemName: "bookmark")
+                                .font(.title2)
+                        }
+                        
+                        Button(action: { showingTTSControls = true }) {
+                            Image(systemName: "speaker.wave.2")
+                                .font(.title2)
+                        }
+                        
+                        Button(action: { showingAutoPageTurn = true }) {
+                            Image(systemName: "timer")
+                                .font(.title2)
+                        }
+                        
+                        Button(action: { showingSettings = true }) {
+                            Image(systemName: "a.square")
+                                .font(.title2)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.3))
                     .opacity(showUI ? 1.0 : 0.0)
                     .animation(.easeInOut, value: showUI)
                     
                     Spacer()
                     
                     // 底部工具栏
-                    ReaderBottomBar(
-                        currentChapter: viewModel.currentChapterIndex,
-                        totalChapters: viewModel.totalChapters,
-                        onPrevChapter: { Task { await viewModel.prevChapter() } },
-                        onNextChapter: { Task { await viewModel.nextChapter() } },
-                        onSliderChange: { viewModel.jumpToChapter($0) },
-                        onBrightness: { showingBrightness = true },
-                        onBgTextConfig: { showingBgTextConfig = true },
-                        onReadStyle: { showingReadStyle = true }
-                    )
+                    VStack(spacing: 8) {
+                        // 进度滑块
+                        Slider(value: Binding(
+                            get: { Double(viewModel.currentChapterIndex) },
+                            set: { viewModel.jumpToChapter(Int($0)) }
+                        ), in: 0...Double(max(1, viewModel.totalChapters - 1)), step: 1)
+                            .padding(.horizontal)
+                        
+                        HStack {
+                            Button(action: { Task { await viewModel.prevChapter() } }) {
+                                Label("上一章", systemImage: "chevron.left")
+                            }
+                            .disabled(viewModel.currentChapterIndex <= 0)
+                            
+                            Spacer()
+                            
+                            Text("第\(viewModel.currentChapterIndex + 1)/\(viewModel.totalChapters)章")
+                                .font(.caption)
+                            
+                            Spacer()
+                            
+                            Button(action: { Task { await viewModel.nextChapter() } }) {
+                                Label("下一章", systemImage: "chevron.right")
+                            }
+                            .disabled(viewModel.currentChapterIndex >= viewModel.totalChapters - 1)
+                        }
+                        .padding(.horizontal)
+                    }
+                    .padding()
+                    .background(Color.black.opacity(0.3))
                     .opacity(showUI ? 1.0 : 0.0)
                     .animation(.easeInOut, value: showUI)
                 }
@@ -103,71 +149,7 @@ struct ReaderView: View {
                         .transition(.opacity)
                 }
                 
-                // Phase 1 新增 Sheet
-                if showingBrightness {
-                    BrightnessSlider(isPresented: $showingBrightness)
-                        .transition(.opacity)
-                }
-                
-                if showingBgTextConfig {
-                    BgTextConfigSheet(isPresented: $showingBgTextConfig, viewModel: viewModel)
-                        .transition(.move(edge: .bottom))
-                }
-                
-                if showingReadStyle {
-                    ReadStyleSheet(isPresented: $showingReadStyle, viewModel: viewModel)
-                        .transition(.move(edge: .bottom))
-                }
-                
-                if showingContentEdit, let chapter = viewModel.currentChapter {
-                    ContentEditSheet(isPresented: $showingContentEdit, chapter: chapter) {
-                        Task { await viewModel.loadCurrentChapter() }
-                    }
-                }
-                
-                if showingEffectiveReplaces {
-                    EffectiveReplacesSheet(isPresented: $showingEffectiveReplaces, bookSourceUrl: book.origin)
-                }
-                
                 AutoPageTurnOverlay(manager: autoPageTurnManager)
-                
-                // 文本选择菜单
-                if textSelectionCoordinator.showMenu {
-                    TextActionMenu(
-                        selectedText: textSelectionCoordinator.selectedText,
-                        chapterIndex: textSelectionCoordinator.chapterIndex,
-                        positionInChapter: textSelectionCoordinator.positionInChapter,
-                        onCopy: {},
-                        onBookmark: {
-                            // 创建书签
-                            let context = CoreDataStack.shared.viewContext
-                            let bookmark = Bookmark(context: context)
-                            bookmark.bookmarkId = UUID()
-                            bookmark.bookId = book.bookId
-                            bookmark.chapterIndex = Int32(textSelectionCoordinator.chapterIndex)
-                            bookmark.chapterTitle = viewModel.currentChapter?.title ?? ""
-                            bookmark.content = textSelectionCoordinator.selectedText
-                            bookmark.createDate = Date()
-                            try? context.save()
-                        },
-                        onSearch: {},
-                        onDictionary: {
-                            textSelectionCoordinator.showDictionaryForWord(textSelectionCoordinator.selectedText)
-                        },
-                        onDismiss: {
-                            textSelectionCoordinator.hideMenu()
-                        }
-                    )
-                    .position(x: textSelectionCoordinator.selectionRect.midX,
-                              y: textSelectionCoordinator.selectionRect.minY - 40)
-                    .transition(.opacity)
-                }
-                
-                // 字典视图
-                if textSelectionCoordinator.showDictionary {
-                    DictionaryLookupView(word: textSelectionCoordinator.dictionaryWord)
-                        .ignoresSafeArea()
-                }
                 
                 // 加载指示器
                 if viewModel.isLoading {
@@ -191,9 +173,6 @@ struct ReaderView: View {
                     .padding()
                 }
             }
-            .onTapGesture {
-                // 点击手势由 PagedReaderView 内部处理
-            }
             .onAppear {
                 viewModel.loadBook(book)
                 autoPageTurnManager.onTurnPage = { viewModel.turnToNextPage() }
@@ -206,14 +185,12 @@ struct ReaderView: View {
                     viewModel.applyTheme(isNight ? .dark : .light)
                 }
                 readingEnhancementManager.startReadingSession()
-                startHideTimer()
             }
             .onDisappear {
                 viewModel.saveProgress()
                 ttsManager.stop()
                 autoPageTurnManager.stop()
                 readingEnhancementManager.endReadingSession()
-                hideTimer?.invalidate()
             }
             .onChange(of: viewModel.currentPageIndex) { _ in
                 autoPageTurnManager.reset()
@@ -246,173 +223,6 @@ struct ReaderView: View {
         }
         .navigationBarHidden(true)
         .statusBar(hidden: !showUI)
-    }
-    
-    // MARK: - 自动隐藏定时器
-    
-    private func startHideTimer() {
-        hideTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
-            withAnimation {
-                showUI = false
-            }
-        }
-    }
-    
-    private func resetHideTimer() {
-        hideTimer?.invalidate()
-        startHideTimer()
-    }
-}
-
-// MARK: - 顶部工具栏
-struct ReaderTopBar: View {
-    let title: String
-    let chapterTitle: String
-    let onBack: () -> Void
-    let onChapterList: () -> Void
-    let onChangeSource: () -> Void
-    let onBookmarks: () -> Void
-    let onTTS: () -> Void
-    let onAutoPage: () -> Void
-    let onSettings: () -> Void
-    let onContentEdit: () -> Void
-    let onReplaces: () -> Void
-    
-    var body: some View {
-        HStack {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.title2)
-            }
-            
-            VStack(alignment: .leading) {
-                Text(title)
-                    .font(.caption)
-                    .lineLimit(1)
-                Text(chapterTitle)
-                    .font(.caption2)
-                    .lineLimit(1)
-            }
-            
-            Spacer()
-            
-            Menu {
-                Button(action: onChapterList) {
-                    Label("目录", systemImage: "list.bullet")
-                }
-                Button(action: onChangeSource) {
-                    Label("换源", systemImage: "arrow.triangle.2.circlepath")
-                }
-                Button(action: onBookmarks) {
-                    Label("书签", systemImage: "bookmark")
-                }
-                Button(action: onContentEdit) {
-                    Label("编辑内容", systemImage: "pencil")
-                }
-                Button(action: onReplaces) {
-                    Label("替换规则", systemImage: "text.badge.checkmark")
-                }
-                Divider()
-                Button(action: onTTS) {
-                    Label("朗读", systemImage: "speaker.wave.2")
-                }
-                Button(action: onAutoPage) {
-                    Label("自动翻页", systemImage: "timer")
-                }
-                Button(action: onSettings) {
-                    Label("设置", systemImage: "a.square")
-                }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .font(.title2)
-            }
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(Color.black.opacity(0.3))
-    }
-}
-
-// MARK: - 底部工具栏
-struct ReaderBottomBar: View {
-    let currentChapter: Int
-    let totalChapters: Int
-    let onPrevChapter: () -> Void
-    let onNextChapter: () -> Void
-    let onSliderChange: (Int) -> Void
-    let onBrightness: () -> Void
-    let onBgTextConfig: () -> Void
-    let onReadStyle: () -> Void
-    
-    @State private var sliderValue: Double = 0
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            // 进度滑块
-            Slider(value: $sliderValue, in: 0...Double(max(1, totalChapters - 1)), step: 1) {
-                Text("章节")
-            } minimumValueLabel: {
-                Text("0")
-            } maximumValueLabel: {
-                Text("\(totalChapters)")
-            } onEditingChanged: { _ in
-                onSliderChange(Int(sliderValue))
-            }
-            .padding(.horizontal)
-            
-            // 章节控制
-            HStack {
-                Button(action: onPrevChapter) {
-                    Label("上一章", systemImage: "chevron.left")
-                }
-                .disabled(currentChapter <= 0)
-                
-                Spacer()
-                
-                Text("第\(currentChapter + 1)/\(totalChapters)章")
-                    .font(.caption)
-                
-                Spacer()
-                
-                Button(action: onNextChapter) {
-                    Label("下一章", systemImage: "chevron.right")
-                }
-                .disabled(currentChapter >= totalChapters - 1)
-            }
-            .padding(.horizontal)
-            
-            // 新增按钮行
-            HStack(spacing: 20) {
-                Button(action: onBrightness) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "sun.max")
-                        Text("亮度")
-                            .font(.caption2)
-                    }
-                }
-                
-                Button(action: onBgTextConfig) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "paintpalette")
-                        Text("背景")
-                            .font(.caption2)
-                    }
-                }
-                
-                Button(action: onReadStyle) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "textformat.size")
-                        Text("样式")
-                            .font(.caption2)
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(Color.black.opacity(0.3))
-        .onChange(of: currentChapter, perform: { newValue in
-            sliderValue = Double(newValue)
-        })
     }
 }
 
