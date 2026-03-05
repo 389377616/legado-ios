@@ -102,25 +102,40 @@ struct BookDetailView: View {
         .navigationDestination(isPresented: $navigatingToReader) {
             ReaderView(book: book)
         }
-        .alert("提示", isPresented: $viewModel.showingAlert) {
-            Button("确定", role: .cancel) {}
-        } message: {
-            Text(viewModel.alertMessage)
+        .background {
+            // 背景模糊效果
+            if let coverUrl = book.displayCoverUrl, !coverUrl.isEmpty {
+                AsyncImage(url: URL(string: coverUrl)) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .blur(radius: 30)
+                            .overlay(Color.black.opacity(0.6))
+                            .ignoresSafeArea()
+                    default:
+                        Color.clear
+                    }
+                }
+            }
         }
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .task {
             await viewModel.loadChapters()
         }
-    }
     
     // MARK: - 书籍头部
     private var bookHeader: some View {
         HStack(alignment: .top, spacing: 16) {
+            // 封面 - 增强阴影效果
             BookCoverView(url: book.displayCoverUrl)
                 .frame(width: 120, height: 160)
                 .background(Color.gray.opacity(0.1))
                 .cornerRadius(8)
-                .shadow(radius: 4)
-            
+                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.15), radius: 16, x: 0, y: 8)
             VStack(alignment: .leading, spacing: 8) {
                 Text(book.name)
                     .font(.title2)

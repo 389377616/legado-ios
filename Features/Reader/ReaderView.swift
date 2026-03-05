@@ -38,23 +38,25 @@ struct ReaderView: View {
                     withAnimation { showUI.toggle() }
                 }
                 
-                // 顶部工具栏
-                VStack {
+                // MARK: - 顶部工具栏（精简版）                VStack {
                     HStack {
                         Button(action: {
                             viewModel.saveProgress()
                             dismiss()
                         }) {
                             Image(systemName: "chevron.left")
-                                .font(.title2)
+                                .font(.title3)
+                                .frame(width: 44, height: 44)
                         }
                         
-                        VStack(alignment: .leading) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(book.name)
-                                .font(.caption)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
                                 .lineLimit(1)
                             Text(viewModel.currentChapter?.title ?? "")
-                                .font(.caption2)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                                 .lineLimit(1)
                         }
                         
@@ -62,75 +64,115 @@ struct ReaderView: View {
                         
                         Button(action: { showingChapterList = true }) {
                             Image(systemName: "list.bullet")
-                                .font(.title2)
-                        }
-                        
-                        Button(action: { showingChangeSource = true }) {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.title2)
-                        }
-                        
-                        Button(action: { showingBookmarks = true }) {
-                            Image(systemName: "bookmark")
-                                .font(.title2)
-                        }
-                        
-                        Button(action: { showingTTSControls = true }) {
-                            Image(systemName: "speaker.wave.2")
-                                .font(.title2)
-                        }
-                        
-                        Button(action: { showingAutoPageTurn = true }) {
-                            Image(systemName: "timer")
-                                .font(.title2)
-                        }
-                        
-                        Button(action: { showingSettings = true }) {
-                            Image(systemName: "a.square")
-                                .font(.title2)
+                                .font(.title3)
+                                .frame(width: 44, height: 44)
                         }
                     }
                     .padding(.horizontal)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.3))
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+                    .background(.ultraThinMaterial)
                     .opacity(showUI ? 1.0 : 0.0)
-                    .animation(.easeInOut, value: showUI)
+                    .animation(.easeInOut(duration: 0.25), value: showUI)
                     
                     Spacer()
                     
-                    // 底部工具栏
-                    VStack(spacing: 8) {
-                        // 进度滑块
-                        Slider(value: Binding(
-                            get: { Double(viewModel.currentChapterIndex) },
-                            set: { viewModel.jumpToChapter(Int($0)) }
-                        ), in: 0...Double(max(1, viewModel.totalChapters - 1)), step: 1)
-                            .padding(.horizontal)
-                        
-                        HStack {
-                            Button(action: { Task { await viewModel.prevChapter() } }) {
-                                Label("上一章", systemImage: "chevron.left")
+                    // MARK: - 底部工具栏（分离式）
+                    VStack(spacing: 0) {
+                        // 进度区域
+                        VStack(spacing: 12) {
+                            // 章节进度
+                            HStack {
+                                Text("第\(viewModel.currentChapterIndex + 1)/\(viewModel.totalChapters)章")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text(viewModel.currentChapter?.title ?? "")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
                             }
-                            .disabled(viewModel.currentChapterIndex <= 0)
                             
-                            Spacer()
+                            // 进度滑块
+                            Slider(value: Binding(
+                                get: { Double(viewModel.currentChapterIndex) },
+                                set: { viewModel.jumpToChapter(Int($0)) }
+                            ), in: 0...Double(max(1, viewModel.totalChapters - 1)), step: 1)
                             
-                            Text("第\(viewModel.currentChapterIndex + 1)/\(viewModel.totalChapters)章")
-                                .font(.caption)
-                            
-                            Spacer()
-                            
-                            Button(action: { Task { await viewModel.nextChapter() } }) {
-                                Label("下一章", systemImage: "chevron.right")
+                            // 翻页控制
+                            HStack(spacing: 20) {
+                                Button(action: { Task { await viewModel.prevChapter() } }) {
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "chevron.left")
+                                            .font(.title3)
+                                        Text("上一章")
+                                            .font(.caption2)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                }
+                                .disabled(viewModel.currentChapterIndex <= 0)
+                                .opacity(viewModel.currentChapterIndex <= 0 ? 0.5 : 1)
+                                
+                                Divider()
+                                    .frame(height: 30)
+                                
+                                Button(action: { Task { await viewModel.nextChapter() } }) {
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "chevron.right")
+                                            .font(.title3)
+                                        Text("下一章")
+                                            .font(.caption2)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                }
+                                .disabled(viewModel.currentChapterIndex >= viewModel.totalChapters - 1)
+                                .opacity(viewModel.currentChapterIndex >= viewModel.totalChapters - 1 ? 0.5 : 1)
                             }
-                            .disabled(viewModel.currentChapterIndex >= viewModel.totalChapters - 1)
                         }
                         .padding(.horizontal)
+                        .padding(.top, 16)
+                        .padding(.bottom, 12)
+                        
+                        Divider()
+                            .padding(.horizontal)
+                        
+                        // 工具栏
+                        HStack(spacing: 0) {
+                            ToolBarButton(
+                                icon: "a.square",
+                                title: "设置",
+                                action: { showingSettings = true }
+                            )
+                            
+                            ToolBarButton(
+                                icon: "speaker.wave.2",
+                                title: "朗读",
+                                action: { showingTTSControls = true }
+                            )
+                            
+                            ToolBarButton(
+                                icon: "timer",
+                                title: "自动",
+                                action: { showingAutoPageTurn = true }
+                            )
+                            
+                            ToolBarButton(
+                                icon: "bookmark",
+                                title: "书签",
+                                action: { showingBookmarks = true }
+                            )
+                            
+                            ToolBarButton(
+                                icon: "arrow.triangle.2.circlepath",
+                                title: "换源",
+                                action: { showingChangeSource = true }
+                            )
+                        }
+                        .padding(.vertical, 12)
                     }
-                    .padding()
-                    .background(Color.black.opacity(0.3))
+                    .background(.ultraThinMaterial)
                     .opacity(showUI ? 1.0 : 0.0)
-                    .animation(.easeInOut, value: showUI)
+                    .animation(.easeInOut(duration: 0.25), value: showUI)
                 }
                 
                 // 设置面板
@@ -223,6 +265,26 @@ struct ReaderView: View {
         }
         .navigationBarHidden(true)
         .statusBar(hidden: !showUI)
+    }
+}
+
+// MARK: - 工具栏按钮组件
+struct ToolBarButton: View {
+    let icon: String
+    let title: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.title3)
+                Text(title)
+                    .font(.caption2)
+            }
+            .frame(maxWidth: .infinity)
+            .foregroundColor(.primary)
+        }
     }
 }
 

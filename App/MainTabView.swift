@@ -13,40 +13,33 @@ struct MainTabView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            // 书架
+            // 书架（含本地书籍入口）
             NavigationStack { BookshelfView() }
                 .tabItem {
-                    Label("书架", systemImage: "books.vertical.fill")
+                    Image(systemName: "books.vertical.fill")
                 }
                 .tag(0)
             
             // 发现
             NavigationStack { DiscoveryView() }
                 .tabItem {
-                    Label("发现", systemImage: "safari")
+                    Image(systemName: "safari")
                 }
                 .tag(1)
             
-            // 本地
-            NavigationStack { LocalBookView() }
-                .tabItem {
-                    Label("本地", systemImage: "folder.fill")
-                }
-                .tag(2)
-            
-            // 订阅
+            // RSS订阅
             NavigationStack { RSSSubscriptionView() }
                 .tabItem {
-                    Label("订阅", systemImage: "dot.radiowaves.left.and.right")
+                    Image(systemName: "dot.radiowaves.left.and.right")
                 }
-                .tag(3)
+                .tag(2)
             
             // 我的
             SettingsView()
                 .tabItem {
-                    Label("我的", systemImage: "person.crop.circle")
+                    Image(systemName: "person.crop.circle")
                 }
-                .tag(4)
+                .tag(3)
         }
         .accentColor(.blue)
     }
