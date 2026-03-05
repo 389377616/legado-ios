@@ -213,7 +213,8 @@ class TableOfContentsService {
         
         // 5. 返回保存后的章节
         return try await loadCachedChapters(book: book)
-
+    }
+    
     /// 解析目录页面（支持分页）
     private func parseTOCPage(url: String, ruleToc: RuleToc, source: BookSource, accumulated: [TableOfContentsParser.ChapterInfo] = []) async throws -> [TableOfContentsParser.ChapterInfo] {
         guard let tocURL = URL(string: url) else {
@@ -232,12 +233,11 @@ class TableOfContentsService {
         // 合并之前页的结果
         let startIndex = accumulated.count
         chapters = chapters.map { chapterInfo in
-            ChapterInfo(
+            TableOfContentsParser.ChapterInfo(
                 title: chapterInfo.title,
                 url: chapterInfo.url,
                 index: chapterInfo.index + startIndex
             )
-        }
 
         
         var allChapters = accumulated + chapters
