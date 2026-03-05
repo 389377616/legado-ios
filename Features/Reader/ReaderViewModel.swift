@@ -58,9 +58,6 @@ class ReaderViewModel: ObservableObject {
     @Published var letterSpacing: CGFloat = 0
     
     // MARK: - 私有属性
-    @Published var textColor: Color = .black
-    
-    // MARK: - 私有属性
     private var ruleEngine: RuleEngine = RuleEngine()
     private var loadTask: Task<Void, Never>?
     let cacheManager = ChapterCacheManager()
