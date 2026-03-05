@@ -555,7 +555,6 @@ extension ReaderViewModel {
     }
 }
 
-// MARK: - 错误类型
 enum ReaderError: LocalizedError {
     case noChapters
     case invalidChapterIndex
@@ -563,6 +562,7 @@ enum ReaderError: LocalizedError {
     case networkFailure
     case noBook
     case noSource
+    case parseFailed(String)
     
     var errorDescription: String? {
         switch self {
@@ -572,10 +572,10 @@ enum ReaderError: LocalizedError {
         case .networkFailure: return "网络加载失败"
         case .noBook: return "未找到书籍"
         case .noSource: return "未找到书源"
+        case .parseFailed(let reason): return "解析失败：\(reason)"
         }
     }
 }
-
 // MARK: - 设置视图
 struct ReaderSettingsView: View {
     @ObservedObject var viewModel: ReaderViewModel
