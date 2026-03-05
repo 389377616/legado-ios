@@ -93,13 +93,6 @@ class ChangeSourceViewModel: ObservableObject {
                             tocUrl: "",
                             isCurrentSource: isCurrentSource
                         )
-                            source: source,
-                            latestChapter: matchedBook.latestChapterTitle ?? "未知",
-                            chapterCount: Int(matchedBook.totalChapterNum),
-                            bookUrl: matchedBook.bookUrl,
-                            tocUrl: matchedBook.tocUrl ?? "",
-                            isCurrentSource: isCurrentSource
-                        )
                         
                         await MainActor.run {
                             self?.results.append(result)

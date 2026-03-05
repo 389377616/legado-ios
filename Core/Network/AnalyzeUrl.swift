@@ -362,22 +362,6 @@ private final class WebViewHTMLFetcher: NSObject, WKNavigationDelegate {
             finish(.failure(error))
         }
     }
-        Task { @MainActor in
-            finish(.failure(error))
-        }
-    }
-
-    nonisolated func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        Task { @MainActor in
-            finish(.failure(error))
-        }
-    }
-        finish(.failure(error))
-    }
-
-    nonisolated func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        finish(.failure(error))
-    }
 
     private func finish(_ result: Result<(html: String, finalURL: String), Error>) {
         guard let continuation else { return }

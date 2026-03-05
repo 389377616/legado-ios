@@ -211,6 +211,10 @@ class TableOfContentsService {
         // 4. 保存到 CoreData
         try await saveChapters(chapters, book: book)
         
+        // 5. 返回保存后的章节
+        return try await loadCachedChapters(book: book)
+        try await saveChapters(chapters, book: book)
+        
         return chapters
     }
     
@@ -231,7 +235,13 @@ class TableOfContentsService {
         
         // 合并之前页的结果
         let startIndex = accumulated.count
-        chapters = chapters.map { ChapterInfo in
+        chapters = chapters.map { chapterInfo in
+            ChapterInfo(
+                title: chapterInfo.title,
+                url: chapterInfo.url,
+                index: chapterInfo.index + startIndex
+            )
+        }
             ChapterInfo(
                 title: ChapterInfo.title,
                 url: ChapterInfo.url,
