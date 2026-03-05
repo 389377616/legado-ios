@@ -199,13 +199,7 @@ class ReadingEnhancementManager: ObservableObject {
             }
         }
     }
-        readingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.updateReadingTime()
-            }
-        }
-    }
-    
+
     private func stopReadingTimer() {
         readingTimer?.invalidate()
         readingTimer = nil
@@ -255,17 +249,7 @@ class ReadingEnhancementManager: ObservableObject {
             }
         }
     }
-        // 立即检查一次
-        updateNightMode()
-        
-        // 每分钟检查一次
-        nightModeTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.updateNightMode()
-            }
-        }
-    }
-    
+
     private func stopNightModeDetection() {
         nightModeTimer?.invalidate()
         nightModeTimer = nil

@@ -83,9 +83,7 @@ class DictRuleViewModel: ObservableObject {
             DictRuleItem(name: "百度翻译", urlRule: "https://fanyi.baidu.com/#auto/zh/{{word}}", sortOrder: 0),
             DictRuleItem(name: "有道词典", urlRule: "https://dict.youdao.com/m/result?word={{word}}&lang=en", sortOrder: 1),
             DictRuleItem(name: "Google 翻译", urlRule: "https://translate.google.com/?sl=auto&tl=zh-CN&text={{word}}", sortOrder: 2),
-            DictRule(name: "有道词典", urlRule: "https://dict.youdao.com/m/result?word={{word}}&lang=en", sortOrder: 1),
-            DictRule(name: "Google 翻译", urlRule: "https://translate.google.com/?sl=auto&tl=zh-CN&text={{word}}", sortOrder: 2),
-            DictRule(name: "维基百科", urlRule: "https://zh.m.wikipedia.org/wiki/{{word}}", showInPanel: false, sortOrder: 3)
+            DictRuleItem(name: "维基百科", urlRule: "https://zh.m.wikipedia.org/wiki/{{word}}", showInPanel: false, sortOrder: 3)
         ]
         saveRules()
     }
