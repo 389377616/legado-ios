@@ -38,7 +38,8 @@ struct ReaderView: View {
                     withAnimation { showUI.toggle() }
                 }
                 
-                // MARK: - 顶部工具栏（精简版）                VStack {
+                // MARK: - 顶部工具栏（精简版）
+                VStack {
                     HStack {
                         Button(action: {
                             viewModel.saveProgress()
