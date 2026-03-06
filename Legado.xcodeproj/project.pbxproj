@@ -115,7 +115,8 @@
 		1A00000000000083 /* ChangeSourceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000083 /* ChangeSourceSheet.swift */; };
 		1A00000000000084 /* BookmarkSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000084 /* BookmarkSheet.swift */; };
 		1A00000000000085 /* ChapterCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000085 /* ChapterCacheManager.swift */; };
-	/* End PBXBuildFile section */
+		1A00000000000086 /* UTType+EPUB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000086 /* UTType+EPUB.swift */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1A10000000000001 /* LegadoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegadoApp.swift; sourceTree = "<group>"; };
@@ -225,7 +226,8 @@
 		1A10000000000083 /* ChangeSourceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeSourceSheet.swift; sourceTree = "<group>"; };
 		1A10000000000084 /* BookmarkSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkSheet.swift; sourceTree = "<group>"; };
 		1A10000000000085 /* ChapterCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterCacheManager.swift; sourceTree = "<group>"; };
-	/* End PBXFileReference section */
+		1A10000000000086 /* UTType+EPUB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UTType+EPUB.swift"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		1A20000000000001 /* Frameworks */ = {
@@ -323,6 +325,7 @@
 			isa = PBXGroup;
 			children = (
 				1A10000000000032 /* AppConstants.swift */,
+				1A10000000000086 /* UTType+EPUB.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -696,7 +699,8 @@
 				1A00000000000082 /* Chapter.swift in Sources */,
 				1A00000000000083 /* ChangeSourceSheet.swift in Sources */,
 				1A00000000000084 /* BookmarkSheet.swift in Sources */,
-				1A00000000000085 /* ChapterCacheManager.swift in Sources */,
+1A00000000000085 /* ChapterCacheManager.swift in Sources */,
+				1A00000000000086 /* UTType+EPUB.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
