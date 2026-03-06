@@ -49,16 +49,22 @@ final class BookshelfViewModel: ObservableObject {
 
         do {
             let firstPage = try await fetchBooks(page: 0, size: pageSize)
+            print("📚 loadBooks: 获取到 \(firstPage.count) 本书")
+            for book in firstPage.prefix(3) {
+                print("  - \(book.name) (origin: \(book.origin))")
+            }
             books = firstPage
             hasMore = firstPage.count == pageSize
         } catch {
             errorMessage = "加载失败：\(error.localizedDescription)"
+            print("❌ loadBooks 失败: \(error)")
         }
 
         isLoading = false
     }
     
     func forceReload() async {
+        print("🔄 forceReload: 强制刷新书架")
         isLoading = false
         await loadBooks()
     }
