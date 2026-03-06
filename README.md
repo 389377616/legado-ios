@@ -1,6 +1,6 @@
 # Legado iOS
 
-📚 基于 Legado 的 iOS 原生阅读应用
+📚 基于 Legado 的 iOS 原生阅读应用  纯vibe coding玩具
 
 [![iOS CI](https://github.com/chrn11/legado-ios/actions/workflows/ios-ci.yml/badge.svg)](https://github.com/chrn11/legado-ios/actions/workflows/ios-ci.yml)
 ![Platform](https://img.shields.io/badge/platform-iOS%2016.0+-blue)
