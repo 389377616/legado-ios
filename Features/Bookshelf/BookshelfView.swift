@@ -55,7 +55,7 @@ ToolbarItem(placement: .navigationBarTrailing) {
                             Task { @MainActor in
                                 do {
                                     try await localBookViewModel.importBook(url: url)
-                                    await viewModel.loadBooks()
+                                    await viewModel.forceReload()
                                 } catch {
                                     localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"
                                 }
@@ -79,7 +79,7 @@ ToolbarItem(placement: .navigationBarTrailing) {
                 Task {
                     do {
                         try await localBookViewModel.importBook(url: url)
-                        await viewModel.loadBooks()
+                        await viewModel.forceReload()
                     } catch {
                         await MainActor.run {
                             localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"

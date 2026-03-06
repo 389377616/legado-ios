@@ -44,12 +44,11 @@ final class BookshelfViewModel: ObservableObject {
     
     // MARK: - 懒加载
     
-    func loadBooks() async {
+func loadBooks() async {
         guard !isLoading else { return }
 
         isLoading = true
         currentPage = 0
-        books.removeAll()
 
         do {
             let firstPage = try await fetchBooks(page: 0, size: pageSize)
@@ -58,6 +57,22 @@ final class BookshelfViewModel: ObservableObject {
         } catch {
             errorMessage = "加载失败：\(error.localizedDescription)"
         }
+
+        isLoading = false
+    }
+    
+    func forceReload() async {
+        isLoading = false
+        await loadBooks()
+    }
+
+        isLoading = false
+    }
+    
+    func forceReload() async {
+        isLoading = false
+        await loadBooks()
+    }
 
         isLoading = false
     }
