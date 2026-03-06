@@ -23,13 +23,11 @@ class LocalBookViewModel: ObservableObject {
         
         do {
             let context = CoreDataStack.shared.viewContext
-            let book = Book.create(in: context)
             
-            // 获取文件信息
             let fileName = url.lastPathComponent
             let fileExtension = url.pathExtension.lowercased()
             
-            // 设置基本信息
+            let book = Book.create(in: context)
             book.name = fileName.replacingOccurrences(of: ".\(fileExtension)", with: "")
             book.author = "未知"
             book.type = fileExtension == "epub" ? 1 : 0
@@ -37,9 +35,8 @@ class LocalBookViewModel: ObservableObject {
             book.originName = fileName
             book.bookUrl = url.path
             book.tocUrl = ""
-            book.canUpdate = false  // 本地书籍不更新
+            book.canUpdate = false
             
-            // 根据类型解析
             if fileExtension == "txt" {
                 try await parseTXT(file: url, book: book)
             } else if fileExtension == "epub" {
@@ -48,17 +45,23 @@ class LocalBookViewModel: ObservableObject {
                 throw LocalBookError.unsupportedFormat
             }
             
-            // 保存
-            try CoreDataStack.shared.save()
+            print("📝 准备保存: hasChanges=\(context.hasChanges), bookName=\(book.name)")
+            
+            if context.hasChanges {
+                try context.save()
+                print("✅ CoreData 保存成功")
+            } else {
+                print("⚠️ context.hasChanges = false，跳过保存")
+            }
             
             isImporting = false
             successMessage = "导入成功：\(book.name)"
-            await loadLocalBooks()
             
             return book
         } catch {
             isImporting = false
             errorMessage = "导入失败：\(error.localizedDescription)"
+            print("❌ 导入失败: \(error)")
             throw error
         }
     }
