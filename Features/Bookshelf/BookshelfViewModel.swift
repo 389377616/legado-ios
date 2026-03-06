@@ -20,7 +20,6 @@ final class BookshelfViewModel: ObservableObject {
     @Published var groupFilter: Int32 = 0
     @Published var sortBy: SortBy = .lastRead
     
-    // 分页配置
     private let pageSize = 50
     private var currentPage = 0
     
@@ -42,9 +41,7 @@ final class BookshelfViewModel: ObservableObject {
         loadTask?.cancel()
     }
     
-    // MARK: - 懒加载
-    
-func loadBooks() async {
+    func loadBooks() async {
         guard !isLoading else { return }
 
         isLoading = true
@@ -65,19 +62,7 @@ func loadBooks() async {
         isLoading = false
         await loadBooks()
     }
-
-        isLoading = false
-    }
     
-    func forceReload() async {
-        isLoading = false
-        await loadBooks()
-    }
-
-        isLoading = false
-    }
-    
-    /// 加载更多（滚动到底部时调用）
     func loadMoreBooks() async {
         guard !isLoading && hasMore else { return }
 
@@ -95,7 +80,6 @@ func loadBooks() async {
         isLoading = false
     }
     
-    /// 分页获取书籍
     private func fetchBooks(page: Int, size: Int) async throws -> [Book] {
         let context = CoreDataStack.shared.viewContext
 
@@ -103,12 +87,10 @@ func loadBooks() async {
         request.fetchLimit = size
         request.fetchOffset = page * size
 
-        // 分组过滤
         if groupFilter != 0 {
             request.predicate = NSPredicate(format: "group == %d", groupFilter)
         }
 
-        // 排序
         switch sortBy {
         case .lastRead:
             request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
