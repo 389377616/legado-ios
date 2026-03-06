@@ -14,8 +14,8 @@ struct BookshelfView: View {
     @State private var showingSourceManage = false
     @State private var showingAddBook = false
     @State private var showingSearch = false
-    // fileImporter 上提到此层，避免三层嵌套 sheet 导致回调不触发
     @State private var showingFilePicker = false
+    @State private var pendingFilePicker = false
     
     var body: some View {
         Group {
@@ -60,13 +60,17 @@ struct BookshelfView: View {
         .sheet(isPresented: $showingSourceManage) {
             SourceManageView()
         }
-        .sheet(isPresented: $showingAddBook) {
-            AddBookView(showingFilePicker: $showingFilePicker)
+        .sheet(isPresented: $showingAddBook, onDismiss: {
+            if pendingFilePicker {
+                pendingFilePicker = false
+                showingFilePicker = true
+            }
+        }) {
+            AddBookView(pendingFilePicker: $pendingFilePicker)
         }
         .sheet(isPresented: $showingSearch) {
             NavigationStack { SearchResultView() }
         }
-        // fileImporter 挂在最外层（非嵌套 sheet），回调可正常触发
         .fileImporter(
             isPresented: $showingFilePicker,
             allowedContentTypes: [.plainText, .epub],

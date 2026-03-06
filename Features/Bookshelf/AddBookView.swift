@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AddBookView: View {
     @Environment(\.dismiss) var dismiss
-    @Binding var showingFilePicker: Bool
+    @Binding var pendingFilePicker: Bool
 
     @State private var showingQRScanner = false
     @State private var showingSearch = false
@@ -18,10 +18,8 @@ struct AddBookView: View {
         NavigationView {
             List {
                 Button {
+                    pendingFilePicker = true
                     dismiss()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showingFilePicker = true
-                    }
                 } label: {
                     Label("本地导入", systemImage: "folder")
                 }
@@ -57,5 +55,5 @@ struct AddBookView: View {
 }
 
 #Preview {
-    AddBookView(showingFilePicker: .constant(false))
+    AddBookView(pendingFilePicker: .constant(false))
 }
