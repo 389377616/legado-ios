@@ -748,10 +748,9 @@
 				1A00000000000087 /* DocumentPickerHelper.swift in Sources */,
 				1A00000000000088 /* URLSchemeHandler.swift in Sources */,
 				1A00000000000089 /* URLConfirmHelper.swift in Sources */,
-				1A0000000000008A /* VerificationWebView.swift in Sources */,
+1A0000000000008A /* VerificationWebView.swift in Sources */,
 				1A0000000000008B /* RemoteBookView.swift in Sources */,
 				1A0000000000008C /* BackgroundCacheService.swift in Sources */,
-				1A0000000000008D /* IntegrationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
