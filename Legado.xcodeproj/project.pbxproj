@@ -120,6 +120,9 @@
 		1A00000000000088 /* URLSchemeHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000088 /* URLSchemeHandler.swift */; };
 		1A00000000000089 /* URLConfirmHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000089 /* URLConfirmHelper.swift */; };
 		1A0000000000008A /* VerificationWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008A /* VerificationWebView.swift */; };
+		1A0000000000008B /* RemoteBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008B /* RemoteBookView.swift */; };
+		1A0000000000008C /* BackgroundCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008C /* BackgroundCacheService.swift */; };
+		1A0000000000008D /* IntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008D /* IntegrationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -235,6 +238,9 @@
 		1A10000000000088 /* URLSchemeHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSchemeHandler.swift; sourceTree = "<group>"; };
 		1A10000000000089 /* URLConfirmHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLConfirmHelper.swift; sourceTree = "<group>"; };
 		1A1000000000008A /* VerificationWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationWebView.swift; sourceTree = "<group>"; };
+		1A1000000000008B /* RemoteBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteBookView.swift; sourceTree = "<group>"; };
+		1A1000000000008C /* BackgroundCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundCacheService.swift; sourceTree = "<group>"; };
+		1A1000000000008D /* IntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -321,11 +327,12 @@
 			path = Persistence;
 			sourceTree = "<group>";
 		};
-		1A30000000000014 /* Cache */ = {
+1A30000000000014 /* Cache */ = {
 			isa = PBXGroup;
 			children = (
 				1A10000000000033 /* ImageCacheManager.swift */,
 				1A10000000000085 /* ChapterCacheManager.swift */,
+				1A1000000000008C /* BackgroundCacheService.swift */,
 			);
 			path = Cache;
 			sourceTree = "<group>";
@@ -409,7 +416,7 @@
 			path = RuleEngine;
 			sourceTree = "<group>";
 		};
-		1A30000000000020 /* Features */ = {
+1A30000000000020 /* Features */ = {
 			isa = PBXGroup;
 			children = (
 				1A30000000000021 /* Bookshelf */,
@@ -420,6 +427,7 @@
 				1A30000000000027 /* Local */,
 				1A30000000000026 /* BookDetail */,
 				1A30000000000028 /* RSS */,
+				1A30000000000063 /* Remote */,
 				1A1000000000005C /* DiscoveryView.swift */,
 				1A1000000000005D /* ReadingStatisticsView.swift */,
 			);
@@ -532,12 +540,20 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		1A30000000000040 /* Products */ = {
+1A30000000000040 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				1A10000000000005 /* Legado.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		1A30000000000063 /* Remote */ = {
+			isa = PBXGroup;
+			children = (
+				1A1000000000008B /* RemoteBookView.swift */,
+			);
+			path = Remote;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -725,6 +741,9 @@
 				1A00000000000088 /* URLSchemeHandler.swift in Sources */,
 				1A00000000000089 /* URLConfirmHelper.swift in Sources */,
 				1A0000000000008A /* VerificationWebView.swift in Sources */,
+				1A0000000000008B /* RemoteBookView.swift in Sources */,
+				1A0000000000008C /* BackgroundCacheService.swift in Sources */,
+				1A0000000000008D /* IntegrationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
