@@ -231,16 +231,12 @@ class RemoteBookViewModel: ObservableObject {
         do {
             let localURL = try await client.download(path: file.path)
             
-let ext = (file.name as NSString).pathExtension.lowercased()
+            let ext = (file.name as NSString).pathExtension.lowercased()
             if ext == "json" {
                 let data = try Data(contentsOf: localURL)
                 if let jsonString = String(data: data, encoding: .utf8) {
                     URLSchemeHandler.importBookSourceJSON(jsonString) { _ in }
                 }
-            } else {
-                let localBookVM = LocalBookViewModel()
-                try await localBookVM.importBook(url: localURL)
-            }
             } else {
                 let localBookVM = LocalBookViewModel()
                 try await localBookVM.importBook(url: localURL)

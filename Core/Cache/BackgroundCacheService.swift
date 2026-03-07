@@ -95,7 +95,12 @@ class BackgroundCacheService {
             chapter: chapter
         )
         
-        let cachePath = ChapterCacheManager.shared.cachePath(for: chapter)
+        let cacheDir = FileManager.default.urls(
+            for: .cachesDirectory,
+            in: .userDomainMask
+        ).first!.appendingPathComponent("ChapterCache")
+        
+        let cachePath = cacheDir.appendingPathComponent("\(chapter.chapterId.uuidString).txt").path
         try content.write(to: URL(fileURLWithPath: cachePath), atomically: true, encoding: .utf8)
         
         chapter.contentHash = cachePath
