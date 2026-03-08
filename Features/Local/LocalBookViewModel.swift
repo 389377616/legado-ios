@@ -19,6 +19,7 @@ class LocalBookViewModel: ObservableObject {
     
     // MARK: - 导入本地书籍
     func importBook(url: URL) async throws -> Book {
+        print("🚀 importBook 开始: url=\(url.path)")
         isImporting = true
         
         do {
@@ -26,6 +27,7 @@ class LocalBookViewModel: ObservableObject {
             
             let fileName = url.lastPathComponent
             let fileExtension = url.pathExtension.lowercased()
+            print("📁 文件信息: name=\(fileName), ext=\(fileExtension)")
             
             let book = Book.create(in: context)
             book.name = fileName.replacingOccurrences(of: ".\(fileExtension)", with: "")
@@ -36,10 +38,13 @@ class LocalBookViewModel: ObservableObject {
             book.bookUrl = url.path
             book.tocUrl = ""
             book.canUpdate = false
+            print("📖 Book 创建完成: id=\(book.bookId), name=\(book.name)")
             
             if fileExtension == "txt" {
+                print("📄 开始解析 TXT...")
                 try await parseTXT(file: url, book: book)
             } else if fileExtension == "epub" {
+                print("📚 开始解析 EPUB...")
                 try await parseEPUB(file: url, book: book)
             } else {
                 throw LocalBookError.unsupportedFormat
@@ -56,6 +61,7 @@ class LocalBookViewModel: ObservableObject {
             
             isImporting = false
             successMessage = "导入成功：\(book.name)"
+            print("🎉 导入成功提示已设置: \(successMessage ?? "")")
             
             return book
         } catch {
@@ -81,14 +87,25 @@ class LocalBookViewModel: ObservableObject {
     
     // MARK: - 解析 TXT
     private func parseTXT(file url: URL, book: Book) async throws {
+        print("📄 parseTXT 开始: \(url.path)")
+        
+        // 检查文件是否存在
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            print("❌ 文件不存在: \(url.path)")
+            throw LocalBookError.fileNotFound
+        }
+        
         // 尝试检测编码
         let encoding = try await detectEncoding(file: url)
+        print("📝 检测到编码: \(encoding)")
         
         // 读取内容
         let content = try String(contentsOf: url, encoding: encoding)
+        print("📊 文件内容长度: \(content.count) 字符")
         
         // 智能分章
         let chapters = splitChapters(content: content)
+        print("📑 分章完成: \(chapters.count) 章")
         
         // 设置章节数
         book.totalChapterNum = Int32(chapters.count)
@@ -114,25 +131,31 @@ class LocalBookViewModel: ObservableObject {
         if let firstChapter = chapters.first {
             book.durChapterTitle = firstChapter.title
         }
+        print("✅ parseTXT 完成")
     }
     
     // MARK: - 解析 EPUB
     private func parseEPUB(file url: URL, book: Book) async throws {
-        // 使用 EPUBParser 解析
-        let epubBook = try await EPUBParser.parse(file: url)
+        print("📚 parseEPUB 开始: \(url.path)")
         
-        // 设置书籍信息
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            print("❌ EPUB 文件不存在: \(url.path)")
+            throw LocalBookError.fileNotFound
+        }
+        
+        let epubBook = try await EPUBParser.parse(file: url)
+        print("📖 EPUB 解析完成: title=\(epubBook.title), chapters=\(epubBook.chapters.count)")
+        
         book.name = epubBook.title
         book.author = epubBook.author
         book.totalChapterNum = Int32(epubBook.chapters.count)
         
-        // 保存封面
         if let coverData = epubBook.coverImage {
             let coverURL = try await saveCoverImage(coverData, bookId: book.bookId)
             book.coverUrl = coverURL.path
+            print("🖼️ 封面保存完成")
         }
         
-        // 创建章节记录
         let context = CoreDataStack.shared.viewContext
         for chapter in epubBook.chapters {
             let bookChapter = BookChapter.create(
@@ -147,16 +170,15 @@ class LocalBookViewModel: ObservableObject {
             bookChapter.isCached = true
         }
         
-        // 保存元数据
         if let description = epubBook.metadata.description {
             book.intro = description
         }
         
-        // 设置第一章
         book.durChapterIndex = 0
         if let firstChapter = epubBook.chapters.first {
             book.durChapterTitle = firstChapter.title
         }
+        print("✅ parseEPUB 完成")
     }
     
     // MARK: - 检测编码

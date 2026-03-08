@@ -39,7 +39,7 @@ struct BookshelfView: View {
                 .pickerStyle(.segmented)
             }
             
-ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 12) {
                     Button(action: { showingSearch = true }) {
                         Image(systemName: "magnifyingglass")
@@ -50,13 +50,23 @@ ToolbarItem(placement: .navigationBarTrailing) {
                     }
                     
                     Button(action: {
+                        print("🔘 导入按钮被点击")
                         DocumentPickerHelper.shared.present(contentTypes: [.plainText, .epub]) { urls in
-                            guard let url = urls.first else { return }
+                            print("📂 DocumentPicker 回调: urls=\(urls)")
+                            guard let url = urls.first else {
+                                print("⚠️ 没有选择文件")
+                                return
+                            }
+                            print("📄 选择文件: \(url.path)")
                             Task { @MainActor in
                                 do {
+                                    print("🚀 开始导入...")
                                     try await localBookViewModel.importBook(url: url)
+                                    print("✅ 导入完成，准备刷新书架")
                                     await viewModel.forceReload()
+                                    print("📢 successMessage=\(localBookViewModel.successMessage ?? "nil")")
                                 } catch {
+                                    print("❌ 导入异常: \(error)")
                                     localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"
                                 }
                             }
@@ -76,14 +86,17 @@ ToolbarItem(placement: .navigationBarTrailing) {
         }
         .sheet(isPresented: $showingAddBook) {
             AddBookView { url, completion in
-                Task {
+                print("📂 AddBookView 回调: url=\(url.path)")
+                Task { @MainActor in
                     do {
+                        print("🚀 AddBookView: 开始导入...")
                         try await localBookViewModel.importBook(url: url)
+                        print("✅ AddBookView: 导入完成")
                         await viewModel.forceReload()
+                        print("📢 AddBookView: successMessage=\(localBookViewModel.successMessage ?? "nil")")
                     } catch {
-                        await MainActor.run {
-                            localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"
-                        }
+                        print("❌ AddBookView: 导入异常: \(error)")
+                        localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"
                     }
                     completion()
                 }
@@ -140,12 +153,10 @@ ToolbarItem(placement: .navigationBarTrailing) {
                     .buttonStyle(.plain)
                 }
                 
-                // 加载更多指示器
                 if viewModel.isLoading {
                     ProgressView()
                         .padding()
                 } else if viewModel.hasMore {
-                    // 接近底部时加载更多
                     Color.clear
                         .frame(height: 1)
                         .onAppear {
@@ -179,13 +190,11 @@ ToolbarItem(placement: .navigationBarTrailing) {
     }
 }
 
-// MARK: - 网格项
 struct BookGridItemView: View {
     let book: Book
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // 封面
             BookCoverView(url: book.coverUrl)
                 .frame(maxWidth: .infinity)
                 .aspectRatio(3/4, contentMode: .fill)
@@ -193,20 +202,17 @@ struct BookGridItemView: View {
                 .cornerRadius(8)
                 .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
             
-            // 书名
             Text(book.name)
                 .font(.caption)
                 .fontWeight(.medium)
                 .lineLimit(1)
                 .foregroundColor(.primary)
             
-            // 作者
             Text(book.author)
                 .font(.caption2)
                 .lineLimit(1)
                 .foregroundColor(.secondary)
             
-            // 进度条
             ProgressView(value: book.readProgress)
                 .progressViewStyle(.linear)
                 .tint(.blue)
@@ -214,32 +220,27 @@ struct BookGridItemView: View {
     }
 }
 
-// MARK: - 列表项
 struct BookListItemView: View {
     let book: Book
     
     var body: some View {
         HStack(spacing: 12) {
-            // 封面
             BookCoverView(url: book.coverUrl)
                 .frame(width: 60, height: 80)
                 .background(Color.gray.opacity(0.1))
                 .cornerRadius(4)
             
             VStack(alignment: .leading, spacing: 4) {
-                // 书名
                 Text(book.name)
                     .font(.body)
                     .fontWeight(.medium)
                     .lineLimit(1)
                 
-                // 作者
                 Text(book.author)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                 
-                // 最新章节
                 if let chapter = book.latestChapterTitle {
                     Text(chapter)
                         .font(.caption2)
@@ -249,7 +250,6 @@ struct BookListItemView: View {
                 
                 Spacer()
                 
-                // 进度
                 HStack {
                     ProgressView(value: book.readProgress)
                         .progressViewStyle(.linear)
@@ -267,7 +267,6 @@ struct BookListItemView: View {
     }
 }
 
-// MARK: - 封面视图
 struct BookCoverView: View {
     let url: String?
     @State private var imageData: Data?
@@ -293,7 +292,6 @@ struct BookCoverView: View {
     }
     
     private func loadImage(urlString: String) async {
-        // 使用 ImageCacheManager 实现内存+磁盘缓存
         let cached = await ImageCacheManager.shared.loadImage(from: urlString)
         if let cached = cached {
             imageData = cached.pngData()
@@ -301,7 +299,6 @@ struct BookCoverView: View {
     }
 }
 
-// MARK: - 空状态
 struct EmptyStateView: View {
     let title: String
     let subtitle: String
@@ -325,7 +322,6 @@ struct EmptyStateView: View {
     }
 }
 
-// MARK: - 预览
 #Preview {
     BookshelfView()
 }
