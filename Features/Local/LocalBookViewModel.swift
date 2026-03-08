@@ -17,10 +17,12 @@ class LocalBookViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var successMessage: String?
     
-    // MARK: - 导入本地书籍
     func importBook(url: URL) async throws -> Book {
-        print("🚀 importBook 开始: url=\(url.path)")
+        print("🚀 importBook 开始: url=\(url.absoluteString)")
         isImporting = true
+        
+        let didStartAccess = url.startAccessingSecurityScopedResource()
+        print("🔐 安全访问: \(didStartAccess)")
         
         do {
             let context = CoreDataStack.shared.viewContext
@@ -35,7 +37,7 @@ class LocalBookViewModel: ObservableObject {
             book.type = fileExtension == "epub" ? 1 : 0
             book.origin = "local"
             book.originName = fileName
-            book.bookUrl = url.path
+            book.bookUrl = url.absoluteString
             book.tocUrl = ""
             book.canUpdate = false
             print("📖 Book 创建完成: id=\(book.bookId), name=\(book.name)")
@@ -59,12 +61,20 @@ class LocalBookViewModel: ObservableObject {
                 print("⚠️ context.hasChanges = false，跳过保存")
             }
             
+            if didStartAccess {
+                url.stopAccessingSecurityScopedResource()
+                print("🔐 释放安全访问")
+            }
+            
             isImporting = false
             successMessage = "导入成功：\(book.name)"
             print("🎉 导入成功提示已设置: \(successMessage ?? "")")
             
             return book
         } catch {
+            if didStartAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
             isImporting = false
             errorMessage = "导入失败：\(error.localizedDescription)"
             print("❌ 导入失败: \(error)")
@@ -72,7 +82,6 @@ class LocalBookViewModel: ObservableObject {
         }
     }
     
-    // MARK: - 加载本地书籍
     func loadLocalBooks() async {
         do {
             let request: NSFetchRequest<Book> = Book.fetchRequest()
@@ -85,32 +94,25 @@ class LocalBookViewModel: ObservableObject {
         }
     }
     
-    // MARK: - 解析 TXT
     private func parseTXT(file url: URL, book: Book) async throws {
         print("📄 parseTXT 开始: \(url.path)")
         
-        // 检查文件是否存在
         guard FileManager.default.fileExists(atPath: url.path) else {
             print("❌ 文件不存在: \(url.path)")
             throw LocalBookError.fileNotFound
         }
         
-        // 尝试检测编码
         let encoding = try await detectEncoding(file: url)
         print("📝 检测到编码: \(encoding)")
         
-        // 读取内容
         let content = try String(contentsOf: url, encoding: encoding)
         print("📊 文件内容长度: \(content.count) 字符")
         
-        // 智能分章
         let chapters = splitChapters(content: content)
         print("📑 分章完成: \(chapters.count) 章")
         
-        // 设置章节数
         book.totalChapterNum = Int32(chapters.count)
         
-        // 创建章节记录
         let context = CoreDataStack.shared.viewContext
         for (index, chapter) in chapters.enumerated() {
             let bookChapter = BookChapter.create(
@@ -126,7 +128,6 @@ class LocalBookViewModel: ObservableObject {
             bookChapter.cachePath = url.path
         }
         
-        // 设置第一章为当前
         book.durChapterIndex = 0
         if let firstChapter = chapters.first {
             book.durChapterTitle = firstChapter.title
@@ -134,7 +135,6 @@ class LocalBookViewModel: ObservableObject {
         print("✅ parseTXT 完成")
     }
     
-    // MARK: - 解析 EPUB
     private func parseEPUB(file url: URL, book: Book) async throws {
         print("📚 parseEPUB 开始: \(url.path)")
         
@@ -181,14 +181,11 @@ class LocalBookViewModel: ObservableObject {
         print("✅ parseEPUB 完成")
     }
     
-    // MARK: - 检测编码
     private func detectEncoding(file url: URL) async throws -> String.Encoding {
-        // 读取前 1000 字节检测编码
         let handle = try FileHandle(forReadingFrom: url)
         let data = handle.readData(ofLength: 1000)
         try handle.close()
         
-        // 检测 BOM
         if data.starts(with: [0xEF, 0xBB, 0xBF]) {
             return .utf8
         } else if data.starts(with: [0xFF, 0xFE]) {
@@ -206,13 +203,10 @@ class LocalBookViewModel: ObservableObject {
             return gb18030
         }
         
-        // 默认 UTF-8
         return .utf8
     }
     
-    // MARK: - 智能分章
     private func splitChapters(content: String) -> [(title: String, content: String)] {
-        // 章节匹配正则
         let chapterPatterns = [
             "^第[零一二三四五六七八九十百千万 0-9]+[章回卷节部篇]",
             "^第[0-9]+章",
@@ -240,12 +234,10 @@ class LocalBookViewModel: ObservableObject {
             }
             
             if isChapterStart {
-                // 保存前一章
                 if let title = currentTitle, !currentContent.isEmpty {
                     chapters.append((title, currentContent.trimmingCharacters(in: .whitespaces)))
                 }
                 
-                // 新章节
                 currentTitle = line.trimmingCharacters(in: .whitespaces)
                 currentContent = ""
             } else {
@@ -253,12 +245,10 @@ class LocalBookViewModel: ObservableObject {
             }
         }
         
-        // 添加最后一章
         if let title = currentTitle, !currentContent.isEmpty {
             chapters.append((title, currentContent.trimmingCharacters(in: .whitespaces)))
         }
         
-        // 如果没有检测到章节，返回全部内容作为一章
         if chapters.isEmpty {
             return [("第一章", content)]
         }
@@ -266,7 +256,6 @@ class LocalBookViewModel: ObservableObject {
         return chapters
     }
     
-    // MARK: - 保存封面图片
     private func saveCoverImage(_ data: Data, bookId: UUID) async throws -> URL {
         let fileManager = FileManager.default
         let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -282,9 +271,7 @@ class LocalBookViewModel: ObservableObject {
         return coverURL
     }
     
-    // MARK: - 删除本地书籍
     func deleteBook(_ book: Book) {
-        // 如果是本地文件，删除文件
         if book.origin == "local" {
             try? FileManager.default.removeItem(atPath: book.bookUrl)
         }
@@ -298,7 +285,6 @@ class LocalBookViewModel: ObservableObject {
     }
 }
 
-// MARK: - 错误类型
 enum LocalBookError: LocalizedError {
     case unsupportedFormat
     case fileNotFound
@@ -315,7 +301,6 @@ enum LocalBookError: LocalizedError {
     }
 }
 
-// MARK: - 本地书籍视图
 struct LocalBookView: View {
     @StateObject private var viewModel = LocalBookViewModel()
     var onImportTapped: () -> Void
