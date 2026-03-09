@@ -169,18 +169,18 @@ class LogManager: ObservableObject {
 }
 
 // MARK: - 便捷的日志宏
-func LogDebug(_ message: String, file: String = #file, line: Int = #line) {
+public func LogDebug(_ message: String, file: String = #file, line: Int = #line) {
     LogManager.shared.debug(message, file: file, line: line)
 }
 
-func LogInfo(_ message: String, file: String = #file, line: Int = #line) {
+public func LogInfo(_ message: String, file: String = #file, line: Int = #line) {
     LogManager.shared.info(message, file: file, line: line)
 }
 
-func LogWarning(_ message: String, file: String = #file, line: Int = #line) {
+public func LogWarning(_ message: String, file: String = #file, line: Int = #line) {
     LogManager.shared.warning(message, file: file, line: line)
 }
 
-func LogError(_ message: String, file: String = #file, line: Int = #line) {
+public func LogError(_ message: String, file: String = #file, line: Int = #line) {
     LogManager.shared.error(message, file: file, line: line)
 }
