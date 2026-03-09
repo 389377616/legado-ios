@@ -18,7 +18,7 @@ class LocalBookViewModel: ObservableObject {
     @Published var successMessage: String?
     
     func importBook(url: URL) async throws -> Book {
-        ToastDebug("开始导入: \(url.lastPathComponent)")
+        print("🚀 开始导入: \(url.lastPathComponent)")
         isImporting = true
         
         do {
@@ -26,7 +26,7 @@ class LocalBookViewModel: ObservableObject {
             
             let fileName = url.lastPathComponent
             let fileExtension = url.pathExtension.lowercased()
-            ToastDebug("文件类型: \(fileExtension)")
+            print("📁 文件类型: \(fileExtension)")
             
             let book = Book.create(in: context)
             book.name = fileName.replacingOccurrences(of: ".\(fileExtension)", with: "")
@@ -37,39 +37,39 @@ class LocalBookViewModel: ObservableObject {
             book.bookUrl = url.absoluteString
             book.tocUrl = ""
             book.canUpdate = false
-            ToastDebug("创建书籍: \(book.name)")
+            print("📖 创建书籍: \(book.name)")
             
             if fileExtension == "txt" {
-                ToastInfo("正在解析 TXT...")
+                print("📄 解析 TXT...")
                 try await parseTXT(file: url, book: book)
             } else if fileExtension == "epub" {
-                ToastInfo("正在解析 EPUB...")
+                print("📚 解析 EPUB...")
                 try await parseEPUB(file: url, book: book)
             } else {
                 throw LocalBookError.unsupportedFormat
             }
             
-            ToastDebug("保存中... changes=\(context.hasChanges)")
+            print("📝 保存中... hasChanges=\(context.hasChanges)")
             
             if context.hasChanges {
                 try context.save()
-                ToastDebug("CoreData 保存成功")
+                print("✅ CoreData 保存成功")
             } else {
-                ToastWarning("没有变更需要保存")
+                print("⚠️ 没有变更需要保存")
             }
             
             url.stopAccessingSecurityScopedResource()
             
             isImporting = false
-            successMessage = "导入成功：\(book.name)"
-            ToastSuccess("导入成功：\(book.name)")
+            successMessage = "✅ 导入成功：\(book.name) (\(book.totalChapterNum)章)"
+            print("🎉 导入成功: \(book.name)")
             
             return book
         } catch {
             url.stopAccessingSecurityScopedResource()
             isImporting = false
-            errorMessage = "导入失败：\(error.localizedDescription)"
-            ToastError("导入失败：\(error.localizedDescription)")
+            errorMessage = "❌ 导入失败：\(error.localizedDescription)"
+            print("❌ 导入失败: \(error)")
             throw error
         }
     }
