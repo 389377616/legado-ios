@@ -29,6 +29,10 @@ struct SettingsLegacyView: View {
                     NavigationLink("清理缓存") {
                         Text("清理缓存")
                     }
+                    
+                    NavigationLink("应用日志") {
+                        LogView()
+                    }
                 }
                 
                 Section(header: Text("关于")) {
