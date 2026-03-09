@@ -32,7 +32,7 @@ class DocumentPickerHelper: NSObject, UIDocumentPickerDelegate {
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         for url in urls {
             let success = url.startAccessingSecurityScopedResource()
-            LogInfo("🔐 DocumentPicker 安全访问: \(success) for \(url.lastPathComponent)")
+            print("🔐 DocumentPicker 安全访问: \(success) for \(url.lastPathComponent)")
         }
         onPick?(urls)
         onPick = nil

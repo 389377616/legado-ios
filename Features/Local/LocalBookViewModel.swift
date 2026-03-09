@@ -18,7 +18,7 @@ class LocalBookViewModel: ObservableObject {
     @Published var successMessage: String?
     
     func importBook(url: URL) async throws -> Book {
-        LogInfo("🚀 importBook 开始: url=\(url.absoluteString)")
+        print("🚀 importBook 开始: url=\(url.absoluteString)")
         isImporting = true
         
         do {
@@ -26,7 +26,7 @@ class LocalBookViewModel: ObservableObject {
             
             let fileName = url.lastPathComponent
             let fileExtension = url.pathExtension.lowercased()
-            LogInfo("📁 文件信息: name=\(fileName), ext=\(fileExtension)")
+            print("📁 文件信息: name=\(fileName), ext=\(fileExtension)")
             
             let book = Book.create(in: context)
             book.name = fileName.replacingOccurrences(of: ".\(fileExtension)", with: "")
@@ -37,40 +37,40 @@ class LocalBookViewModel: ObservableObject {
             book.bookUrl = url.absoluteString
             book.tocUrl = ""
             book.canUpdate = false
-            LogInfo("📖 Book 创建完成: id=\(book.bookId), name=\(book.name)")
+            print("📖 Book 创建完成: id=\(book.bookId), name=\(book.name)")
             
             if fileExtension == "txt" {
-                LogInfo("📄 开始解析 TXT...")
+                print("📄 开始解析 TXT...")
                 try await parseTXT(file: url, book: book)
             } else if fileExtension == "epub" {
-                LogInfo("📚 开始解析 EPUB...")
+                print("📚 开始解析 EPUB...")
                 try await parseEPUB(file: url, book: book)
             } else {
                 throw LocalBookError.unsupportedFormat
             }
             
-            LogInfo("📝 准备保存: hasChanges=\(context.hasChanges), bookName=\(book.name)")
+            print("📝 准备保存: hasChanges=\(context.hasChanges), bookName=\(book.name)")
             
             if context.hasChanges {
                 try context.save()
-                LogInfo("✅ CoreData 保存成功")
+                print("✅ CoreData 保存成功")
             } else {
-                LogWarning("⚠️ context.hasChanges = false，跳过保存")
+                print("⚠️ context.hasChanges = false，跳过保存")
             }
             
             url.stopAccessingSecurityScopedResource()
-            LogInfo("🔐 释放安全访问")
+            print("🔐 释放安全访问")
             
             isImporting = false
             successMessage = "导入成功：\(book.name)"
-            LogInfo("🎉 导入成功提示已设置: \(successMessage ?? "")")
+            print("🎉 导入成功提示已设置: \(successMessage ?? "")")
             
             return book
         } catch {
             url.stopAccessingSecurityScopedResource()
             isImporting = false
             errorMessage = "导入失败：\(error.localizedDescription)"
-            LogError("❌ 导入失败: \(error)")
+            print("❌ 导入失败: \(error)")
             throw error
         }
     }
@@ -88,21 +88,21 @@ class LocalBookViewModel: ObservableObject {
     }
     
     private func parseTXT(file url: URL, book: Book) async throws {
-        LogInfo("📄 parseTXT 开始: \(url.path)")
+        print("📄 parseTXT 开始: \(url.path)")
         
         guard FileManager.default.fileExists(atPath: url.path) else {
-            LogError("❌ 文件不存在: \(url.path)")
+            print("❌ 文件不存在: \(url.path)")
             throw LocalBookError.fileNotFound
         }
         
         let encoding = try await detectEncoding(file: url)
-        LogInfo("📝 检测到编码: \(encoding)")
+        print("📝 检测到编码: \(encoding)")
         
         let content = try String(contentsOf: url, encoding: encoding)
-        LogInfo("📊 文件内容长度: \(content.count) 字符")
+        print("📊 文件内容长度: \(content.count) 字符")
         
         let chapters = splitChapters(content: content)
-        LogInfo("📑 分章完成: \(chapters.count) 章")
+        print("📑 分章完成: \(chapters.count) 章")
         
         book.totalChapterNum = Int32(chapters.count)
         
@@ -125,19 +125,19 @@ class LocalBookViewModel: ObservableObject {
         if let firstChapter = chapters.first {
             book.durChapterTitle = firstChapter.title
         }
-        LogInfo("✅ parseTXT 完成")
+        print("✅ parseTXT 完成")
     }
     
     private func parseEPUB(file url: URL, book: Book) async throws {
-        LogInfo("📚 parseEPUB 开始: \(url.path)")
+        print("📚 parseEPUB 开始: \(url.path)")
         
         guard FileManager.default.fileExists(atPath: url.path) else {
-            LogError("❌ EPUB 文件不存在: \(url.path)")
+            print("❌ EPUB 文件不存在: \(url.path)")
             throw LocalBookError.fileNotFound
         }
         
         let epubBook = try await EPUBParser.parse(file: url)
-        LogInfo("📖 EPUB 解析完成: title=\(epubBook.title), chapters=\(epubBook.chapters.count)")
+        print("📖 EPUB 解析完成: title=\(epubBook.title), chapters=\(epubBook.chapters.count)")
         
         book.name = epubBook.title
         book.author = epubBook.author
@@ -146,7 +146,7 @@ class LocalBookViewModel: ObservableObject {
         if let coverData = epubBook.coverImage {
             let coverURL = try await saveCoverImage(coverData, bookId: book.bookId)
             book.coverUrl = coverURL.path
-            LogInfo("🖼️ 封面保存完成")
+            print("🖼️ 封面保存完成")
         }
         
         let context = CoreDataStack.shared.viewContext
@@ -171,7 +171,7 @@ class LocalBookViewModel: ObservableObject {
         if let firstChapter = epubBook.chapters.first {
             book.durChapterTitle = firstChapter.title
         }
-        LogInfo("✅ parseEPUB 完成")
+        print("✅ parseEPUB 完成")
     }
     
     private func detectEncoding(file url: URL) async throws -> String.Encoding {
