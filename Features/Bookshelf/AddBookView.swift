@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 
 struct AddBookView: View {
     @Environment(\.dismiss) var dismiss
-    var onLocalImport: (URL, @escaping () -> Void) -> Void
+    var onLocalImport: () -> Void
 
     @State private var showingQRScanner = false
     @State private var showingSearch = false
@@ -19,9 +19,9 @@ struct AddBookView: View {
         NavigationView {
             List {
                 Button {
-                    DocumentPickerHelper.shared.present(contentTypes: [.plainText, .epub]) { urls in
-                        guard let url = urls.first else { return }
-                        onLocalImport(url) { dismiss() }
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        onLocalImport()
                     }
                 } label: {
                     Label("本地导入", systemImage: "folder")
@@ -56,5 +56,5 @@ struct AddBookView: View {
 }
 
 #Preview {
-    AddBookView(onLocalImport: { _, completion in completion() })
+    AddBookView(onLocalImport: { })
 }

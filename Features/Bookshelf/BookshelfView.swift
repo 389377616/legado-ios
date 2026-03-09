@@ -85,20 +85,26 @@ struct BookshelfView: View {
             SourceManageView()
         }
         .sheet(isPresented: $showingAddBook) {
-            AddBookView { url, completion in
-                print("📂 AddBookView 回调: url=\(url.path)")
-                Task { @MainActor in
-                    do {
-                        print("🚀 AddBookView: 开始导入...")
-                        try await localBookViewModel.importBook(url: url)
-                        print("✅ AddBookView: 导入完成")
-                        await viewModel.forceReload()
-                        print("📢 AddBookView: successMessage=\(localBookViewModel.successMessage ?? "nil")")
-                    } catch {
-                        print("❌ AddBookView: 导入异常: \(error)")
-                        localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"
+            AddBookView {
+                print("📂 AddBookView: 开始本地导入")
+                DocumentPickerHelper.shared.present(contentTypes: [.plainText, .epub]) { urls in
+                    print("📂 DocumentPicker 回调: urls=\(urls)")
+                    guard let url = urls.first else {
+                        print("⚠️ 没有选择文件")
+                        return
                     }
-                    completion()
+                    print("📄 选择文件: \(url.path)")
+                    Task { @MainActor in
+                        do {
+                            print("🚀 开始导入...")
+                            try await localBookViewModel.importBook(url: url)
+                            print("✅ 导入完成")
+                            await viewModel.forceReload()
+                        } catch {
+                            print("❌ 导入异常: \(error)")
+                            localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"
+                        }
+                    }
                 }
             }
         }
