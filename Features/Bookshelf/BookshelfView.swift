@@ -12,7 +12,6 @@ struct BookshelfView: View {
     @StateObject private var viewModel = BookshelfViewModel()
     @StateObject private var localBookViewModel = LocalBookViewModel()
     @State private var showingSourceManage = false
-    @State private var showingAddBook = false
     @State private var showingSearch = false
     
     var body: some View {
@@ -20,7 +19,7 @@ struct BookshelfView: View {
             if viewModel.books.isEmpty && !viewModel.isLoading {
                 EmptyStateView(
                     title: "书架空空如也",
-                    subtitle: "点击右上角添加书籍或导入书源",
+                    subtitle: "点击右上角 + 导入本地书籍",
                     imageName: "books.vertical"
                 )
             } else {
@@ -50,32 +49,18 @@ struct BookshelfView: View {
                     }
                     
                     Button(action: {
-                        print("🔘 导入按钮被点击")
                         DocumentPickerHelper.shared.present(contentTypes: [.plainText, .epub]) { urls in
-                            print("📂 DocumentPicker 回调: urls=\(urls)")
-                            guard let url = urls.first else {
-                                print("⚠️ 没有选择文件")
-                                return
-                            }
-                            print("📄 选择文件: \(url.path)")
+                            guard let url = urls.first else { return }
                             Task { @MainActor in
                                 do {
-                                    print("🚀 开始导入...")
                                     try await localBookViewModel.importBook(url: url)
-                                    print("✅ 导入完成，准备刷新书架")
                                     await viewModel.forceReload()
-                                    print("📢 successMessage=\(localBookViewModel.successMessage ?? "nil")")
                                 } catch {
-                                    print("❌ 导入异常: \(error)")
                                     localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"
                                 }
                             }
                         }
                     }) {
-                        Image(systemName: "square.and.arrow.down")
-                    }
-                    
-                    Button(action: { showingAddBook = true }) {
                         Image(systemName: "plus")
                     }
                 }
@@ -83,30 +68,6 @@ struct BookshelfView: View {
         }
         .sheet(isPresented: $showingSourceManage) {
             SourceManageView()
-        }
-        .sheet(isPresented: $showingAddBook) {
-            AddBookView {
-                print("📂 AddBookView: 开始本地导入")
-                DocumentPickerHelper.shared.present(contentTypes: [.plainText, .epub]) { urls in
-                    print("📂 DocumentPicker 回调: urls=\(urls)")
-                    guard let url = urls.first else {
-                        print("⚠️ 没有选择文件")
-                        return
-                    }
-                    print("📄 选择文件: \(url.path)")
-                    Task { @MainActor in
-                        do {
-                            print("🚀 开始导入...")
-                            try await localBookViewModel.importBook(url: url)
-                            print("✅ 导入完成")
-                            await viewModel.forceReload()
-                        } catch {
-                            print("❌ 导入异常: \(error)")
-                            localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"
-                        }
-                    }
-                }
-            }
         }
         .sheet(isPresented: $showingSearch) {
             NavigationStack { SearchResultView() }

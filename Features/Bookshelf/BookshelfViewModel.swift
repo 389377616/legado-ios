@@ -65,6 +65,7 @@ final class BookshelfViewModel: ObservableObject {
     
     func forceReload() async {
         print("🔄 forceReload: 强制刷新书架")
+        CoreDataStack.shared.viewContext.refreshAllObjects()
         isLoading = false
         await loadBooks()
     }
