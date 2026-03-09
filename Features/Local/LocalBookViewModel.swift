@@ -21,9 +21,6 @@ class LocalBookViewModel: ObservableObject {
         print("🚀 importBook 开始: url=\(url.absoluteString)")
         isImporting = true
         
-        let didStartAccess = url.startAccessingSecurityScopedResource()
-        print("🔐 安全访问: \(didStartAccess)")
-        
         do {
             let context = CoreDataStack.shared.viewContext
             
@@ -61,10 +58,8 @@ class LocalBookViewModel: ObservableObject {
                 print("⚠️ context.hasChanges = false，跳过保存")
             }
             
-            if didStartAccess {
-                url.stopAccessingSecurityScopedResource()
-                print("🔐 释放安全访问")
-            }
+            url.stopAccessingSecurityScopedResource()
+            print("🔐 释放安全访问")
             
             isImporting = false
             successMessage = "导入成功：\(book.name)"
@@ -72,9 +67,7 @@ class LocalBookViewModel: ObservableObject {
             
             return book
         } catch {
-            if didStartAccess {
-                url.stopAccessingSecurityScopedResource()
-            }
+            url.stopAccessingSecurityScopedResource()
             isImporting = false
             errorMessage = "导入失败：\(error.localizedDescription)"
             print("❌ 导入失败: \(error)")
