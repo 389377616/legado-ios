@@ -16,6 +16,7 @@ struct LegadoApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .toast()
                 .onOpenURL { url in
                     handleURL(url)
                 }
