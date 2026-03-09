@@ -65,7 +65,7 @@ final class BookshelfViewModel: ObservableObject {
     
     func forceReload() async {
         print("🔄 forceReload: 强制刷新书架")
-        CoreDataStack.shared.viewContext.refreshAllObjects()
+        CoreDataStack.shared.viewContext.reset()
         isLoading = false
         await loadBooks()
     }
@@ -93,6 +93,7 @@ final class BookshelfViewModel: ObservableObject {
         let request: NSFetchRequest<Book> = Book.fetchRequest()
         request.fetchLimit = size
         request.fetchOffset = page * size
+        request.returnsObjectsAsFaults = false
 
         if groupFilter != 0 {
             request.predicate = NSPredicate(format: "group == %d", groupFilter)
@@ -109,7 +110,9 @@ final class BookshelfViewModel: ObservableObject {
             request.sortDescriptors = [NSSortDescriptor(key: "lastCheckTime", ascending: false)]
         }
 
-        return try context.fetch(request)
+        let results = try context.fetch(request)
+        print("📊 fetchBooks: 查询到 \(results.count) 本书")
+        return results
     }
     
     func refreshBooks() async {
