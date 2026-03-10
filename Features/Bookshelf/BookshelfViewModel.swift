@@ -18,6 +18,12 @@ final class BookshelfViewModel: ObservableObject {
 
     @Published var debugDiskBookCount: Int = 0
     @Published var debugStorePath: String = ""
+    @Published var coreDataStatus: String = ""
+    
+    init() {
+        _ = CoreDataStack.shared.persistentContainer
+        coreDataStatus = CoreDataStack.shared.debugInfo
+    }
     
     @Published var viewMode: ViewMode = .grid
     @Published var groupFilter: Int32 = 0
@@ -116,12 +122,13 @@ final class BookshelfViewModel: ObservableObject {
     }
 
     var debugSummary: String {
+        let status = coreDataStatus.isEmpty ? "" : "\(coreDataStatus) | "
         if debugStorePath.isEmpty {
-            return "调试: store=<none>, 磁盘书籍=\(debugDiskBookCount)"
+            return "\(status)store=<none>, 磁盘书籍=\(debugDiskBookCount)"
         }
         let parts = debugStorePath.split(separator: "/")
         let tail = parts.suffix(3).joined(separator: "/")
-        return "调试: .../\(tail), 磁盘书籍=\(debugDiskBookCount), 内存books=\(books.count)"
+        return "\(status).../\(tail), 磁盘=\(debugDiskBookCount), 内存=\(books.count)"
     }
     
     func loadMoreBooks() async {

@@ -10,23 +10,21 @@ import CoreData
 final class CoreDataStack {
     static let shared = CoreDataStack()
     
-    /// App Group ID 常量（避免硬编码）
     static let appGroupIdentifier = "group.com.chrn11.legado"
-    
-    /// CoreData 模型名称
     private static let modelName = "Legado"
-    
-    /// Store 文件名
     private static let storeFileName = "Legado.sqlite"
     
-    // MARK: - Core Data 容器
+    private(set) var loadError: Error?
+    private(set) var isLoaded = false
+    private var storeURL: URL?
+    
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: Self.modelName)
         
-        // 确定 store URL（优先使用 App Group 共享目录）
-        let storeURL = Self.resolveStoreURL()
+        let resolvedStoreURL = Self.resolveStoreURL()
+        self.storeURL = resolvedStoreURL
         
-        let description = NSPersistentStoreDescription(url: storeURL)
+        let description = NSPersistentStoreDescription(url: resolvedStoreURL)
         description.type = NSSQLiteStoreType
         
         description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
@@ -36,18 +34,40 @@ final class CoreDataStack {
         
         container.persistentStoreDescriptions = [description]
         
-        container.loadPersistentStores { [weak container] description, error in
+        container.loadPersistentStores { [weak self] description, error in
+            guard let self = self else { return }
+            
             if let error = error {
-                print("CoreData 存储加载失败：\(error.localizedDescription)")
+                self.loadError = error
+                self.isLoaded = false
+                print("❌ CoreData 存储加载失败: \(error.localizedDescription)")
+                print("❌ Store URL: \(resolvedStoreURL.path)")
+                print("❌ Error domain: \(error._domain), code: \((error as NSError).code)")
                 return
             }
             
-            container?.viewContext.automaticallyMergesChangesFromParent = true
-            container?.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+            self.isLoaded = true
+            print("✅ CoreData 存储加载成功: \(resolvedStoreURL.path)")
+            
+            container.viewContext.automaticallyMergesChangesFromParent = true
+            container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         }
         
         return container
     }()
+    
+    var debugInfo: String {
+        if isLoaded {
+            let path = storeURL?.path ?? "<unknown>"
+            let parts = path.split(separator: "/")
+            let tail = parts.suffix(3).joined(separator: "/")
+            return "✅ 已加载: .../\(tail)"
+        } else if let error = loadError {
+            return "❌ 加载失败: \(error.localizedDescription)"
+        } else {
+            return "⏳ 未初始化"
+        }
+    }
     
     // MARK: - Store URL 解析
     
