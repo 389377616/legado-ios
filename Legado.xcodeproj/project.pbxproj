@@ -35,7 +35,6 @@
 		1A00000000000028 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000028 /* SettingsView.swift */; };
 		1A00000000000029 /* BookDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000029 /* BookDetailView.swift */; };
 		1A00000000000030 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000030 /* MainTabView.swift */; };
-		1A00000000000031 /* CloudKitSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000031 /* CloudKitSyncManager.swift */; };
 		1A00000000000032 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000032 /* AppConstants.swift */; };
 		1A00000000000033 /* ImageCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000033 /* ImageCacheManager.swift */; };
 		1A00000000000034 /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000034 /* EPUBParser.swift */; };
@@ -305,7 +304,6 @@
 				1A10000000000013 /* Bookmark+CoreDataClass.swift */,
 				1A10000000000014 /* ReadConfig.swift */,
 				1A10000000000015 /* CoreDataStack.swift */,
-				1A10000000000031 /* CloudKitSyncManager.swift */,
 				1A10000000000045 /* ReplaceRule+CoreDataClass.swift */,
 				1A10000000000070 /* BookGroup+CoreDataClass.swift */,
 				1A10000000000071 /* SearchBook+CoreDataClass.swift */,
@@ -653,7 +651,6 @@
 				1A00000000000013 /* Bookmark+CoreDataClass.swift in Sources */,
 				1A00000000000014 /* ReadConfig.swift in Sources */,
 				1A00000000000015 /* CoreDataStack.swift in Sources */,
-				1A00000000000031 /* CloudKitSyncManager.swift in Sources */,
 				1A00000000000032 /* AppConstants.swift in Sources */,
 				1A00000000000033 /* ImageCacheManager.swift in Sources */,
 				1A00000000000016 /* HTTPClient.swift in Sources */,
