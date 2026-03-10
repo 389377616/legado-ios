@@ -52,6 +52,10 @@ class EPUBParser {
     
     // MARK: - 主解析方法
     static func parse(file url: URL) async throws -> EPUBBook {
+        return try parseSync(file: url)
+    }
+    
+    static func parseSync(file url: URL) throws -> EPUBBook {
         guard FileManager.default.fileExists(atPath: url.path) else {
             throw EPUBError.fileNotFound
         }
@@ -60,25 +64,16 @@ class EPUBParser {
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
         
-        // 解压 EPUB
         try unzipFile(at: url, to: tempDir)
         
-        // 解析 container.xml 获取 OPF 路径
         let containerPath = tempDir.appendingPathComponent("META-INF/container.xml")
         let opfRelativePath = try parseContainer(at: containerPath)
         let opfPath = tempDir.appendingPathComponent(opfRelativePath)
         let basePath = opfPath.deletingLastPathComponent()
         
-        // 解析 OPF 文件
         let (metadata, manifest, spine) = try parseOPF(at: opfPath)
-        
-        // 解析目录（NCX 或 Nav）
         let toc = try parseNavigation(manifest: manifest, basePath: basePath)
-        
-        // 解析章节内容
         let chapters = try parseChapters(spine: spine, manifest: manifest, basePath: basePath)
-        
-        // 获取封面
         let coverImage = try extractCover(manifest: manifest, metadata: metadata, basePath: basePath)
         
         return EPUBBook(

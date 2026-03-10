@@ -68,22 +68,27 @@ final class BookshelfViewModel: ObservableObject {
         isLoading = false
         
         let context = CoreDataStack.shared.viewContext
-        context.refreshAllObjects()
+        
+        // 打印 store URL 验证
+        if let storeURL = CoreDataStack.shared.persistentContainer.persistentStoreCoordinator.persistentStores.first?.url {
+            print("📍 书架 Store URL: \(storeURL.path)")
+        }
         
         let request: NSFetchRequest<Book> = Book.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
+        request.returnsObjectsAsFaults = false
         
         do {
             let allBooks = try context.fetch(request)
-            print("📊 forceReload: 直接查询到 \(allBooks.count) 本书")
-            
-            await MainActor.run {
-                self.books = allBooks
-                self.hasMore = allBooks.count >= pageSize
+            print("📊 forceReload: 查询到 \(allBooks.count) 本书")
+            for book in allBooks.prefix(3) {
+                print("  - \(book.name) (origin: \(book.origin))")
             }
+            
+            self.books = allBooks
+            self.hasMore = allBooks.count >= pageSize
         } catch {
             print("❌ forceReload 查询失败: \(error)")
-            await loadBooks()
         }
     }
     

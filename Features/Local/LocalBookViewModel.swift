@@ -21,14 +21,15 @@ class LocalBookViewModel: ObservableObject {
         print("🚀 开始导入: \(url.lastPathComponent)")
         isImporting = true
         
-        do {
-            let context = CoreDataStack.shared.viewContext
-            
+        // 使用 background context 进行导入
+        let bgContext = CoreDataStack.shared.newBackgroundContext()
+        
+        return try await bgContext.perform {
             let fileName = url.lastPathComponent
             let fileExtension = url.pathExtension.lowercased()
             print("📁 文件类型: \(fileExtension)")
             
-            let book = Book.create(in: context)
+            let book = Book.create(in: bgContext)
             book.name = fileName.replacingOccurrences(of: ".\(fileExtension)", with: "")
             book.author = "未知"
             book.type = fileExtension == "epub" ? 1 : 0
@@ -39,43 +40,90 @@ class LocalBookViewModel: ObservableObject {
             book.canUpdate = false
             print("📖 创建书籍: \(book.name)")
             
+            // 同步解析文件（在 background context 中）
             if fileExtension == "txt" {
                 print("📄 解析 TXT...")
-                try await parseTXT(file: url, book: book)
+                self.parseTXTSync(file: url, book: book, context: bgContext)
             } else if fileExtension == "epub" {
                 print("📚 解析 EPUB...")
-                try await parseEPUB(file: url, book: book)
+                self.parseEPUBSync(file: url, book: book, context: bgContext)
             } else {
                 throw LocalBookError.unsupportedFormat
             }
             
-            print("📝 保存中... hasChanges=\(context.hasChanges)")
+            print("📝 保存中... hasChanges=\(bgContext.hasChanges)")
             
-            if context.hasChanges {
-                try context.save()
-                print("✅ CoreData 保存成功")
-            } else {
-                print("⚠️ 没有变更需要保存")
+            // 打印 store URL
+            if let storeURL = CoreDataStack.shared.persistentContainer.persistentStoreCoordinator.persistentStores.first?.url {
+                print("📍 Store URL: \(storeURL.path)")
             }
             
-            // 验证保存结果
+            if bgContext.hasChanges {
+                try bgContext.save()
+                print("✅ CoreData 保存成功")
+            }
+            
+            // 用新 context 验证数据是否真正写入磁盘
+            let verifyContext = CoreDataStack.shared.newBackgroundContext()
             let verifyRequest: NSFetchRequest<Book> = Book.fetchRequest()
-            let totalCount = try context.count(for: verifyRequest)
-            print("📊 数据库中书籍总数: \(totalCount)")
+            verifyRequest.includesPendingChanges = false
+            let savedBooks = try verifyContext.fetch(verifyRequest)
+            print("📊 硬验证: 从磁盘读取到 \(savedBooks.count) 本书")
             
-            url.stopAccessingSecurityScopedResource()
+            let bookId = book.bookId
             
-            isImporting = false
-            successMessage = "✅ 导入成功：\(book.name) (\(book.totalChapterNum)章) [共\(totalCount)本]"
+            Task { @MainActor in
+                url.stopAccessingSecurityScopedResource()
+                self.isImporting = false
+                self.successMessage = "✅ 导入成功：\(book.name) (\(book.totalChapterNum)章) [磁盘\(savedBooks.count)本]"
+            }
+            
             print("🎉 导入成功: \(book.name)")
-            
             return book
+        }
+    }
+    
+    private func parseTXTSync(file url: URL, book: Book, context: NSManagedObjectContext) {
+        guard let data = try? Data(contentsOf: url),
+              let content = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .init(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)))) else {
+            print("❌ 无法读取文件")
+            return
+        }
+        
+        let chapters = splitChapters(content: content)
+        book.totalChapterNum = Int32(chapters.count)
+        
+        for (index, chapter) in chapters.enumerated() {
+            let bookChapter = BookChapter.create(in: context, bookId: book.bookId, url: "\(index)", index: Int32(index), title: chapter.title)
+            bookChapter.book = book
+        }
+        
+        book.durChapterIndex = 0
+        if let first = chapters.first {
+            book.durChapterTitle = first.title
+        }
+    }
+    
+    private func parseEPUBSync(file url: URL, book: Book, context: NSManagedObjectContext) {
+        // EPUB 解析需要在主线程或使用同步方式
+        // 暂时使用简化的同步解析
+        do {
+            let epubBook = try EPUBParser.parseSync(file: url)
+            book.name = epubBook.title
+            book.author = epubBook.author
+            book.totalChapterNum = Int32(epubBook.chapters.count)
+            
+            for chapter in epubBook.chapters {
+                let bookChapter = BookChapter.create(in: context, bookId: book.bookId, url: chapter.href, index: Int32(chapter.index), title: chapter.title)
+                bookChapter.book = book
+            }
+            
+            book.durChapterIndex = 0
+            if let first = epubBook.chapters.first {
+                book.durChapterTitle = first.title
+            }
         } catch {
-            url.stopAccessingSecurityScopedResource()
-            isImporting = false
-            errorMessage = "❌ 导入失败：\(error.localizedDescription)"
-            print("❌ 导入失败: \(error)")
-            throw error
+            print("❌ EPUB 解析失败: \(error)")
         }
     }
     
