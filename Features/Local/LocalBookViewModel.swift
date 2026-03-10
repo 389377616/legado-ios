@@ -58,10 +58,15 @@ class LocalBookViewModel: ObservableObject {
                 print("⚠️ 没有变更需要保存")
             }
             
+            // 验证保存结果
+            let verifyRequest: NSFetchRequest<Book> = Book.fetchRequest()
+            let totalCount = try context.count(for: verifyRequest)
+            print("📊 数据库中书籍总数: \(totalCount)")
+            
             url.stopAccessingSecurityScopedResource()
             
             isImporting = false
-            successMessage = "✅ 导入成功：\(book.name) (\(book.totalChapterNum)章)"
+            successMessage = "✅ 导入成功：\(book.name) (\(book.totalChapterNum)章) [共\(totalCount)本]"
             print("🎉 导入成功: \(book.name)")
             
             return book
