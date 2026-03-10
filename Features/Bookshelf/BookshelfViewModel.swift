@@ -15,6 +15,9 @@ final class BookshelfViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var hasMore = true
+
+    @Published var debugDiskBookCount: Int = 0
+    @Published var debugStorePath: String = ""
     
     @Published var viewMode: ViewMode = .grid
     @Published var groupFilter: Int32 = 0
@@ -48,6 +51,16 @@ final class BookshelfViewModel: ObservableObject {
         currentPage = 0
 
         do {
+            if let storeURL = CoreDataStack.shared.persistentContainer.persistentStoreCoordinator.persistentStores.first?.url {
+                debugStorePath = storeURL.path
+            } else {
+                debugStorePath = ""
+            }
+
+            let countReq: NSFetchRequest<Book> = Book.fetchRequest()
+            countReq.includesPendingChanges = false
+            debugDiskBookCount = try CoreDataStack.shared.viewContext.count(for: countReq)
+
             let firstPage = try await fetchBooks(page: 0, size: pageSize)
             print("📚 loadBooks: 获取到 \(firstPage.count) 本书")
             for book in firstPage.prefix(3) {
@@ -68,10 +81,19 @@ final class BookshelfViewModel: ObservableObject {
         isLoading = false
         
         let context = CoreDataStack.shared.viewContext
-        
-        // 打印 store URL 验证
+
         if let storeURL = CoreDataStack.shared.persistentContainer.persistentStoreCoordinator.persistentStores.first?.url {
-            print("📍 书架 Store URL: \(storeURL.path)")
+            debugStorePath = storeURL.path
+        } else {
+            debugStorePath = ""
+        }
+
+        do {
+            let countReq: NSFetchRequest<Book> = Book.fetchRequest()
+            countReq.includesPendingChanges = false
+            debugDiskBookCount = try context.count(for: countReq)
+        } catch {
+            debugDiskBookCount = 0
         }
         
         let request: NSFetchRequest<Book> = Book.fetchRequest()
@@ -88,8 +110,18 @@ final class BookshelfViewModel: ObservableObject {
             self.books = allBooks
             self.hasMore = allBooks.count >= pageSize
         } catch {
+            errorMessage = "加载失败：\(error.localizedDescription)"
             print("❌ forceReload 查询失败: \(error)")
         }
+    }
+
+    var debugSummary: String {
+        if debugStorePath.isEmpty {
+            return "调试: store=<none>, 磁盘书籍=\(debugDiskBookCount)"
+        }
+        let parts = debugStorePath.split(separator: "/")
+        let tail = parts.suffix(3).joined(separator: "/")
+        return "调试: .../\(tail), 磁盘书籍=\(debugDiskBookCount), 内存books=\(books.count)"
     }
     
     func loadMoreBooks() async {

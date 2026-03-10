@@ -18,113 +18,133 @@ class LocalBookViewModel: ObservableObject {
     @Published var successMessage: String?
     
     func importBook(url: URL) async throws -> Book {
-        print("🚀 开始导入: \(url.lastPathComponent)")
         isImporting = true
-        
-        // 使用 background context 进行导入
-        let bgContext = CoreDataStack.shared.newBackgroundContext()
-        
-        return try await bgContext.perform {
+        errorMessage = nil
+        successMessage = nil
+
+        let didStartAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didStartAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        do {
             let fileName = url.lastPathComponent
             let fileExtension = url.pathExtension.lowercased()
-            print("📁 文件类型: \(fileExtension)")
-            
-            let book = Book.create(in: bgContext)
-            book.name = fileName.replacingOccurrences(of: ".\(fileExtension)", with: "")
-            book.author = "未知"
-            book.type = fileExtension == "epub" ? 1 : 0
-            book.origin = "local"
-            book.originName = fileName
-            book.bookUrl = url.absoluteString
-            book.tocUrl = ""
-            book.canUpdate = false
-            print("📖 创建书籍: \(book.name)")
-            
-            // 同步解析文件（在 background context 中）
-            if fileExtension == "txt" {
-                print("📄 解析 TXT...")
-                self.parseTXTSync(file: url, book: book, context: bgContext)
-            } else if fileExtension == "epub" {
-                print("📚 解析 EPUB...")
-                self.parseEPUBSync(file: url, book: book, context: bgContext)
-            } else {
-                throw LocalBookError.unsupportedFormat
+
+            let result = try await CoreDataStack.shared.performBackgroundTask { context in
+                let book = Book.create(in: context)
+                book.name = fileName.replacingOccurrences(of: ".\(fileExtension)", with: "")
+                book.author = "未知"
+                book.type = fileExtension == "epub" ? 1 : 0
+                book.origin = "local"
+                book.originName = fileName
+                book.bookUrl = url.absoluteString
+                book.tocUrl = ""
+                book.canUpdate = false
+
+                if fileExtension == "txt" {
+                    let content = try Self.readText(fileURL: url)
+                    let chapters = Self.splitChapters(content: content)
+                    book.totalChapterNum = Int32(chapters.count)
+
+                    book.durChapterIndex = 0
+                    book.durChapterTitle = chapters.first?.title
+
+                    for (index, chapter) in chapters.enumerated() {
+                        let chapterObj = BookChapter.create(
+                            in: context,
+                            bookId: book.bookId,
+                            url: "local:\(index)",
+                            index: Int32(index),
+                            title: chapter.title
+                        )
+                        chapterObj.book = book
+                        chapterObj.wordCount = Int32(chapter.content.count)
+                        chapterObj.isCached = true
+                    }
+                } else if fileExtension == "epub" {
+                    let epubBook = try EPUBParser.parseSync(file: url)
+                    book.name = epubBook.title
+                    book.author = epubBook.author
+                    book.totalChapterNum = Int32(epubBook.chapters.count)
+
+                    book.durChapterIndex = 0
+                    book.durChapterTitle = epubBook.chapters.first?.title
+
+                    for chapter in epubBook.chapters {
+                        let chapterObj = BookChapter.create(
+                            in: context,
+                            bookId: book.bookId,
+                            url: chapter.href,
+                            index: Int32(chapter.index),
+                            title: chapter.title
+                        )
+                        chapterObj.book = book
+                        chapterObj.wordCount = Int32(chapter.content.count)
+                        chapterObj.isCached = true
+                    }
+                } else {
+                    throw LocalBookError.unsupportedFormat
+                }
+
+                return (bookId: book.bookId, name: book.name, chapters: Int(book.totalChapterNum))
             }
-            
-            print("📝 保存中... hasChanges=\(bgContext.hasChanges)")
-            
-            // 打印 store URL
-            if let storeURL = CoreDataStack.shared.persistentContainer.persistentStoreCoordinator.persistentStores.first?.url {
-                print("📍 Store URL: \(storeURL.path)")
+
+            let viewContext = CoreDataStack.shared.viewContext
+            let diskCount = try await viewContext.perform {
+                let req: NSFetchRequest<Book> = Book.fetchRequest()
+                req.includesPendingChanges = false
+                return try viewContext.count(for: req)
             }
-            
-            if bgContext.hasChanges {
-                try bgContext.save()
-                print("✅ CoreData 保存成功")
+
+            let importedBook = try await viewContext.perform {
+                let req: NSFetchRequest<Book> = Book.fetchRequest()
+                req.fetchLimit = 1
+                req.includesPendingChanges = false
+                req.predicate = NSPredicate(format: "bookId == %@", result.bookId as CVarArg)
+                return try viewContext.fetch(req).first
             }
-            
-            // 用新 context 验证数据是否真正写入磁盘
-            let verifyContext = CoreDataStack.shared.newBackgroundContext()
-            let verifyRequest: NSFetchRequest<Book> = Book.fetchRequest()
-            verifyRequest.includesPendingChanges = false
-            let savedBooks = try verifyContext.fetch(verifyRequest)
-            print("📊 硬验证: 从磁盘读取到 \(savedBooks.count) 本书")
-            
-            let bookId = book.bookId
-            
-            Task { @MainActor in
-                url.stopAccessingSecurityScopedResource()
-                self.isImporting = false
-                self.successMessage = "✅ 导入成功：\(book.name) (\(book.totalChapterNum)章) [磁盘\(savedBooks.count)本]"
+
+            isImporting = false
+            successMessage = "✅ 导入成功：\(result.name) (\(result.chapters)章) [磁盘\(diskCount)本]"
+
+            guard let importedBook else {
+                throw LocalBookError.parseFailed
             }
-            
-            print("🎉 导入成功: \(book.name)")
-            return book
-        }
-    }
-    
-    private func parseTXTSync(file url: URL, book: Book, context: NSManagedObjectContext) {
-        guard let data = try? Data(contentsOf: url),
-              let content = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .init(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)))) else {
-            print("❌ 无法读取文件")
-            return
-        }
-        
-        let chapters = splitChapters(content: content)
-        book.totalChapterNum = Int32(chapters.count)
-        
-        for (index, chapter) in chapters.enumerated() {
-            let bookChapter = BookChapter.create(in: context, bookId: book.bookId, url: "\(index)", index: Int32(index), title: chapter.title)
-            bookChapter.book = book
-        }
-        
-        book.durChapterIndex = 0
-        if let first = chapters.first {
-            book.durChapterTitle = first.title
-        }
-    }
-    
-    private func parseEPUBSync(file url: URL, book: Book, context: NSManagedObjectContext) {
-        // EPUB 解析需要在主线程或使用同步方式
-        // 暂时使用简化的同步解析
-        do {
-            let epubBook = try EPUBParser.parseSync(file: url)
-            book.name = epubBook.title
-            book.author = epubBook.author
-            book.totalChapterNum = Int32(epubBook.chapters.count)
-            
-            for chapter in epubBook.chapters {
-                let bookChapter = BookChapter.create(in: context, bookId: book.bookId, url: chapter.href, index: Int32(chapter.index), title: chapter.title)
-                bookChapter.book = book
-            }
-            
-            book.durChapterIndex = 0
-            if let first = epubBook.chapters.first {
-                book.durChapterTitle = first.title
-            }
+            return importedBook
         } catch {
-            print("❌ EPUB 解析失败: \(error)")
+            isImporting = false
+            errorMessage = "❌ 导入失败：\(error.localizedDescription)"
+            throw error
         }
+    }
+
+    nonisolated private static func readText(fileURL url: URL) throws -> String {
+        let data = try Data(contentsOf: url)
+
+        if data.starts(with: [0xEF, 0xBB, 0xBF]) {
+            if let s = String(data: data, encoding: .utf8) { return s }
+        }
+        if data.starts(with: [0xFF, 0xFE]) {
+            if let s = String(data: data, encoding: .utf16LittleEndian) { return s }
+        }
+        if data.starts(with: [0xFE, 0xFF]) {
+            if let s = String(data: data, encoding: .utf16BigEndian) { return s }
+        }
+
+        if let s = String(data: data, encoding: .utf8) { return s }
+        if let s = String(data: data, encoding: .utf16) { return s }
+
+        let gb18030 = String.Encoding(
+            rawValue: CFStringConvertEncodingToNSStringEncoding(
+                CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)
+            )
+        )
+        if let s = String(data: data, encoding: gb18030) { return s }
+
+        throw LocalBookError.parseFailed
     }
     
     func loadLocalBooks() async {
@@ -153,7 +173,7 @@ class LocalBookViewModel: ObservableObject {
         let content = try String(contentsOf: url, encoding: encoding)
         print("📊 文件内容长度: \(content.count) 字符")
         
-        let chapters = splitChapters(content: content)
+        let chapters = Self.splitChapters(content: content)
         print("📑 分章完成: \(chapters.count) 章")
         
         book.totalChapterNum = Int32(chapters.count)
@@ -251,7 +271,7 @@ class LocalBookViewModel: ObservableObject {
         return .utf8
     }
     
-    private func splitChapters(content: String) -> [(title: String, content: String)] {
+    nonisolated private static func splitChapters(content: String) -> [(title: String, content: String)] {
         let chapterPatterns = [
             "^第[零一二三四五六七八九十百千万 0-9]+[章回卷节部篇]",
             "^第[0-9]+章",

@@ -17,11 +17,18 @@ struct BookshelfView: View {
     var body: some View {
         Group {
             if viewModel.books.isEmpty && !viewModel.isLoading {
-                EmptyStateView(
-                    title: "书架空空如也",
-                    subtitle: "点击右上角 + 导入本地书籍",
-                    imageName: "books.vertical"
-                )
+                VStack(spacing: 12) {
+                    EmptyStateView(
+                        title: "书架空空如也",
+                        subtitle: "点击右上角 + 导入本地书籍",
+                        imageName: "books.vertical"
+                    )
+                    Text(viewModel.debugSummary)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
             } else {
                 bookshelfContent
             }
@@ -49,7 +56,7 @@ struct BookshelfView: View {
                     }
                     
                     Button(action: {
-                        DocumentPickerHelper.shared.present(contentTypes: [.plainText, .epub]) { urls in
+                        DocumentPickerHelper.shared.present(contentTypes: [.plainText, .text, .utf8PlainText, .data, .epub]) { urls in
                             guard let url = urls.first else { return }
                             Task { @MainActor in
                                 do {
@@ -93,6 +100,14 @@ struct BookshelfView: View {
             Button("确定", role: .cancel) { localBookViewModel.errorMessage = nil }
         } message: {
             Text(localBookViewModel.errorMessage ?? "未知错误")
+        }
+        .alert("书架加载失败", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("确定", role: .cancel) { viewModel.errorMessage = nil }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
         }
         .task {
             await viewModel.loadBooks()
