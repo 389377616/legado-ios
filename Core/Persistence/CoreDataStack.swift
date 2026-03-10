@@ -19,10 +19,24 @@ final class CoreDataStack {
     private var storeURL: URL?
     
     lazy var persistentContainer: NSPersistentContainer = {
-        let container = NSPersistentContainer(name: Self.modelName)
+        guard let modelURL = Bundle.main.url(forResource: Self.modelName, withExtension: "momd") else {
+            print("❌ 找不到 CoreData 模型文件: \(Self.modelName).momd")
+            print("❌ Bundle path: \(Bundle.main.bundlePath)")
+            print("❌ Bundle resources: \(Bundle.main.urls(forResourcesWithExtension: "momd", subdirectory: nil) ?? [])")
+            return NSPersistentContainer(name: Self.modelName)
+        }
+        
+        guard let model = NSManagedObjectModel(contentsOf: modelURL) else {
+            print("❌ 无法加载 CoreData 模型: \(modelURL.path)")
+            return NSPersistentContainer(name: Self.modelName)
+        }
+        
+        let container = NSPersistentContainer(name: Self.modelName, managedObjectModel: model)
         
         let resolvedStoreURL = Self.resolveStoreURL()
         self.storeURL = resolvedStoreURL
+        
+        print("📍 CoreData Store URL: \(resolvedStoreURL.path)")
         
         let description = NSPersistentStoreDescription(url: resolvedStoreURL)
         description.type = NSSQLiteStoreType
@@ -40,9 +54,11 @@ final class CoreDataStack {
             if let error = error {
                 self.loadError = error
                 self.isLoaded = false
+                let nsError = error as NSError
                 print("❌ CoreData 存储加载失败: \(error.localizedDescription)")
                 print("❌ Store URL: \(resolvedStoreURL.path)")
-                print("❌ Error domain: \(error._domain), code: \((error as NSError).code)")
+                print("❌ Error domain: \(nsError.domain), code: \(nsError.code)")
+                print("❌ Error userInfo: \(nsError.userInfo)")
                 return
             }
             
@@ -73,22 +89,24 @@ final class CoreDataStack {
     
     /// 解析并返回 store 文件的 URL，处理旧数据迁移
     private static func resolveStoreURL() -> URL {
-        // 尝试获取 App Group 共享目录
         if let groupURL = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: appGroupIdentifier
         ) {
             let sharedStoreURL = groupURL.appendingPathComponent(storeFileName)
             
-            // 如果共享目录中没有 store，检查是否需要从旧位置迁移
             if !FileManager.default.fileExists(atPath: sharedStoreURL.path) {
                 migrateStoreIfNeeded(to: sharedStoreURL)
             }
             
-            return sharedStoreURL
+            if FileManager.default.isWritableFile(atPath: groupURL.path) {
+                print("✅ 使用 App Group 目录: \(sharedStoreURL.path)")
+                return sharedStoreURL
+            } else {
+                print("⚠️ App Group 目录不可写，fallback 到私有目录")
+            }
         }
         
-        // Fallback: App Group 不可用时使用私有目录
-        print("⚠️ App Group 不可用，使用应用私有目录")
+        print("⚠️ 使用应用私有目录")
         return defaultStoreURL()
     }
     
@@ -98,6 +116,11 @@ final class CoreDataStack {
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first!
+        
+        if !FileManager.default.fileExists(atPath: appSupportURL.path) {
+            try? FileManager.default.createDirectory(at: appSupportURL, withIntermediateDirectories: true)
+        }
+        
         return appSupportURL.appendingPathComponent(storeFileName)
     }
     
