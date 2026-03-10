@@ -65,9 +65,26 @@ final class BookshelfViewModel: ObservableObject {
     
     func forceReload() async {
         print("🔄 forceReload: 强制刷新书架")
-        CoreDataStack.shared.viewContext.reset()
         isLoading = false
-        await loadBooks()
+        
+        let context = CoreDataStack.shared.viewContext
+        context.refreshAllObjects()
+        
+        let request: NSFetchRequest<Book> = Book.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
+        
+        do {
+            let allBooks = try context.fetch(request)
+            print("📊 forceReload: 直接查询到 \(allBooks.count) 本书")
+            
+            await MainActor.run {
+                self.books = allBooks
+                self.hasMore = allBooks.count >= pageSize
+            }
+        } catch {
+            print("❌ forceReload 查询失败: \(error)")
+            await loadBooks()
+        }
     }
     
     func loadMoreBooks() async {
