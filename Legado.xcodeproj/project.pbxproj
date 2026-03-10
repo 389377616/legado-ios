@@ -121,7 +121,8 @@
 		1A0000000000008A /* VerificationWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008A /* VerificationWebView.swift */; };
 		1A0000000000008B /* RemoteBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008B /* RemoteBookView.swift */; };
 		1A0000000000008C /* BackgroundCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008C /* BackgroundCacheService.swift */; };
-		1A0000000000008D /* IntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008D /* IntegrationTests.swift */; };
+1A0000000000008D /* IntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008D /* IntegrationTests.swift */; };
+		1A0000000000008E /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008E /* DebugLogger.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -239,7 +240,8 @@
 		1A1000000000008A /* VerificationWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationWebView.swift; sourceTree = "<group>"; };
 		1A1000000000008B /* RemoteBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteBookView.swift; sourceTree = "<group>"; };
 		1A1000000000008C /* BackgroundCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundCacheService.swift; sourceTree = "<group>"; };
-		1A1000000000008D /* IntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationTests.swift; sourceTree = "<group>"; };
+1A1000000000008D /* IntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationTests.swift; sourceTree = "<group>"; };
+		1A1000000000008E /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -342,6 +344,7 @@
 				1A10000000000086 /* UTType+EPUB.swift */,
 				1A10000000000087 /* DocumentPickerHelper.swift */,
 				1A10000000000089 /* URLConfirmHelper.swift */,
+				1A1000000000008E /* DebugLogger.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -747,7 +750,8 @@
 				1A00000000000089 /* URLConfirmHelper.swift in Sources */,
 1A0000000000008A /* VerificationWebView.swift in Sources */,
 				1A0000000000008B /* RemoteBookView.swift in Sources */,
-				1A0000000000008C /* BackgroundCacheService.swift in Sources */,
+1A0000000000008C /* BackgroundCacheService.swift in Sources */,
+				1A0000000000008E /* DebugLogger.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

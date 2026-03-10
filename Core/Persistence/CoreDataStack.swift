@@ -30,6 +30,9 @@ final class CoreDataStack {
             self.isLoaded = true
             print("✅ CoreData 加载成功: \(description.url?.path ?? "nil")")
             
+            let stores = container.persistentStoreCoordinator.persistentStores
+            print("📊 persistentStores 数量: \(stores.count)")
+            
             container.viewContext.automaticallyMergesChangesFromParent = true
             container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         }
@@ -37,13 +40,25 @@ final class CoreDataStack {
         return container
     }()
     
+    var storeCount: Int {
+        persistentContainer.persistentStoreCoordinator.persistentStores.count
+    }
+    
+    var storeURL: URL? {
+        persistentContainer.persistentStoreCoordinator.persistentStores.first?.url
+    }
+    
     var debugInfo: String {
+        let stores = persistentContainer.persistentStoreCoordinator.persistentStores
         if isLoaded {
-            let url = persistentContainer.persistentStoreCoordinator.persistentStores.first?.url
+            if stores.isEmpty {
+                return "⚠️ 加载成功但store为空"
+            }
+            let url = stores.first?.url
             let path = url?.path ?? "nil"
             let parts = path.split(separator: "/")
             let tail = parts.suffix(3).joined(separator: "/")
-            return "✅ 已加载: .../\(tail)"
+            return "✅ stores=\(stores.count): .../\(tail)"
         } else if let error = loadError {
             return "❌ 失败: \(error.localizedDescription)"
         } else {

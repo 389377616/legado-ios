@@ -82,7 +82,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        _ = CoreDataStack.shared
+        DebugLogger.shared.log("应用启动")
+        
+        let stack = CoreDataStack.shared
+        _ = stack.persistentContainer
+        
+        DebugLogger.shared.dumpCoreDataState()
+        
         return true
     }
     
