@@ -23,11 +23,16 @@ struct BookshelfView: View {
                         subtitle: "点击右上角 + 导入本地书籍",
                         imageName: "books.vertical"
                     )
-                    Text(viewModel.debugSummary)
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                    VStack(spacing: 4) {
+                        Text(viewModel.coreDataStatus)
+                            .font(.caption)
+                            .foregroundColor(viewModel.coreDataStatus.contains("❌") ? .red : .secondary)
+                        Text(viewModel.debugSummary)
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
                 }
             } else {
                 bookshelfContent
