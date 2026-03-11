@@ -22,6 +22,9 @@ class LocalBookViewModel: ObservableObject {
         errorMessage = nil
         successMessage = nil
 
+        DebugLogger.shared.log("importBook 开始: \(url.path)")
+        DebugLogger.shared.dumpCoreDataState()
+
         let didStartAccess = url.startAccessingSecurityScopedResource()
         defer {
             if didStartAccess {
@@ -33,7 +36,11 @@ class LocalBookViewModel: ObservableObject {
             let fileName = url.lastPathComponent
             let fileExtension = url.pathExtension.lowercased()
 
+            DebugLogger.shared.log("文件: \(fileName), 扩展名: \(fileExtension)")
+
             let result = try await CoreDataStack.shared.performBackgroundTask { context in
+                DebugLogger.shared.log("performBackgroundTask 开始")
+                
                 let book = Book.create(in: context)
                 book.name = fileName.replacingOccurrences(of: ".\(fileExtension)", with: "")
                 book.author = "未知"
@@ -43,6 +50,8 @@ class LocalBookViewModel: ObservableObject {
                 book.bookUrl = url.absoluteString
                 book.tocUrl = ""
                 book.canUpdate = false
+
+                DebugLogger.shared.log("Book 创建: \(book.name)")
 
                 if fileExtension == "txt" {
                     let content = try Self.readText(fileURL: url)
@@ -64,6 +73,7 @@ class LocalBookViewModel: ObservableObject {
                         chapterObj.wordCount = Int32(chapter.content.count)
                         chapterObj.isCached = true
                     }
+                    DebugLogger.shared.log("TXT 解析完成: \(chapters.count) 章")
                 } else if fileExtension == "epub" {
                     let epubBook = try EPUBParser.parseSync(file: url)
                     book.name = epubBook.title
@@ -85,12 +95,16 @@ class LocalBookViewModel: ObservableObject {
                         chapterObj.wordCount = Int32(chapter.content.count)
                         chapterObj.isCached = true
                     }
+                    DebugLogger.shared.log("EPUB 解析完成: \(epubBook.chapters.count) 章")
                 } else {
                     throw LocalBookError.unsupportedFormat
                 }
 
+                DebugLogger.shared.log("performBackgroundTask 即将完成")
                 return (bookId: book.bookId, name: book.name, chapters: Int(book.totalChapterNum))
             }
+
+            DebugLogger.shared.log("performBackgroundTask 完成，开始验证")
 
             let viewContext = CoreDataStack.shared.viewContext
             let diskCount = try await viewContext.perform {
@@ -98,6 +112,8 @@ class LocalBookViewModel: ObservableObject {
                 req.includesPendingChanges = false
                 return try viewContext.count(for: req)
             }
+
+            DebugLogger.shared.log("磁盘书籍数: \(diskCount)")
 
             let importedBook = try await viewContext.perform {
                 let req: NSFetchRequest<Book> = Book.fetchRequest()
@@ -109,13 +125,17 @@ class LocalBookViewModel: ObservableObject {
 
             isImporting = false
             successMessage = "✅ 导入成功：\(result.name) (\(result.chapters)章) [磁盘\(diskCount)本]"
+            DebugLogger.shared.log("导入成功: \(result.name)")
 
             guard let importedBook else {
+                DebugLogger.shared.log("错误: 导入后找不到书籍")
                 throw LocalBookError.parseFailed
             }
             return importedBook
         } catch {
             isImporting = false
+            DebugLogger.shared.log("导入失败: \(error.localizedDescription)")
+            DebugLogger.shared.log("错误详情: \(error)")
             errorMessage = "❌ 导入失败：\(error.localizedDescription)"
             throw error
         }
