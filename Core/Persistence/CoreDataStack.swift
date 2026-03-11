@@ -1,10 +1,3 @@
-//
-//  CoreDataStack.swift
-//  Legado-iOS
-//
-//  CoreData 持久化栈（简化版）
-//
-
 import CoreData
 
 final class CoreDataStack {
@@ -18,23 +11,61 @@ final class CoreDataStack {
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: Self.modelName)
         
+        if let storeURL = container.persistentStoreDescriptions.first?.url {
+            let fm = FileManager.default
+            let storeDir = storeURL.deletingLastPathComponent()
+            
+            DebugLogger.shared.log("Store 目录: \(storeDir.path)")
+            DebugLogger.shared.log("Store 文件: \(storeURL.path)")
+            
+            do {
+                if !fm.fileExists(atPath: storeDir.path) {
+                    try fm.createDirectory(at: storeDir, withIntermediateDirectories: true)
+                    DebugLogger.shared.log("创建 store 目录")
+                }
+                
+                let dirAttrs = try fm.attributesOfItem(atPath: storeDir.path)
+                DebugLogger.shared.log("目录权限: \(dirAttrs[.posixPermissions] ?? "unknown")")
+                
+                try fm.setAttributes([.posixPermissions: 0o777], ofItemAtPath: storeDir.path)
+                DebugLogger.shared.log("设置目录权限为 777")
+                
+                if fm.fileExists(atPath: storeURL.path) {
+                    let fileAttrs = try fm.attributesOfItem(atPath: storeURL.path)
+                    DebugLogger.shared.log("sqlite 权限: \(fileAttrs[.posixPermissions] ?? "unknown")")
+                    
+                    try fm.setAttributes([.posixPermissions: 0o666], ofItemAtPath: storeURL.path)
+                    DebugLogger.shared.log("设置 sqlite 权限为 666")
+                }
+                
+                for suffix in ["-shm", "-wal"] {
+                    let sidecar = storeURL.path + suffix
+                    if fm.fileExists(atPath: sidecar) {
+                        try? fm.setAttributes([.posixPermissions: 0o666], ofItemAtPath: sidecar)
+                    }
+                }
+            } catch {
+                DebugLogger.shared.log("权限设置失败: \(error)")
+            }
+        }
+        
         container.loadPersistentStores { description, error in
             if let error = error {
                 self.loadError = error
                 self.isLoaded = false
-                print("❌ CoreData 加载失败: \(error.localizedDescription)")
-                print("❌ Store: \(description.url?.path ?? "nil")")
+                DebugLogger.shared.log("CoreData 加载失败: \(error)")
                 return
             }
             
             self.isLoaded = true
-            print("✅ CoreData 加载成功: \(description.url?.path ?? "nil")")
+            DebugLogger.shared.log("CoreData 加载成功")
             
             let stores = container.persistentStoreCoordinator.persistentStores
-            print("📊 persistentStores 数量: \(stores.count)")
+            DebugLogger.shared.log("Stores 数量: \(stores.count)")
             
-            container.viewContext.automaticallyMergesChangesFromParent = true
-            container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+            for store in stores {
+                DebugLogger.shared.log("Store: \(store.url?.path ?? "nil"), readOnly=\(store.isReadOnly)")
+            }
         }
         
         return container
@@ -58,7 +89,8 @@ final class CoreDataStack {
             let path = url?.path ?? "nil"
             let parts = path.split(separator: "/")
             let tail = parts.suffix(3).joined(separator: "/")
-            return "✅ stores=\(stores.count): .../\(tail)"
+            let readOnly = stores.first?.isReadOnly ?? true
+            return readOnly ? "⚠️ 只读: .../\(tail)" : "✅ 可写: .../\(tail)"
         } else if let error = loadError {
             return "❌ 失败: \(error.localizedDescription)"
         } else {
@@ -70,7 +102,7 @@ final class CoreDataStack {
         persistentContainer.viewContext
     }
     
-    func newBackgroundContext() -> NSManagedObjectContext {
+func newBackgroundContext() -> NSManagedObjectContext {
         let context = persistentContainer.newBackgroundContext()
         context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         return context
