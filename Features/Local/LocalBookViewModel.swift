@@ -87,7 +87,6 @@ class LocalBookViewModel: ObservableObject {
                     if let coverData = epubBook.coverImage {
                         let coverURL = try saveCoverImage(coverData, bookId: book.bookId)
                         book.coverUrl = coverURL.path
-                        DebugLogger.shared.log("EPUB 封面已保存: \(coverURL.path)")
                     }
 
                     for chapter in epubBook.chapters {
@@ -101,7 +100,17 @@ class LocalBookViewModel: ObservableObject {
                         chapterObj.book = book
                         chapterObj.wordCount = Int32(chapter.content.count)
                         chapterObj.isCached = true
-                        chapterObj.content = chapter.content // 保存章节内容
+                        
+                        // 缓存章节内容到文件
+                        let cacheFileName = "\(book.bookId.uuidString)_\(chapter.index).txt"
+                        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                        let chapterDir = documents.appendingPathComponent("chapters", isDirectory: true)
+                        if !FileManager.default.fileExists(atPath: chapterDir.path) {
+                            try FileManager.default.createDirectory(at: chapterDir, withIntermediateDirectories: true)
+                        }
+                        let cacheURL = chapterDir.appendingPathComponent(cacheFileName)
+                        try chapter.content.write(to: cacheURL, atomically: true, encoding: .utf8)
+                        chapterObj.cachePath = cacheFileName
                     }
                     DebugLogger.shared.log("EPUB 解析完成: \(epubBook.chapters.count) 章")
                 } else {
