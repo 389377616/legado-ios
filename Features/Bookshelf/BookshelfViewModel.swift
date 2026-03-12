@@ -55,16 +55,12 @@ final class BookshelfViewModel: ObservableObject {
 
         isLoading = true
         currentPage = 0
-        
-        let context = CoreDataStack.shared.viewContext
-        context.refreshAllObjects()
 
         do {
-            if let storeURL = CoreDataStack.shared.persistentContainer.persistentStoreCoordinator.persistentStores.first?.url {
-                debugStorePath = storeURL.path
-            } else {
-                debugStorePath = ""
-            }
+            debugStorePath = CoreDataStack.shared.storeURL?.path ?? ""
+
+            let context = CoreDataStack.shared.viewContext
+            context.reset()
 
             let countReq: NSFetchRequest<Book> = Book.fetchRequest()
             countReq.includesPendingChanges = false
@@ -89,14 +85,10 @@ final class BookshelfViewModel: ObservableObject {
         print("🔄 forceReload: 强制刷新书架")
         isLoading = false
         
-        let context = CoreDataStack.shared.viewContext
-        context.refreshAllObjects()
+        debugStorePath = CoreDataStack.shared.storeURL?.path ?? ""
 
-        if let storeURL = CoreDataStack.shared.persistentContainer.persistentStoreCoordinator.persistentStores.first?.url {
-            debugStorePath = storeURL.path
-        } else {
-            debugStorePath = ""
-        }
+        let context = CoreDataStack.shared.viewContext
+        context.reset()
 
         do {
             let countReq: NSFetchRequest<Book> = Book.fetchRequest()
