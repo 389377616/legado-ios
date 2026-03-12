@@ -87,20 +87,25 @@ final class BookshelfViewModel: ObservableObject {
     }
     
     func forceReload() async {
-        print("🔄 forceReload: 强制刷新书架")
+        print("🔄 forceReload: 开始执行")
         
         debugStorePath = CoreDataStack.shared.storeURL?.path ?? ""
+        print("🔄 forceReload: store path = \(debugStorePath)")
 
         do {
+            print("🔄 forceReload: 准备查询")
             let (count, allBooks) = try await CoreDataStack.shared.performBackgroundTask { context in
+                print("🔄 forceReload: 在 background task 中")
                 let countReq: NSFetchRequest<Book> = Book.fetchRequest()
                 countReq.includesPendingChanges = false
                 let count = try context.count(for: countReq)
+                print("🔄 forceReload: count = \(count)")
                 
                 let request: NSFetchRequest<Book> = Book.fetchRequest()
                 request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
                 request.returnsObjectsAsFaults = false
                 let books = try context.fetch(request)
+                print("🔄 forceReload: fetched \(books.count) books")
                 
                 return (count, books)
             }
@@ -109,11 +114,13 @@ final class BookshelfViewModel: ObservableObject {
             books = allBooks
             hasMore = allBooks.count >= pageSize
             
-            print("📊 forceReload: 查询到 \(allBooks.count) 本书，磁盘共 \(count) 本")
+            print("📊 forceReload: 完成 - 查询到 \(allBooks.count) 本书，磁盘共 \(count) 本")
         } catch {
             errorMessage = "加载失败：\(error.localizedDescription)"
             print("❌ forceReload 失败: \(error)")
         }
+        
+        print("🔄 forceReload: 结束")
     }
 
     var debugSummary: String {

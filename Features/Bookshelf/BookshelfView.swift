@@ -86,14 +86,24 @@ struct BookshelfView: View {
         }
         .alert("导入成功", isPresented: Binding(
             get: { localBookViewModel.successMessage != nil },
-            set: { if !$0 { 
-                localBookViewModel.successMessage = nil
-                Task { await viewModel.forceReload() }
-            }}
+            set: { isPresented in 
+                if !isPresented { 
+                    localBookViewModel.successMessage = nil
+                    print("📚 Alert dismissed, calling forceReload...")
+                    Task { 
+                        await viewModel.forceReload()
+                        print("📚 forceReload completed")
+                    }
+                }
+            }
         )) {
             Button("确定", role: .cancel) { 
+                print("📚 确定按钮点击")
                 localBookViewModel.successMessage = nil
-                Task { await viewModel.forceReload() }
+                Task { 
+                    await viewModel.forceReload()
+                    print("📚 确定按钮 forceReload completed")
+                }
             }
         } message: {
             Text(localBookViewModel.successMessage ?? "")
