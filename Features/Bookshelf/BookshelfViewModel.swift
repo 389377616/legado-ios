@@ -59,20 +59,25 @@ final class BookshelfViewModel: ObservableObject {
         do {
             debugStorePath = CoreDataStack.shared.storeURL?.path ?? ""
 
-            let context = CoreDataStack.shared.viewContext
-            context.reset()
-
-            let countReq: NSFetchRequest<Book> = Book.fetchRequest()
-            countReq.includesPendingChanges = false
-            debugDiskBookCount = try context.count(for: countReq)
-
-            let firstPage = try await fetchBooks(page: 0, size: pageSize)
-            print("📚 loadBooks: 获取到 \(firstPage.count) 本书")
-            for book in firstPage.prefix(3) {
-                print("  - \(book.name) (origin: \(book.origin))")
+            let (count, firstPage) = try await CoreDataStack.shared.performBackgroundTask { context in
+                let countReq: NSFetchRequest<Book> = Book.fetchRequest()
+                countReq.includesPendingChanges = false
+                let count = try context.count(for: countReq)
+                
+                let request: NSFetchRequest<Book> = Book.fetchRequest()
+                request.fetchLimit = 50
+                request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
+                request.returnsObjectsAsFaults = false
+                let books = try context.fetch(request)
+                
+                return (count, books)
             }
+            
+            debugDiskBookCount = count
             books = firstPage
             hasMore = firstPage.count == pageSize
+            
+            print("📚 loadBooks: 获取到 \(firstPage.count) 本书，磁盘共 \(count) 本")
         } catch {
             errorMessage = "加载失败：\(error.localizedDescription)"
             print("❌ loadBooks 失败: \(error)")
@@ -83,37 +88,31 @@ final class BookshelfViewModel: ObservableObject {
     
     func forceReload() async {
         print("🔄 forceReload: 强制刷新书架")
-        isLoading = false
         
         debugStorePath = CoreDataStack.shared.storeURL?.path ?? ""
 
-        let context = CoreDataStack.shared.viewContext
-        context.reset()
-
         do {
-            let countReq: NSFetchRequest<Book> = Book.fetchRequest()
-            countReq.includesPendingChanges = false
-            debugDiskBookCount = try context.count(for: countReq)
-        } catch {
-            debugDiskBookCount = 0
-        }
-        
-        let request: NSFetchRequest<Book> = Book.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
-        request.returnsObjectsAsFaults = false
-        
-        do {
-            let allBooks = try context.fetch(request)
-            print("📊 forceReload: 查询到 \(allBooks.count) 本书")
-            for book in allBooks.prefix(3) {
-                print("  - \(book.name) (origin: \(book.origin))")
+            let (count, allBooks) = try await CoreDataStack.shared.performBackgroundTask { context in
+                let countReq: NSFetchRequest<Book> = Book.fetchRequest()
+                countReq.includesPendingChanges = false
+                let count = try context.count(for: countReq)
+                
+                let request: NSFetchRequest<Book> = Book.fetchRequest()
+                request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
+                request.returnsObjectsAsFaults = false
+                let books = try context.fetch(request)
+                
+                return (count, books)
             }
             
-            self.books = allBooks
-            self.hasMore = allBooks.count >= pageSize
+            debugDiskBookCount = count
+            books = allBooks
+            hasMore = allBooks.count >= pageSize
+            
+            print("📊 forceReload: 查询到 \(allBooks.count) 本书，磁盘共 \(count) 本")
         } catch {
             errorMessage = "加载失败：\(error.localizedDescription)"
-            print("❌ forceReload 查询失败: \(error)")
+            print("❌ forceReload 失败: \(error)")
         }
     }
 
