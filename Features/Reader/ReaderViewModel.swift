@@ -462,10 +462,18 @@ class ReaderViewModel: ObservableObject {
     private func loadLocalChapterContent(_ chapter: BookChapter) async throws -> String {
         guard let book = currentBook else { throw ReaderError.noBook }
         
+        // EPUB：从 CoreData 中读取已解析的章节内容
+        if book.type == 1 || book.bookUrl.lowercased().hasSuffix(".epub") {
+            if let content = chapter.content, !content.isEmpty {
+                return content
+            }
+            throw ReaderError.notCached
+        }
+        
+        // TXT：按章节分割读取
         let fileURL = URL(fileURLWithPath: book.bookUrl)
         let content = try String(contentsOf: fileURL, encoding: .utf8)
         
-        // 通过章节索引找到对应的内容段
         // 使用与 LocalBookViewModel 相同的分章逻辑
         let chapterPatterns = [
             #"^第[零一二三四五六七八九十百千万0-9]+[章回卷节部篇]"#,
