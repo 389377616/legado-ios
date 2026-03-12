@@ -9,14 +9,23 @@ import SwiftUI
 import CoreData
 
 struct BookshelfView: View {
+    @Environment(\.managedObjectContext) private var viewContext
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(key: "durChapterTime", ascending: false)],
+        animation: .default
+    ) private var fetchedBooks: FetchedResults<Book>
     @StateObject private var viewModel = BookshelfViewModel()
     @StateObject private var localBookViewModel = LocalBookViewModel()
     @State private var showingSourceManage = false
     @State private var showingSearch = false
+
+    private var visibleBooks: [Book] {
+        Array(fetchedBooks)
+    }
     
     var body: some View {
         Group {
-            if viewModel.books.isEmpty && !viewModel.isLoading {
+            if visibleBooks.isEmpty && !viewModel.isLoading {
                 VStack(spacing: 12) {
                     EmptyStateView(
                         title: "书架空空如也",
@@ -30,6 +39,9 @@ struct BookshelfView: View {
                         Text(viewModel.debugSummary)
                             .font(.footnote)
                             .foregroundColor(.secondary)
+                        Text("显示书籍=\(visibleBooks.count)")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
                     }
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
@@ -39,6 +51,9 @@ struct BookshelfView: View {
             }
         }
         .navigationTitle("书架")
+        .navigationDestination(for: NSManagedObjectID.self) { objectID in
+            readerDestination(for: objectID)
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Picker("", selection: $viewModel.viewMode) {
@@ -149,24 +164,11 @@ struct BookshelfView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 16) {
-                ForEach(viewModel.books, id: \.bookId) { book in
-                    NavigationLink(destination: ReaderView(book: book)) {
+                ForEach(visibleBooks, id: \.bookId) { book in
+                    NavigationLink(value: book.objectID) {
                         BookGridItemView(book: book)
                     }
                     .buttonStyle(.plain)
-                }
-                
-                if viewModel.isLoading {
-                    ProgressView()
-                        .padding()
-                } else if viewModel.hasMore {
-                    Color.clear
-                        .frame(height: 1)
-                        .onAppear {
-                            Task {
-                                await viewModel.loadMoreBooks()
-                            }
-                        }
                 }
             }
             .padding()
@@ -178,18 +180,28 @@ struct BookshelfView: View {
     
     private var bookListView: some View {
         List {
-            ForEach(viewModel.books, id: \.bookId) { book in
-                NavigationLink(destination: ReaderView(book: book)) {
+            ForEach(visibleBooks, id: \.bookId) { book in
+                NavigationLink(value: book.objectID) {
                     BookListItemView(book: book)
                 }
             }
             .onDelete { indexSet in
                 if let index = indexSet.first {
-                    viewModel.removeBook(viewModel.books[index])
+                    viewModel.removeBook(visibleBooks[index])
                 }
             }
         }
         .listStyle(.insetGrouped)
+    }
+
+    @ViewBuilder
+    private func readerDestination(for objectID: NSManagedObjectID) -> some View {
+        if let book = try? viewContext.existingObject(with: objectID) as? Book {
+            ReaderView(book: book)
+        } else {
+            Text("书籍不存在")
+                .foregroundColor(.secondary)
+        }
     }
 }
 

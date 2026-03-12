@@ -16,6 +16,7 @@ struct LegadoApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .environment(\.managedObjectContext, CoreDataStack.shared.viewContext)
                 .onOpenURL { url in
                     handleURL(url)
                 }
