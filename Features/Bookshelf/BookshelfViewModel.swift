@@ -55,6 +55,9 @@ final class BookshelfViewModel: ObservableObject {
 
         isLoading = true
         currentPage = 0
+        
+        let context = CoreDataStack.shared.viewContext
+        context.refreshAllObjects()
 
         do {
             if let storeURL = CoreDataStack.shared.persistentContainer.persistentStoreCoordinator.persistentStores.first?.url {
@@ -65,7 +68,7 @@ final class BookshelfViewModel: ObservableObject {
 
             let countReq: NSFetchRequest<Book> = Book.fetchRequest()
             countReq.includesPendingChanges = false
-            debugDiskBookCount = try CoreDataStack.shared.viewContext.count(for: countReq)
+            debugDiskBookCount = try context.count(for: countReq)
 
             let firstPage = try await fetchBooks(page: 0, size: pageSize)
             print("📚 loadBooks: 获取到 \(firstPage.count) 本书")
@@ -87,6 +90,7 @@ final class BookshelfViewModel: ObservableObject {
         isLoading = false
         
         let context = CoreDataStack.shared.viewContext
+        context.refreshAllObjects()
 
         if let storeURL = CoreDataStack.shared.persistentContainer.persistentStoreCoordinator.persistentStores.first?.url {
             debugStorePath = storeURL.path
