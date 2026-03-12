@@ -8,45 +8,13 @@ final class CoreDataStack {
     private(set) var loadError: Error?
     private(set) var isLoaded = false
     
-    lazy var persistentContainer: NSPersistentContainer = {
+lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: Self.modelName)
         
-        if let storeURL = container.persistentStoreDescriptions.first?.url {
-            let fm = FileManager.default
-            let storeDir = storeURL.deletingLastPathComponent()
-            
-            DebugLogger.shared.log("Store 目录: \(storeDir.path)")
-            DebugLogger.shared.log("Store 文件: \(storeURL.path)")
-            
-            do {
-                if !fm.fileExists(atPath: storeDir.path) {
-                    try fm.createDirectory(at: storeDir, withIntermediateDirectories: true)
-                    DebugLogger.shared.log("创建 store 目录")
-                }
-                
-                let dirAttrs = try fm.attributesOfItem(atPath: storeDir.path)
-                DebugLogger.shared.log("目录权限: \(dirAttrs[.posixPermissions] ?? "unknown")")
-                
-                try fm.setAttributes([.posixPermissions: 0o777], ofItemAtPath: storeDir.path)
-                DebugLogger.shared.log("设置目录权限为 777")
-                
-                if fm.fileExists(atPath: storeURL.path) {
-                    let fileAttrs = try fm.attributesOfItem(atPath: storeURL.path)
-                    DebugLogger.shared.log("sqlite 权限: \(fileAttrs[.posixPermissions] ?? "unknown")")
-                    
-                    try fm.setAttributes([.posixPermissions: 0o666], ofItemAtPath: storeURL.path)
-                    DebugLogger.shared.log("设置 sqlite 权限为 666")
-                }
-                
-                for suffix in ["-shm", "-wal"] {
-                    let sidecar = storeURL.path + suffix
-                    if fm.fileExists(atPath: sidecar) {
-                        try? fm.setAttributes([.posixPermissions: 0o666], ofItemAtPath: sidecar)
-                    }
-                }
-            } catch {
-                DebugLogger.shared.log("权限设置失败: \(error)")
-            }
+        if let description = container.persistentStoreDescriptions.first {
+            description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+            description.setOption(true as NSNumber, forKey: NSMigratePersistentStoresAutomaticallyOption)
+            description.setOption(true as NSNumber, forKey: NSInferMappingModelAutomaticallyOption)
         }
         
         container.loadPersistentStores { description, error in
