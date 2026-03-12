@@ -28,6 +28,9 @@ lazy var persistentContainer: NSPersistentContainer = {
             self.isLoaded = true
             DebugLogger.shared.log("CoreData 加载成功")
             
+            container.viewContext.automaticallyMergesChangesFromParent = true
+            container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+            
             let stores = container.persistentStoreCoordinator.persistentStores
             DebugLogger.shared.log("Stores 数量: \(stores.count)")
             
