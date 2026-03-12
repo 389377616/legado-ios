@@ -55,72 +55,46 @@ final class BookshelfViewModel: ObservableObject {
 
         isLoading = true
         currentPage = 0
+        coreDataStatus = CoreDataStack.shared.debugInfo
 
         do {
             debugStorePath = CoreDataStack.shared.storeURL?.path ?? ""
 
-            let (count, firstPage) = try await CoreDataStack.shared.performBackgroundTask { context in
-                let countReq: NSFetchRequest<Book> = Book.fetchRequest()
-                countReq.includesPendingChanges = false
-                let count = try context.count(for: countReq)
-                
-                let request: NSFetchRequest<Book> = Book.fetchRequest()
-                request.fetchLimit = 50
-                request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
-                request.returnsObjectsAsFaults = false
-                let books = try context.fetch(request)
-                
-                return (count, books)
-            }
+            let count = try await countBooks()
+            let firstPage = try await fetchBooks(page: 0, size: pageSize)
             
             debugDiskBookCount = count
             books = firstPage
             hasMore = firstPage.count == pageSize
             
-            print("📚 loadBooks: 获取到 \(firstPage.count) 本书，磁盘共 \(count) 本")
+            DebugLogger.shared.log("loadBooks 完成: UI=\(firstPage.count), 磁盘=\(count)")
         } catch {
             errorMessage = "加载失败：\(error.localizedDescription)"
-            print("❌ loadBooks 失败: \(error)")
+            DebugLogger.shared.log("loadBooks 失败: \(error)")
         }
 
         isLoading = false
     }
     
     func forceReload() async {
-        print("🔄 forceReload: 开始执行")
+        DebugLogger.shared.log("forceReload 开始")
+        coreDataStatus = CoreDataStack.shared.debugInfo
         
         debugStorePath = CoreDataStack.shared.storeURL?.path ?? ""
-        print("🔄 forceReload: store path = \(debugStorePath)")
 
         do {
-            print("🔄 forceReload: 准备查询")
-            let (count, allBooks) = try await CoreDataStack.shared.performBackgroundTask { context in
-                print("🔄 forceReload: 在 background task 中")
-                let countReq: NSFetchRequest<Book> = Book.fetchRequest()
-                countReq.includesPendingChanges = false
-                let count = try context.count(for: countReq)
-                print("🔄 forceReload: count = \(count)")
-                
-                let request: NSFetchRequest<Book> = Book.fetchRequest()
-                request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
-                request.returnsObjectsAsFaults = false
-                let books = try context.fetch(request)
-                print("🔄 forceReload: fetched \(books.count) books")
-                
-                return (count, books)
-            }
+            let count = try await countBooks()
+            let allBooks = try await fetchBooks(page: 0, size: pageSize)
             
             debugDiskBookCount = count
             books = allBooks
-            hasMore = allBooks.count >= pageSize
+            hasMore = allBooks.count == pageSize
             
-            print("📊 forceReload: 完成 - 查询到 \(allBooks.count) 本书，磁盘共 \(count) 本")
+            DebugLogger.shared.log("forceReload 完成: UI=\(allBooks.count), 磁盘=\(count)")
         } catch {
             errorMessage = "加载失败：\(error.localizedDescription)"
-            print("❌ forceReload 失败: \(error)")
+            DebugLogger.shared.log("forceReload 失败: \(error)")
         }
-        
-        print("🔄 forceReload: 结束")
     }
 
     var debugSummary: String {
@@ -153,29 +127,42 @@ final class BookshelfViewModel: ObservableObject {
     private func fetchBooks(page: Int, size: Int) async throws -> [Book] {
         let context = CoreDataStack.shared.viewContext
 
-        let request: NSFetchRequest<Book> = Book.fetchRequest()
-        request.fetchLimit = size
-        request.fetchOffset = page * size
-        request.returnsObjectsAsFaults = false
+        let groupFilter = self.groupFilter
+        let sortBy = self.sortBy
 
-        if groupFilter != 0 {
-            request.predicate = NSPredicate(format: "group == %d", groupFilter)
+        return try await context.perform {
+            let request: NSFetchRequest<Book> = Book.fetchRequest()
+            request.fetchLimit = size
+            request.fetchOffset = page * size
+            request.returnsObjectsAsFaults = false
+
+            if groupFilter != 0 {
+                request.predicate = NSPredicate(format: "group == %d", groupFilter)
+            }
+
+            switch sortBy {
+            case .lastRead:
+                request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
+            case .name:
+                request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+            case .author:
+                request.sortDescriptors = [NSSortDescriptor(key: "author", ascending: true)]
+            case .update:
+                request.sortDescriptors = [NSSortDescriptor(key: "lastCheckTime", ascending: false)]
+            }
+
+            return try context.fetch(request)
         }
+    }
 
-        switch sortBy {
-        case .lastRead:
-            request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
-        case .name:
-            request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-        case .author:
-            request.sortDescriptors = [NSSortDescriptor(key: "author", ascending: true)]
-        case .update:
-            request.sortDescriptors = [NSSortDescriptor(key: "lastCheckTime", ascending: false)]
+    private func countBooks() async throws -> Int {
+        let context = CoreDataStack.shared.viewContext
+
+        return try await context.perform {
+            let request: NSFetchRequest<Book> = Book.fetchRequest()
+            request.includesPendingChanges = false
+            return try context.count(for: request)
         }
-
-        let results = try context.fetch(request)
-        print("📊 fetchBooks: 查询到 \(results.count) 本书")
-        return results
     }
     
     func refreshBooks() async {

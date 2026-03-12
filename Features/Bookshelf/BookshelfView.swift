@@ -66,6 +66,7 @@ struct BookshelfView: View {
                             Task { @MainActor in
                                 do {
                                     try await localBookViewModel.importBook(url: url)
+                                    DebugLogger.shared.log("BookshelfView 导入后准备 forceReload")
                                     await viewModel.forceReload()
                                 } catch {
                                     localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"
@@ -89,20 +90,18 @@ struct BookshelfView: View {
             set: { isPresented in 
                 if !isPresented { 
                     localBookViewModel.successMessage = nil
-                    print("📚 Alert dismissed, calling forceReload...")
+                    DebugLogger.shared.log("导入成功弹窗关闭，准备 forceReload")
                     Task { 
                         await viewModel.forceReload()
-                        print("📚 forceReload completed")
                     }
                 }
             }
         )) {
             Button("确定", role: .cancel) { 
-                print("📚 确定按钮点击")
                 localBookViewModel.successMessage = nil
+                DebugLogger.shared.log("导入成功弹窗点击确定，准备 forceReload")
                 Task { 
                     await viewModel.forceReload()
-                    print("📚 确定按钮 forceReload completed")
                 }
             }
         } message: {
@@ -125,6 +124,7 @@ struct BookshelfView: View {
             Text(viewModel.errorMessage ?? "")
         }
         .task {
+            DebugLogger.shared.log("BookshelfView.task 触发 loadBooks")
             await viewModel.loadBooks()
         }
         .refreshable {
