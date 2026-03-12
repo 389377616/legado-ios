@@ -38,7 +38,7 @@ class LocalBookViewModel: ObservableObject {
 
             DebugLogger.shared.log("文件: \(fileName), 扩展名: \(fileExtension)")
 
-            let result = try await CoreDataStack.shared.performBackgroundTask { context in
+            let result = try await CoreDataStack.shared.performBackgroundTask { context -> (bookId: UUID, name: String, chapters: Int, coverData: Data?) in
                 DebugLogger.shared.log("performBackgroundTask 开始")
                 
                 let book = Book.create(in: context)
@@ -52,6 +52,8 @@ class LocalBookViewModel: ObservableObject {
                 book.canUpdate = false
 
                 DebugLogger.shared.log("Book 创建: \(book.name)")
+                
+                var coverImageData: Data?
 
                 if fileExtension == "txt" {
                     let content = try Self.readText(fileURL: url)
@@ -83,11 +85,8 @@ class LocalBookViewModel: ObservableObject {
                     book.durChapterIndex = 0
                     book.durChapterTitle = epubBook.chapters.first?.title
                     
-                    // 保存封面图片
-                    if let coverData = epubBook.coverImage {
-                        let coverURL = try saveCoverImage(coverData, bookId: book.bookId)
-                        book.coverUrl = coverURL.path
-                    }
+                    // 暂存封面数据
+                    coverImageData = epubBook.coverImage
 
                     for chapter in epubBook.chapters {
                         let chapterObj = BookChapter.create(
@@ -118,7 +117,21 @@ class LocalBookViewModel: ObservableObject {
                 }
 
                 DebugLogger.shared.log("performBackgroundTask 即将完成")
-                return (bookId: book.bookId, name: book.name, chapters: Int(book.totalChapterNum))
+                return (bookId: book.bookId, name: book.name, chapters: Int(book.totalChapterNum), coverData: coverImageData)
+            }
+            
+            // 保存封面图片（在主线程）
+            if let coverData = result.coverData {
+                let coverURL = try await saveCoverImage(coverData, bookId: result.bookId)
+                
+                // 更新 book 的 coverUrl
+                let viewContext = CoreDataStack.shared.viewContext
+                let updateRequest: NSFetchRequest<Book> = Book.fetchRequest()
+                updateRequest.predicate = NSPredicate(format: "bookId == %@", result.bookId as CVarArg)
+                if let book = try viewContext.fetch(updateRequest).first {
+                    book.coverUrl = coverURL.path
+                    try CoreDataStack.shared.save()
+                }
             }
 
             DebugLogger.shared.log("performBackgroundTask 完成，开始验证")
