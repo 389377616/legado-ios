@@ -132,6 +132,21 @@ struct SettingsView: View {
                         showingAbout = true
                     }
                 }
+                
+                Section(header: Label("调试", systemImage: "ladybug")) {
+                    NavigationLink("查看日志") {
+                        DebugLogView()
+                    }
+                    
+                    ShareLink(item: URL(fileURLWithPath: DebugLogger.shared.logFilePath)) {
+                        HStack {
+                            Text("导出日志")
+                            Spacer()
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
             }
             .listStyle(.insetGrouped)
             .navigationTitle("我的")
@@ -741,6 +756,40 @@ struct SourceSubscriptionView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+struct DebugLogView: View {
+    @State private var logContent: String = ""
+    
+    var body: some View {
+        ScrollView {
+            Text(logContent)
+                .font(.system(.caption, design: .monospaced))
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .navigationTitle("调试日志")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("清空") {
+                    try? "".write(toFile: DebugLogger.shared.logFilePath, atomically: true, encoding: .utf8)
+                    logContent = ""
+                }
+            }
+        }
+        .onAppear {
+            loadLog()
+        }
+    }
+    
+    private func loadLog() {
+        if let content = try? String(contentsOfFile: DebugLogger.shared.logFilePath, encoding: .utf8) {
+            logContent = content
+        } else {
+            logContent = "无法读取日志文件"
+        }
     }
 }
 
