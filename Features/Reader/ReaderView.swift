@@ -273,7 +273,9 @@ struct ReaderView: View {
                 }
             }
             .sheet(isPresented: $showingBookmarks) {
-                BookmarkSheet(viewModel: viewModel, book: book)
+                if let book = book {
+                    BookmarkSheet(viewModel: viewModel, book: book)
+                }
             }
         }
         .navigationBarHidden(true)
