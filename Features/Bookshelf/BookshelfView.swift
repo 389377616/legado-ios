@@ -165,6 +165,13 @@ struct BookshelfView: View {
                         BookGridItemView(book: book)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            viewModel.removeBook(book)
+                        } label: {
+                            Label("删除", systemImage: "trash")
+                        }
+                    }
                 }
             }
             .padding()
@@ -190,7 +197,7 @@ struct BookshelfView: View {
     @ViewBuilder
     private func readerDestination(for objectID: NSManagedObjectID) -> some View {
         if let book = try? viewContext.existingObject(with: objectID) as? Book {
-            ReaderView(book: book)
+            ReaderView(bookId: book.bookId)
         } else {
             Text("书籍不存在")
                 .foregroundColor(.secondary)

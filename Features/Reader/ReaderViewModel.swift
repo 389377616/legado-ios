@@ -130,14 +130,28 @@ class ReaderViewModel: ObservableObject {
     }
     
     // MARK: - 加载书籍
-    func loadBook(_ book: Book) {
+    func loadBook(byId bookId: UUID) {
         loadTask?.cancel()
-        currentBook = book
         isLoading = true
 
         loadTask = Task {
             do {
                 try Task.checkCancellation()
+                
+                let context = CoreDataStack.shared.viewContext
+                context.refreshAllObjects()
+                
+                let request: NSFetchRequest<Book> = Book.fetchRequest()
+                request.predicate = NSPredicate(format: "bookId == %@", bookId as CVarArg)
+                request.fetchLimit = 1
+                
+                guard let book = try context.fetch(request).first else {
+                    errorMessage = "书籍不存在"
+                    isLoading = false
+                    return
+                }
+                
+                currentBook = book
 
                 applyReadConfig(book)
 
@@ -163,13 +177,21 @@ class ReaderViewModel: ObservableObject {
         }
     }
     
+    func loadBook(_ book: Book) {
+        loadBook(byId: book.bookId)
+    }
+    
     // MARK: - 加载目录
     private func loadChapters(book: Book) async throws {
+        DebugLogger.shared.log("loadChapters: bookId=\(book.bookId), name=\(book.name), totalChapterNum=\(book.totalChapterNum)")
+        
         let request = BookChapter.fetchRequest(byBookId: book.bookId)
         
         let context = CoreDataStack.shared.viewContext
         context.refreshAllObjects()
         var chapters = try context.fetch(request)
+        
+        DebugLogger.shared.log("loadChapters: 从 CoreData 获取到 \(chapters.count) 章")
 
         if chapters.isEmpty, !book.isLocal {
             guard let sourceId = UUID(uuidString: book.origin) else {

@@ -19,11 +19,18 @@ struct ReaderView: View {
     @State private var showingChapterList = false
     @State private var showingTTSControls = false
     @State private var showingAutoPageTurn = false
-    @State private var showingChangeSource = false
     @State private var showingBookmarks = false
     @State private var showUI = true
     
-    let book: Book
+    let bookId: UUID
+    
+    private var book: Book? {
+        let context = CoreDataStack.shared.viewContext
+        let request: NSFetchRequest<Book> = Book.fetchRequest()
+        request.predicate = NSPredicate(format: "bookId == %@", bookId as CVarArg)
+        request.fetchLimit = 1
+        return try? context.fetch(request).first
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -51,7 +58,7 @@ struct ReaderView: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(book.name)
+                            Text(book?.name ?? "")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .lineLimit(1)
@@ -217,7 +224,7 @@ struct ReaderView: View {
                 }
             }
             .onAppear {
-                viewModel.loadBook(book)
+                viewModel.loadBook(byId: bookId)
                 autoPageTurnManager.onTurnPage = { viewModel.turnToNextPage() }
                 autoPageTurnManager.onChapterComplete = {
                     Task { @MainActor in
@@ -253,11 +260,15 @@ struct ReaderView: View {
                 Text("阅读一段时间了，休息一下眼睛。")
             }
             .sheet(isPresented: $showingChapterList) {
-                ChapterListView(viewModel: viewModel, book: book)
+                if let book = book {
+                    ChapterListView(viewModel: viewModel, book: book)
+                }
             }
             .sheet(isPresented: $showingChangeSource) {
-                ChangeSourceSheet(isPresented: $showingChangeSource, book: book) {
-                    viewModel.loadBook(book)
+                if let book = book {
+                    ChangeSourceSheet(isPresented: $showingChangeSource, book: book) {
+                        viewModel.loadBook(byId: bookId)
+                    }
                 }
             }
             .sheet(isPresented: $showingBookmarks) {
