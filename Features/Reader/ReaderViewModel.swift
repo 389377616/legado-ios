@@ -168,6 +168,7 @@ class ReaderViewModel: ObservableObject {
         let request = BookChapter.fetchRequest(byBookId: book.bookId)
         
         let context = CoreDataStack.shared.viewContext
+        context.refreshAllObjects()
         var chapters = try context.fetch(request)
 
         if chapters.isEmpty, !book.isLocal {

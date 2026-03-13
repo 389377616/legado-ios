@@ -299,17 +299,11 @@ struct BookCoverView: View {
                     .foregroundColor(.gray.opacity(0.5))
             }
         }
-        .task {
-            if let urlString = url, !urlString.isEmpty {
-                await loadImage(urlString: urlString)
+        .task(id: url) {
+            guard imageData == nil, let urlString = url, !urlString.isEmpty else { return }
+            if let image = await ImageCacheManager.shared.loadImage(from: urlString) {
+                imageData = image.pngData()
             }
-        }
-    }
-    
-    private func loadImage(urlString: String) async {
-        let cached = await ImageCacheManager.shared.loadImage(from: urlString)
-        if let cached = cached {
-            imageData = cached.pngData()
         }
     }
 }
