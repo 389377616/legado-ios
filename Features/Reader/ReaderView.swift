@@ -20,6 +20,7 @@ struct ReaderView: View {
     @State private var showingTTSControls = false
     @State private var showingAutoPageTurn = false
     @State private var showingBookmarks = false
+    @State private var showingChangeSource = false
     @State private var showUI = true
     
     let bookId: UUID

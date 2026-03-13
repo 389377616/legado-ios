@@ -100,7 +100,7 @@ struct BookDetailView: View {
             SourceSelectionSheet(book: book, selectedSource: $viewModel.currentSource)
         }
         .navigationDestination(isPresented: $navigatingToReader) {
-            ReaderView(book: book)
+            ReaderView(bookId: book.bookId)
         }
         .background {
             // 背景模糊效果
