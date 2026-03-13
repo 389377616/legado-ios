@@ -469,6 +469,13 @@ class ReaderViewModel: ObservableObject {
             let cacheFileName = "\(book.bookId.uuidString)_\(chapter.index).txt"
             let cacheURL = documents.appendingPathComponent("chapters").appendingPathComponent(cacheFileName)
             
+            DebugLogger.shared.log("EPUB 读取: bookId=\(book.bookId), chapter=\(chapter.index), path=\(cacheURL.path)")
+            DebugLogger.shared.log("文件存在: \(FileManager.default.fileExists(atPath: cacheURL.path))")
+            
+            if let contents = FileManager.default.contentsOfDirectory(atPath: documents.appendingPathComponent("chapters").path) {
+                DebugLogger.shared.log("chapters 目录文件: \(contents.prefix(5).joined(separator: ", "))")
+            }
+            
             if FileManager.default.fileExists(atPath: cacheURL.path) {
                 return try String(contentsOf: cacheURL, encoding: .utf8)
             }
