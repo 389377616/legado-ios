@@ -82,8 +82,6 @@ class ImageCacheManager: ObservableObject {
             }
         }
     }
-        }
-    }
     
     // MARK: - 下载图片
     
