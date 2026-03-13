@@ -472,8 +472,11 @@ class ReaderViewModel: ObservableObject {
             DebugLogger.shared.log("EPUB 读取: bookId=\(book.bookId), chapter=\(chapter.index), path=\(cacheURL.path)")
             DebugLogger.shared.log("文件存在: \(FileManager.default.fileExists(atPath: cacheURL.path))")
             
-            if let contents = FileManager.default.contentsOfDirectory(atPath: documents.appendingPathComponent("chapters").path) {
-                DebugLogger.shared.log("chapters 目录文件: \(contents.prefix(5).joined(separator: ", "))")
+            let chapterDirPath = documents.appendingPathComponent("chapters").path
+            if let contents = try? FileManager.default.contentsOfDirectory(atPath: chapterDirPath) {
+                DebugLogger.shared.log("chapters 目录文件数: \(contents.count), 前5个: \(contents.prefix(5).joined(separator: ", "))")
+            } else {
+                DebugLogger.shared.log("chapters 目录不存在或为空")
             }
             
             if FileManager.default.fileExists(atPath: cacheURL.path) {
