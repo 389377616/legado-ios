@@ -47,7 +47,7 @@ class LocalBookViewModel: ObservableObject {
                 book.type = fileExtension == "epub" ? 1 : 0
                 book.origin = "local"
                 book.originName = fileName
-                book.bookUrl = url.absoluteString
+                book.bookUrl = url.path
                 book.tocUrl = ""
                 book.canUpdate = false
 

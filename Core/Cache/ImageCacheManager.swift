@@ -69,12 +69,19 @@ class ImageCacheManager: ObservableObject {
     }
     
     // 异步加载（SwiftUI 友好）
-    @MainActor
+@MainActor
     func loadImage(from url: String) async -> UIImage? {
-        await withCheckedContinuation { continuation in
+        if url.hasPrefix("/") || url.hasPrefix("file://") {
+            let path = url.hasPrefix("file://") ? String(url.dropFirst(7)) : url
+            return UIImage(contentsOfFile: path)
+        }
+        
+        return await withCheckedContinuation { continuation in
             loadImage(from: url) { image in
                 continuation.resume(returning: image)
             }
+        }
+    }
         }
     }
     
