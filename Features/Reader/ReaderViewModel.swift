@@ -465,7 +465,15 @@ class ReaderViewModel: ObservableObject {
         
         // EPUB：从缓存文件读取章节内容
         if book.type == 1 || book.bookUrl.lowercased().hasSuffix(".epub") {
-            return try await loadCachedChapter(chapter)
+            let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let cacheFileName = "\(book.bookId.uuidString)_\(chapter.index).txt"
+            let cacheURL = documents.appendingPathComponent("chapters").appendingPathComponent(cacheFileName)
+            
+            if FileManager.default.fileExists(atPath: cacheURL.path) {
+                return try String(contentsOf: cacheURL, encoding: .utf8)
+            }
+            
+            throw ReaderError.notCached
         }
         
         // TXT：按章节分割读取（原有逻辑）

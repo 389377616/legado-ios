@@ -19,13 +19,9 @@ struct BookshelfView: View {
     @State private var showingSourceManage = false
     @State private var showingSearch = false
 
-    private var visibleBooks: [Book] {
-        Array(fetchedBooks)
-    }
-    
     var body: some View {
         Group {
-            if visibleBooks.isEmpty && !viewModel.isLoading {
+            if fetchedBooks.isEmpty && !viewModel.isLoading {
                 VStack(spacing: 12) {
                     EmptyStateView(
                         title: "书架空空如也",
@@ -39,7 +35,7 @@ struct BookshelfView: View {
                         Text(viewModel.debugSummary)
                             .font(.footnote)
                             .foregroundColor(.secondary)
-                        Text("显示书籍=\(visibleBooks.count)")
+                        Text("显示书籍=\(fetchedBooks.count)")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
@@ -164,7 +160,7 @@ struct BookshelfView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 16) {
-                ForEach(visibleBooks, id: \.bookId) { book in
+                ForEach(fetchedBooks, id: \.bookId) { book in
                     NavigationLink(value: book.objectID) {
                         BookGridItemView(book: book)
                     }
@@ -173,21 +169,18 @@ struct BookshelfView: View {
             }
             .padding()
         }
-        .refreshable {
-            await viewModel.refreshBooks()
-        }
     }
     
     private var bookListView: some View {
         List {
-            ForEach(visibleBooks, id: \.bookId) { book in
+            ForEach(fetchedBooks, id: \.bookId) { book in
                 NavigationLink(value: book.objectID) {
                     BookListItemView(book: book)
                 }
             }
             .onDelete { indexSet in
                 if let index = indexSet.first {
-                    viewModel.removeBook(visibleBooks[index])
+                    viewModel.removeBook(fetchedBooks[index])
                 }
             }
         }
@@ -284,12 +277,12 @@ struct BookListItemView: View {
 
 struct BookCoverView: View {
     let url: String?
-    @State private var imageData: Data?
+    @State private var image: UIImage?
     
     var body: some View {
         Group {
-            if let data = imageData, let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
+            if let image = image {
+                Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
@@ -300,10 +293,8 @@ struct BookCoverView: View {
             }
         }
         .task(id: url) {
-            guard imageData == nil, let urlString = url, !urlString.isEmpty else { return }
-            if let image = await ImageCacheManager.shared.loadImage(from: urlString) {
-                imageData = image.pngData()
-            }
+            guard image == nil, let urlString = url, !urlString.isEmpty else { return }
+            image = await ImageCacheManager.shared.loadImage(from: urlString)
         }
     }
 }
