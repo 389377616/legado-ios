@@ -139,7 +139,8 @@ class EPUBParser {
             if let id = extractAttribute(attributes, name: "id"),
                let href = extractAttribute(attributes, name: "href"),
                let mediaType = extractAttribute(attributes, name: "media-type") {
-                manifest[id] = ManifestItem(id: id, href: href, mediaType: mediaType)
+                let properties = extractAttribute(attributes, name: "properties")
+                manifest[id] = ManifestItem(id: id, href: href, mediaType: mediaType, properties: properties)
             }
         }
         
@@ -265,18 +266,26 @@ class EPUBParser {
     
     // MARK: - 提取封面
     private static func extractCover(manifest: [String: ManifestItem], metadata: EPUBMetadata, basePath: URL) -> Data? {
-        // 1. 尝试从 manifest 找封面
         if let coverItem = manifest.first(where: { 
             $0.value.properties?.contains("cover-image") == true 
         })?.value {
             let coverPath = basePath.appendingPathComponent(coverItem.href)
-            return try? Data(contentsOf: coverPath)
+            if let data = try? Data(contentsOf: coverPath) {
+                return data
+            }
         }
         
-        // 2. 尝试找名为 cover 的文件
+        for (id, item) in manifest {
+            if id.lowercased().contains("cover") && item.mediaType.hasPrefix("image/") {
+                let coverPath = basePath.appendingPathComponent(item.href)
+                if let data = try? Data(contentsOf: coverPath) {
+                    return data
+                }
+            }
+        }
+        
         for (_, item) in manifest {
-            if item.href.lowercased().contains("cover") && 
-               (item.mediaType.hasPrefix("image/")) {
+            if item.href.lowercased().contains("cover") && item.mediaType.hasPrefix("image/") {
                 let coverPath = basePath.appendingPathComponent(item.href)
                 if let data = try? Data(contentsOf: coverPath) {
                     return data
@@ -375,10 +384,7 @@ private struct ManifestItem {
     let id: String
     let href: String
     let mediaType: String
-    var properties: String? {
-        // 从原始属性中提取
-        return nil
-    }
+    let properties: String?
 }
 
 // MARK: - EPUBError
