@@ -760,24 +760,46 @@ struct SourceSubscriptionView: View {
 }
 
 struct DebugLogView: View {
-    @State private var logContent: String = ""
+    @State private var logLines: [String] = []
+    @State private var showShareSheet = false
+    
+    private let maxLines = 500
     
     var body: some View {
-        ScrollView {
-            Text(logContent)
-                .font(.system(.caption, design: .monospaced))
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
+        VStack {
+            if logLines.isEmpty {
+                Text("暂无日志")
+                    .foregroundColor(.secondary)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 2) {
+                        ForEach(logLines.indices, id: \.self) { index in
+                            Text(logLines[index])
+                                .font(.system(.caption2, design: .monospaced))
+                                .textSelection(.enabled)
+                        }
+                    }
+                    .padding()
+                }
+            }
         }
         .navigationTitle("调试日志")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("清空") {
-                    try? "".write(toFile: DebugLogger.shared.logFilePath, atomically: true, encoding: .utf8)
-                    logContent = ""
+                HStack {
+                    Button(action: { showShareSheet = true }) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    Button("清空") {
+                        try? "".write(toFile: DebugLogger.shared.logFilePath, atomically: true, encoding: .utf8)
+                        logLines = []
+                    }
                 }
             }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(items: [URL(fileURLWithPath: DebugLogger.shared.logFilePath)])
         }
         .onAppear {
             loadLog()
@@ -785,12 +807,24 @@ struct DebugLogView: View {
     }
     
     private func loadLog() {
-        if let content = try? String(contentsOfFile: DebugLogger.shared.logFilePath, encoding: .utf8) {
-            logContent = content
-        } else {
-            logContent = "无法读取日志文件"
+        guard let content = try? String(contentsOfFile: DebugLogger.shared.logFilePath, encoding: .utf8) else {
+            logLines = []
+            return
         }
+        let allLines = content.components(separatedBy: "\n").filter { !$0.isEmpty }
+        let startIndex = max(0, allLines.count - maxLines)
+        logLines = Array(allLines[startIndex...])
     }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

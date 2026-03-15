@@ -108,9 +108,7 @@ class LocalBookViewModel: ObservableObject {
                             try FileManager.default.createDirectory(at: chapterDir, withIntermediateDirectories: true)
                         }
                         let cacheURL = chapterDir.appendingPathComponent(cacheFileName)
-                        DebugLogger.shared.log("EPUB 写入: bookId=\(book.bookId), chapter=\(chapter.index), path=\(cacheURL.path)")
                         try chapter.content.write(to: cacheURL, atomically: true, encoding: .utf8)
-                        DebugLogger.shared.log("EPUB 写入成功: \(FileManager.default.fileExists(atPath: cacheURL.path))")
                         chapterObj.cachePath = cacheFileName
                     }
                     DebugLogger.shared.log("EPUB 解析完成: \(epubBook.chapters.count) 章")
