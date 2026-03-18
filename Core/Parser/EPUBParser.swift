@@ -240,6 +240,10 @@ class EPUBParser {
             if FileManager.default.fileExists(atPath: chapterPath.path) {
                 let htmlContent = try String(contentsOf: chapterPath, encoding: .utf8)
                 
+                if index < 3 {
+                    DebugLogger.shared.log("EPUB 章节 \(index): html长度=\(htmlContent.count), 前100字符=\(String(htmlContent.prefix(100)))")
+                }
+                
                 // 提取标题
                 if let title = extractFirstMatch(in: htmlContent, pattern: "<title[^>]*>([^<]+)</title>") {
                     chapterTitle = title
@@ -249,6 +253,12 @@ class EPUBParser {
                 
                 // 转换为纯文本
                 chapterContent = htmlToText(html: htmlContent)
+                
+                if index < 3 {
+                    DebugLogger.shared.log("EPUB 章节 \(index): text长度=\(chapterContent.count), 前100字符=\(String(chapterContent.prefix(100)))")
+                }
+            } else {
+                DebugLogger.shared.log("EPUB 章节 \(index): 文件不存在 path=\(chapterPath.path)")
             }
             
             chapters.append(EPUBChapter(
@@ -298,24 +308,26 @@ class EPUBParser {
     
     // MARK: - HTML 转纯文本
     private static func htmlToText(html: String) -> String {
-        // 1. 移除 script 和 style
         var text = html
-        text = text.replacingOccurrences(of: "<script[^>]*>.*?</script>", with: "", options: .regularExpression)
-        text = text.replacingOccurrences(of: "<style[^>]*>.*?</style>", with: "", options: .regularExpression)
         
-        // 2. 将块级标签转换为换行
+        if let scriptRegex = try? NSRegularExpression(pattern: "<script[^>]*>.*?</script>", options: [.dotMatchesLineSeparators]) {
+            text = scriptRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "")
+        }
+        if let styleRegex = try? NSRegularExpression(pattern: "<style[^>]*>.*?</style>", options: [.dotMatchesLineSeparators]) {
+            text = styleRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "")
+        }
+        
         let blockTags = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "br", "li"]
         for tag in blockTags {
             text = text.replacingOccurrences(of: "</\(tag)>", with: "\n", options: .regularExpression)
         }
         
-        // 3. 移除所有 HTML 标签
-        text = text.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        if let tagRegex = try? NSRegularExpression(pattern: "<[^>]+>", options: [.dotMatchesLineSeparators]) {
+            text = tagRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "")
+        }
         
-        // 4. 解码 HTML 实体
         text = decodeHTMLEntities(text)
         
-        // 5. 规范化空白
         text = text.replacingOccurrences(of: "[\\t\\r]+", with: "", options: .regularExpression)
         text = text.replacingOccurrences(of: "\\n\\s*\\n", with: "\n\n", options: .regularExpression)
         
