@@ -360,6 +360,7 @@ struct ThemeSettingsView: View {
 struct CacheCleanView: View {
     @State private var imageCacheSize: String = "计算中..."
     @State private var chapterCacheSize: String = "计算中..."
+    @State private var logSize: String = "计算中..."
     @State private var isClearing = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -367,6 +368,12 @@ struct CacheCleanView: View {
     var body: some View {
         List {
             Section("缓存占用") {
+                HStack {
+                    Label("日志文件", systemImage: "doc.text")
+                    Spacer()
+                    Text(logSize)
+                        .foregroundColor(.secondary)
+                }
                 HStack {
                     Label("图片缓存", systemImage: "photo")
                     Spacer()
@@ -382,6 +389,13 @@ struct CacheCleanView: View {
             }
             
             Section {
+                Button(action: { clearLog() }) {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text("清理日志")
+                    }
+                }
+                
                 Button(action: { clearImageCache() }) {
                     HStack {
                         Image(systemName: "trash")
@@ -418,6 +432,12 @@ struct CacheCleanView: View {
     private func calculateCacheSize() {
         imageCacheSize = folderSize(imageCacheDir())
         chapterCacheSize = folderSize(chapterCacheDir())
+        logSize = fileSize(logFile())
+    }
+
+    private func logFile() -> URL? {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("debug.log")
     }
 
     private func imageCacheDir() -> URL? {
@@ -428,6 +448,13 @@ struct CacheCleanView: View {
     private func chapterCacheDir() -> URL? {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
             .appendingPathComponent("chapters", isDirectory: true)
+    }
+    
+    private func fileSize(_ url: URL?) -> String {
+        guard let url = url else { return "0 B" }
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let size = attrs[.size] as? Int64 else { return "0 B" }
+        return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }
     
     private func folderSize(_ url: URL?) -> String {
@@ -444,6 +471,17 @@ struct CacheCleanView: View {
             total += Int64(values.fileSize ?? 0)
         }
         return ByteCountFormatter.string(fromByteCount: total, countStyle: .file)
+    }
+    
+    private func clearLog(showMessage: Bool = true) {
+        if let url = logFile() {
+            try? "".write(to: url, atomically: true, encoding: .utf8)
+        }
+        calculateCacheSize()
+        if showMessage {
+            alertMessage = "日志已清理"
+            showingAlert = true
+        }
     }
     
     private func clearImageCache(showMessage: Bool = true) {
@@ -473,6 +511,7 @@ struct CacheCleanView: View {
         isClearing = true
         defer { isClearing = false }
 
+        clearLog(showMessage: false)
         clearImageCache(showMessage: false)
         clearChapterCache(showMessage: false)
         alertMessage = "全部缓存已清理"
