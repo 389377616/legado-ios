@@ -133,6 +133,7 @@ class ReaderViewModel: ObservableObject {
     func loadBook(byId bookId: UUID) {
         loadTask?.cancel()
         isLoading = true
+        DebugLogger.shared.log("ReaderViewModel.loadBook 开始: bookId=\(bookId)")
 
         loadTask = Task {
             do {
@@ -146,10 +147,13 @@ class ReaderViewModel: ObservableObject {
                 request.fetchLimit = 1
                 
                 guard let book = try context.fetch(request).first else {
+                    DebugLogger.shared.log("ReaderViewModel: 书籍不存在 bookId=\(bookId)")
                     errorMessage = "书籍不存在"
                     isLoading = false
                     return
                 }
+                
+                DebugLogger.shared.log("ReaderViewModel: 找到书籍 name=\(book.name), type=\(book.type), origin=\(book.origin)")
                 
                 currentBook = book
 
@@ -169,8 +173,10 @@ class ReaderViewModel: ObservableObject {
                 
                 isLoading = false
             } catch is CancellationError {
+                DebugLogger.shared.log("ReaderViewModel: 加载被取消")
                 isLoading = false
             } catch {
+                DebugLogger.shared.log("ReaderViewModel: 加载失败 \(error.localizedDescription)")
                 errorMessage = "加载失败：\(error.localizedDescription)"
                 isLoading = false
             }
@@ -255,13 +261,16 @@ class ReaderViewModel: ObservableObject {
         }
         
         do {
+            DebugLogger.shared.log("loadChapter: index=\(index), chapterId=\(chapters[index].chapterId), isCached=\(chapters[index].isCached), cachePath=\(chapters[index].cachePath ?? "nil")")
             // 尝试从缓存加载
             if let cachedContent = try? await loadCachedChapter(chapters[index]) {
+                DebugLogger.shared.log("loadChapter: 从缓存加载成功，长度=\(cachedContent.count)")
                 chapterContent = applyReplaceRulesIfNeeded(cachedContent, chapter: chapters[index])
                 isLoading = false
                 return
             }
             
+            DebugLogger.shared.log("loadChapter: 缓存未命中，尝试 fetchChapterContent")
             // 从网络加载
             let content = try await fetchChapterContent(chapters[index])
             chapterContent = applyReplaceRulesIfNeeded(content, chapter: chapters[index])
@@ -435,8 +444,10 @@ class ReaderViewModel: ObservableObject {
     
     // MARK: - 缓存管理
     private func loadCachedChapter(_ chapter: BookChapter) async throws -> String {
+        DebugLogger.shared.log("loadCachedChapter: chapterId=\(chapter.chapterId), isCached=\(chapter.isCached), cachePath=\(chapter.cachePath ?? "nil")")
         // 从文件系统加载缓存的章节内容
         guard chapter.isCached, let cachePath = chapter.cachePath, !cachePath.isEmpty else {
+            DebugLogger.shared.log("loadCachedChapter: 章节未缓存或 cachePath 为空")
             throw ReaderError.notCached
         }
         
@@ -448,11 +459,15 @@ class ReaderViewModel: ObservableObject {
             cacheURL = documents.appendingPathComponent("chapters").appendingPathComponent(cachePath)
         }
         
+        DebugLogger.shared.log("loadCachedChapter: 检查文件路径=\(cacheURL.path)")
         guard FileManager.default.fileExists(atPath: cacheURL.path) else {
+            DebugLogger.shared.log("loadCachedChapter: 文件不存在")
             throw ReaderError.notCached
         }
         
-        return try String(contentsOf: cacheURL, encoding: .utf8)
+        let content = try String(contentsOf: cacheURL, encoding: .utf8)
+        DebugLogger.shared.log("loadCachedChapter: 加载成功，长度=\(content.count)")
+        return content
     }
     
     private func fetchChapterContent(_ chapter: BookChapter) async throws -> String {
