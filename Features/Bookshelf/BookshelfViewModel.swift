@@ -201,4 +201,56 @@ final class BookshelfViewModel: ObservableObject {
         book.group = Int64(group)
         try? CoreDataStack.shared.save()
     }
+    
+    func refreshEPUB(_ book: Book) {
+        let bookId = book.bookId
+        let bookUrl = book.bookUrl
+        DebugLogger.shared.log("refreshEPUB 开始: bookId=\(bookId), url=\(bookUrl)")
+        
+        Task { @MainActor in
+            let context = CoreDataStack.shared.viewContext
+            
+            let request: NSFetchRequest<Book> = Book.fetchRequest()
+            request.predicate = NSPredicate(format: "bookId == %@", bookId as CVarArg)
+            request.fetchLimit = 1
+            
+            guard let bookToRefresh = try? context.fetch(request).first else {
+                DebugLogger.shared.log("refreshEPUB: 找不到书籍")
+                return
+            }
+            
+            do {
+                let epubBook = try EPUBParser.parseSync(file: URL(fileURLWithPath: bookUrl), bookId: bookId)
+                
+                bookToRefresh.name = epubBook.title
+                bookToRefresh.author = epubBook.author
+                bookToRefresh.totalChapterNum = Int32(epubBook.chapters.count)
+                bookToRefresh.folderName = epubBook.epubDirectory.path
+                
+                if let chapters = bookToRefresh.chapters as? Set<BookChapter> {
+                    for chapter in chapters {
+                        context.delete(chapter)
+                    }
+                }
+                
+                for chapter in epubBook.chapters {
+                    let chapterObj = BookChapter.create(
+                        in: context,
+                        bookId: bookId,
+                        url: chapter.href,
+                        index: Int32(chapter.index),
+                        title: chapter.title
+                    )
+                    chapterObj.book = bookToRefresh
+                    chapterObj.isCached = true
+                    chapterObj.cachePath = chapter.htmlPath
+                }
+                
+                try context.save()
+                DebugLogger.shared.log("refreshEPUB 成功: \(epubBook.chapters.count) 章")
+            } catch {
+                DebugLogger.shared.log("refreshEPUB 失败: \(error.localizedDescription)")
+            }
+        }
+    }
 }

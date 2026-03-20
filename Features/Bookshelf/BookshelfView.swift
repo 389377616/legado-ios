@@ -166,6 +166,13 @@ struct BookshelfView: View {
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
+                        if book.isLocal && book.bookUrl.lowercased().hasSuffix(".epub") {
+                            Button {
+                                viewModel.refreshEPUB(book)
+                            } label: {
+                                Label("刷新", systemImage: "arrow.clockwise")
+                            }
+                        }
                         Button(role: .destructive) {
                             viewModel.removeBook(book)
                         } label: {
@@ -184,10 +191,22 @@ struct BookshelfView: View {
                 NavigationLink(value: book.objectID) {
                     BookListItemView(book: book)
                 }
-            }
-            .onDelete { indexSet in
-                if let index = indexSet.first {
-                    viewModel.removeBook(fetchedBooks[index])
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        viewModel.removeBook(book)
+                    } label: {
+                        Label("删除", systemImage: "trash")
+                    }
+                }
+                .swipeActions(edge: .leading) {
+                    if book.isLocal && book.bookUrl.lowercased().hasSuffix(".epub") {
+                        Button {
+                            viewModel.refreshEPUB(book)
+                        } label: {
+                            Label("刷新", systemImage: "arrow.clockwise")
+                        }
+                        .tint(.blue)
+                    }
                 }
             }
         }

@@ -40,10 +40,20 @@ struct ReaderView: View {
                     .ignoresSafeArea()
                 
                 if viewModel.useWebView, let htmlURL = viewModel.chapterHTMLURL, let baseURL = viewModel.epubBaseURL {
-                    EPUBReaderView(htmlURL: htmlURL, baseURL: baseURL) {
-                        autoPageTurnManager.handleTouch()
-                        withAnimation { showUI.toggle() }
-                    }
+                    EPUBReaderView(
+                        htmlURL: htmlURL,
+                        baseURL: baseURL,
+                        onTap: {
+                            autoPageTurnManager.handleTouch()
+                            withAnimation { showUI.toggle() }
+                        },
+                        onSwipeLeft: {
+                            Task { await viewModel.nextChapter() }
+                        },
+                        onSwipeRight: {
+                            Task { await viewModel.prevChapter() }
+                        }
+                    )
                 } else {
                     PagedReaderView(viewModel: viewModel) {
                         autoPageTurnManager.handleTouch()
