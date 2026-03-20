@@ -229,7 +229,7 @@ class LocalBookViewModel: ObservableObject {
                 title: chapter.title
             )
             bookChapter.book = book
-            bookChapter.wordCount = Int32(chapter.content.count)
+            bookChapter.wordCount = 0
             bookChapter.isCached = true
             bookChapter.cachePath = url.path
         }
@@ -272,8 +272,9 @@ class LocalBookViewModel: ObservableObject {
                 title: chapter.title
             )
             bookChapter.book = book
-            bookChapter.wordCount = Int32(chapter.content.count)
+            bookChapter.wordCount = 0
             bookChapter.isCached = true
+            bookChapter.cachePath = chapter.htmlPath
         }
         
         if let description = epubBook.metadata.description {
