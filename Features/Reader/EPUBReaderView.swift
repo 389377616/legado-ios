@@ -16,6 +16,8 @@ struct EPUBReaderView: UIViewRepresentable {
         
         webView.scrollView.isPagingEnabled = true
         webView.scrollView.bounces = false
+        webView.scrollView.alwaysBounceHorizontal = true
+        webView.scrollView.alwaysBounceVertical = false
         webView.scrollView.showsVerticalScrollIndicator = false
         webView.scrollView.showsHorizontalScrollIndicator = false
         webView.isOpaque = false
@@ -58,29 +60,40 @@ struct EPUBReaderView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            let width = webView.bounds.width
+            let height = webView.bounds.height
             let js = """
             (function() {
+                var w = \(width);
+                var h = \(height);
                 var style = document.createElement('style');
                 style.innerHTML = `
-                    html, body {
-                        margin: 0;
-                        padding: 0;
-                        width: 100%;
-                        height: 100%;
+                    html {
+                        height: ` + h + `px;
+                        overflow-x: auto;
+                        overflow-y: hidden;
                     }
                     body {
+                        margin: 0;
+                        padding: 0;
+                        height: ` + h + `px;
+                        -webkit-column-width: ` + w + `px;
+                        -webkit-column-gap: 0;
+                        -webkit-column-fill: auto;
                         font-size: \(fontSize)px;
                         font-family: -apple-system, sans-serif;
                         line-height: 1.8;
                         text-align: justify;
+                    }
+                    body > * {
+                        display: block;
                         padding: 16px 12px;
-                        box-sizing: border-box;
                     }
                     img {
                         max-width: 100%;
                         height: auto;
                         display: block;
-                        margin: 10px auto;
+                        margin: 10px 0;
                     }
                     p {
                         margin: 0 0 1em 0;
