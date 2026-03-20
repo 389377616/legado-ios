@@ -170,8 +170,17 @@ final class BookshelfViewModel: ObservableObject {
     }
     
     func removeBook(_ book: Book) {
-        CoreDataStack.shared.viewContext.delete(book)
-        try? CoreDataStack.shared.save()
+        DebugLogger.shared.log("removeBook 开始: bookId=\(book.bookId), name=\(book.name)")
+        
+        let context = CoreDataStack.shared.viewContext
+        context.delete(book)
+        
+        do {
+            try context.save()
+            DebugLogger.shared.log("removeBook 成功")
+        } catch {
+            DebugLogger.shared.log("removeBook 失败: \(error.localizedDescription)")
+        }
     }
     
     func updateGroup(for book: Book, group: Int32) {
