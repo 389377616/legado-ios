@@ -47,12 +47,7 @@ struct ReaderView: View {
                             autoPageTurnManager.handleTouch()
                             withAnimation { showUI.toggle() }
                         },
-                        onSwipeLeft: {
-                            Task { await viewModel.nextChapter() }
-                        },
-                        onSwipeRight: {
-                            Task { await viewModel.prevChapter() }
-                        }
+                        fontSize: viewModel.fontSize
                     )
                 } else {
                     PagedReaderView(viewModel: viewModel) {
