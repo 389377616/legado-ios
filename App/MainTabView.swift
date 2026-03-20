@@ -63,6 +63,10 @@ struct SettingsView: View {
                         ReplaceRuleView()
                     }
                     
+                    NavigationLink("TXT目录规则") {
+                        TxtTocRuleView()
+                    }
+                    
                     NavigationLink("主题") {
                         ThemeSettingsView()
                     }
@@ -84,6 +88,10 @@ struct SettingsView: View {
                     
                     NavigationLink("词典规则") {
                         DictRuleView()
+                    }
+                    
+                    NavigationLink("文件管理") {
+                        FileManageView()
                     }
                     
                     NavigationLink("清理缓存") {

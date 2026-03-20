@@ -2,7 +2,7 @@
 //  ReaderView.swift
 //  Legado-iOS
 //
-//  阅读器主界面
+//  阅读器主界面 - 参考 Android ReadMenu 布局
 //
 
 import SwiftUI
@@ -21,7 +21,10 @@ struct ReaderView: View {
     @State private var showingAutoPageTurn = false
     @State private var showingBookmarks = false
     @State private var showingChangeSource = false
+    @State private var showingSearchContent = false
     @State private var showUI = true
+    @State private var brightness: Double = UIScreen.main.brightness
+    @State private var isNightMode = false
     
     let bookId: UUID
     
@@ -44,142 +47,30 @@ struct ReaderView: View {
                         withAnimation { showUI.toggle() }
                     }
                 
-                // MARK: - 顶部工具栏（精简版）
+                // MARK: - 主UI容器
                 VStack {
-                    HStack {
-                        Button(action: {
-                            viewModel.saveProgress()
-                            dismiss()
-                        }) {
-                            Image(systemName: "chevron.left")
-                                .font(.title3)
-                                .frame(width: 44, height: 44)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(book?.name ?? "")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .lineLimit(1)
-                            Text(viewModel.currentChapter?.title ?? "")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: { showingChapterList = true }) {
-                            Image(systemName: "list.bullet")
-                                .font(.title3)
-                                .frame(width: 44, height: 44)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
-                    .background(.ultraThinMaterial)
-                    .opacity(showUI ? 1.0 : 0.0)
-                    .animation(.easeInOut(duration: 0.25), value: showUI)
+                    // MARK: - 顶部工具栏
+                    topBar
+                        .opacity(showUI ? 1.0 : 0.0)
+                        .animation(.easeInOut(duration: 0.25), value: showUI)
                     
                     Spacer()
                     
-                    // MARK: - 底部工具栏（分离式）
-                    VStack(spacing: 0) {
-                        // 进度区域
-                        VStack(spacing: 12) {
-                            // 章节进度
-                            HStack {
-                                Text("第\(viewModel.currentChapterIndex + 1)/\(viewModel.totalChapters)章")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                Text(viewModel.currentChapter?.title ?? "")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            }
-                            
-                            // 进度滑块
-                            Slider(value: Binding(
-                                get: { Double(viewModel.currentChapterIndex) },
-                                set: { viewModel.jumpToChapter(Int($0)) }
-                            ), in: 0...Double(max(1, viewModel.totalChapters - 1)), step: 1)
-                            
-                            // 翻页控制
-                            HStack(spacing: 20) {
-                                Button(action: { Task { await viewModel.prevChapter() } }) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "chevron.left")
-                                            .font(.title3)
-                                        Text("上一章")
-                                            .font(.caption2)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                }
-                                .disabled(viewModel.currentChapterIndex <= 0)
-                                .opacity(viewModel.currentChapterIndex <= 0 ? 0.5 : 1)
-                                
-                                Divider()
-                                    .frame(height: 30)
-                                
-                                Button(action: { Task { await viewModel.nextChapter() } }) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "chevron.right")
-                                            .font(.title3)
-                                        Text("下一章")
-                                            .font(.caption2)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                }
-                                .disabled(viewModel.currentChapterIndex >= viewModel.totalChapters - 1)
-                                .opacity(viewModel.currentChapterIndex >= viewModel.totalChapters - 1 ? 0.5 : 1)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 16)
-                        .padding(.bottom, 12)
-                        
-                        Divider()
-                            .padding(.horizontal)
-                        
-                        // 工具栏
-                        HStack(spacing: 0) {
-                            ToolBarButton(
-                                icon: "a.square",
-                                title: "设置",
-                                action: { showingSettings = true }
-                            )
-                            
-                            ToolBarButton(
-                                icon: "speaker.wave.2",
-                                title: "朗读",
-                                action: { showingTTSControls = true }
-                            )
-                            
-                            ToolBarButton(
-                                icon: "timer",
-                                title: "自动",
-                                action: { showingAutoPageTurn = true }
-                            )
-                            
-                            ToolBarButton(
-                                icon: "bookmark",
-                                title: "书签",
-                                action: { showingBookmarks = true }
-                            )
-                            
-                            ToolBarButton(
-                                icon: "arrow.triangle.2.circlepath",
-                                title: "换源",
-                                action: { showingChangeSource = true }
-                            )
-                        }
-                        .padding(.vertical, 12)
-                    }
-                    .background(.ultraThinMaterial)
-                    .opacity(showUI ? 1.0 : 0.0)
-                    .animation(.easeInOut(duration: 0.25), value: showUI)
+                    // MARK: - 浮动按钮行（参考Android）
+                    floatingButtons
+                        .opacity(showUI ? 1.0 : 0.0)
+                        .animation(.easeInOut(duration: 0.25), value: showUI)
+                    
+                    // MARK: - 底部工具栏
+                    bottomBar
+                        .opacity(showUI ? 1.0 : 0.0)
+                        .animation(.easeInOut(duration: 0.25), value: showUI)
+                }
+                
+                // MARK: - 左侧亮度滑块（参考Android）
+                if showUI {
+                    brightnessSlider
+                        .transition(.opacity)
                 }
                 
                 // 设置面板
@@ -278,6 +169,176 @@ struct ReaderView: View {
         }
         .navigationBarHidden(true)
         .statusBar(hidden: !showUI)
+    }
+    
+    private var topBar: some View {
+        HStack {
+            Button(action: {
+                viewModel.saveProgress()
+                dismiss()
+            }) {
+                Image(systemName: "chevron.left")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(book?.name ?? "")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+                Text(viewModel.currentChapter?.title ?? "")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            Button(action: { showingChapterList = true }) {
+                Image(systemName: "list.bullet")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+        .background(.ultraThinMaterial)
+    }
+    
+    private var floatingButtons: some View {
+        HStack(spacing: 0) {
+            Spacer()
+            FloatingButton(icon: "magnifyingglass", action: { showingSearchContent = true })
+            Spacer()
+            FloatingButton(icon: "timer", action: { showingAutoPageTurn = true })
+            Spacer()
+            FloatingButton(icon: "arrow.3.trianglepath", action: { showingSettings = true })
+            Spacer()
+            FloatingButton(icon: isNightMode ? "sun.max" : "moon", action: toggleNightMode)
+            Spacer()
+        }
+        .padding(.bottom, 16)
+    }
+    
+    private var bottomBar: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                HStack {
+                    Text("第\(viewModel.currentChapterIndex + 1)/\(viewModel.totalChapters)章")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(viewModel.currentChapter?.title ?? "")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Slider(value: Binding(
+                    get: { Double(viewModel.currentChapterIndex) },
+                    set: { viewModel.jumpToChapter(Int($0)) }
+                ), in: 0...Double(max(1, viewModel.totalChapters - 1)), step: 1)
+                
+                HStack(spacing: 20) {
+                    Button(action: { Task { await viewModel.prevChapter() } }) {
+                        VStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.title3)
+                            Text("上一章")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .disabled(viewModel.currentChapterIndex <= 0)
+                    .opacity(viewModel.currentChapterIndex <= 0 ? 0.5 : 1)
+                    
+                    Divider()
+                        .frame(height: 30)
+                    
+                    Button(action: { Task { await viewModel.nextChapter() } }) {
+                        VStack(spacing: 4) {
+                            Image(systemName: "chevron.right")
+                                .font(.title3)
+                            Text("下一章")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .disabled(viewModel.currentChapterIndex >= viewModel.totalChapters - 1)
+                    .opacity(viewModel.currentChapterIndex >= viewModel.totalChapters - 1 ? 0.5 : 1)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+            
+            Divider()
+                .padding(.horizontal)
+            
+            HStack(spacing: 0) {
+                ToolBarButton(icon: "a.square", title: "设置", action: { showingSettings = true })
+                ToolBarButton(icon: "speaker.wave.2", title: "朗读", action: { showingTTSControls = true })
+                ToolBarButton(icon: "timer", title: "自动", action: { showingAutoPageTurn = true })
+                ToolBarButton(icon: "bookmark", title: "书签", action: { showingBookmarks = true })
+                ToolBarButton(icon: "arrow.triangle.2.circlepath", title: "换源", action: { showingChangeSource = true })
+            }
+            .padding(.vertical, 12)
+        }
+        .background(.ultraThinMaterial)
+    }
+    
+    private var brightnessSlider: some View {
+        VStack {
+            Spacer()
+            HStack {
+                VStack(spacing: 8) {
+                    Image(systemName: "sun.max")
+                        .font(.caption)
+                    
+                    Slider(value: $brightness, in: 0...1)
+                        .frame(height: 120)
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 120, height: 30)
+                    
+                    Image(systemName: "sun.min")
+                        .font(.caption)
+                }
+                .padding(12)
+                .background(Color.black.opacity(0.6))
+                .cornerRadius(8)
+                .padding(.leading, 16)
+                
+                Spacer()
+            }
+            .padding(.top, 80)
+            Spacer()
+        }
+        .onChange(of: brightness) { newValue in
+            UIScreen.main.brightness = newValue
+        }
+    }
+    
+    private func toggleNightMode() {
+        isNightMode.toggle()
+        viewModel.applyTheme(isNightMode ? .dark : .light)
+    }
+}
+
+private struct FloatingButton: View {
+    let icon: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(.primary)
+                .frame(width: 44, height: 44)
+                .background(Color(.systemGray5))
+                .clipShape(Circle())
+        }
     }
 }
 

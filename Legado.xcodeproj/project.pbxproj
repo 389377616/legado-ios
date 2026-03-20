@@ -39,6 +39,8 @@
 		1A00000000000033 /* ImageCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000033 /* ImageCacheManager.swift */; };
 		1A00000000000034 /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000034 /* EPUBParser.swift */; };
 		1A000000000000E0 /* HTMLToTextConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000E0 /* HTMLToTextConverter.swift */; };
+		1A000000000000E1 /* TxtTocRuleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000E1 /* TxtTocRuleView.swift */; };
+		1A000000000000E2 /* FileManageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000E2 /* FileManageView.swift */; };
 		1A00000000000035 /* SearchResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000035 /* SearchResultView.swift */; };
 		1A00000000000036 /* AddBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000036 /* AddBookView.swift */; };
 		1A00000000000037 /* LocalBookViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000037 /* LocalBookViewModel.swift */; };
@@ -163,6 +165,8 @@
 		1A10000000000033 /* ImageCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheManager.swift; sourceTree = "<group>"; };
 		1A10000000000034 /* EPUBParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBParser.swift; sourceTree = "<group>"; };
 		1A100000000000E0 /* HTMLToTextConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLToTextConverter.swift; sourceTree = "<group>"; };
+		1A100000000000E1 /* TxtTocRuleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TxtTocRuleView.swift; sourceTree = "<group>"; };
+		1A100000000000E2 /* FileManageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileManageView.swift; sourceTree = "<group>"; };
 		1A10000000000035 /* SearchResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultView.swift; sourceTree = "<group>"; };
 		1A10000000000036 /* AddBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookView.swift; sourceTree = "<group>"; };
 		1A10000000000037 /* LocalBookViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBookViewModel.swift; sourceTree = "<group>"; };
@@ -510,6 +514,8 @@
 				1A10000000000028 /* SettingsView.swift */,
 				1A10000000000044 /* DictRuleView.swift */,
 				1A10000000000046 /* ReplaceRuleDebugView.swift */,
+				1A100000000000E1 /* TxtTocRuleView.swift */,
+				1A100000000000E2 /* FileManageView.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -759,6 +765,8 @@
 				1A0000000000008E /* DebugLogger.swift in Sources */,
 				1A0000000000006D /* EPUBReaderView.swift in Sources */,
 				1A000000000000E0 /* HTMLToTextConverter.swift in Sources */,
+				1A000000000000E1 /* TxtTocRuleView.swift in Sources */,
+				1A000000000000E2 /* FileManageView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
