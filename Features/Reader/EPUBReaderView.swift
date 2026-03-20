@@ -14,12 +14,7 @@ struct EPUBReaderView: UIViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         
-        webView.paginationMode = .leftToRight
-        webView.paginationBreakingMode = .page
-        webView.pageLength = 0
-        webView.gapBetweenPages = 0
-        webView.isPagingEnabled = true
-        
+        webView.scrollView.isPagingEnabled = true
         webView.scrollView.bounces = false
         webView.scrollView.showsVerticalScrollIndicator = false
         webView.scrollView.showsHorizontalScrollIndicator = false
@@ -67,16 +62,19 @@ struct EPUBReaderView: UIViewRepresentable {
             (function() {
                 var style = document.createElement('style');
                 style.innerHTML = `
-                    html {
-                        font-size: \(fontSize)px;
-                        -webkit-column-gap: 0;
+                    html, body {
+                        margin: 0;
+                        padding: 0;
+                        width: 100%;
+                        height: 100%;
                     }
                     body {
-                        margin: 0;
-                        padding: 16px 12px;
+                        font-size: \(fontSize)px;
                         font-family: -apple-system, sans-serif;
                         line-height: 1.8;
                         text-align: justify;
+                        padding: 16px 12px;
+                        box-sizing: border-box;
                     }
                     img {
                         max-width: 100%;
