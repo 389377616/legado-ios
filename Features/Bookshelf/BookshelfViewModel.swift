@@ -170,16 +170,30 @@ final class BookshelfViewModel: ObservableObject {
     }
     
     func removeBook(_ book: Book) {
-        DebugLogger.shared.log("removeBook 开始: bookId=\(book.bookId), name=\(book.name)")
+        let bookId = book.bookId
+        let bookName = book.name
+        DebugLogger.shared.log("removeBook 开始: bookId=\(bookId), name=\(bookName)")
         
-        let context = CoreDataStack.shared.viewContext
-        context.delete(book)
-        
-        do {
-            try context.save()
-            DebugLogger.shared.log("removeBook 成功")
-        } catch {
-            DebugLogger.shared.log("removeBook 失败: \(error.localizedDescription)")
+        Task { @MainActor in
+            let context = CoreDataStack.shared.viewContext
+            
+            let request: NSFetchRequest<Book> = Book.fetchRequest()
+            request.predicate = NSPredicate(format: "bookId == %@", bookId as CVarArg)
+            request.fetchLimit = 1
+            
+            guard let bookToDelete = try? context.fetch(request).first else {
+                DebugLogger.shared.log("removeBook: 找不到书籍")
+                return
+            }
+            
+            context.delete(bookToDelete)
+            
+            do {
+                try context.save()
+                DebugLogger.shared.log("removeBook 成功")
+            } catch {
+                DebugLogger.shared.log("removeBook 失败: \(error.localizedDescription)")
+            }
         }
     }
     
