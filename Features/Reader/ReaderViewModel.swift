@@ -267,12 +267,18 @@ class ReaderViewModel: ObservableObject {
         do {
             DebugLogger.shared.log("loadChapter: index=\(index), chapterId=\(chapters[index].chapterId), isCached=\(chapters[index].isCached), cachePath=\(chapters[index].cachePath ?? "nil")")
             
-            if let book = currentBook, book.type == 1 || book.bookUrl.lowercased().hasSuffix(".epub"),
-               let epubDirPath = book.folderName,
-               let htmlPath = chapters[index].cachePath {
+            if let book = currentBook {
+                DebugLogger.shared.log("loadChapter: book.type=\(book.type), bookUrl=\(book.bookUrl), folderName=\(book.folderName ?? "nil")")
+            }
+            
+            if let book = currentBook, (book.type == 1 || book.bookUrl.lowercased().hasSuffix(".epub")),
+               let epubDirPath = book.folderName, !epubDirPath.isEmpty,
+               let htmlPath = chapters[index].cachePath, !htmlPath.isEmpty {
                 
                 let epubDir = URL(fileURLWithPath: epubDirPath)
                 let htmlURL = epubDir.appendingPathComponent(htmlPath)
+                
+                DebugLogger.shared.log("loadChapter: EPUB 检查路径=\(htmlURL.path), 存在=\(FileManager.default.fileExists(atPath: htmlURL.path))")
                 
                 if FileManager.default.fileExists(atPath: htmlURL.path) {
                     DebugLogger.shared.log("loadChapter: EPUB WebView 渲染 path=\(htmlURL.path)")
@@ -285,6 +291,7 @@ class ReaderViewModel: ObservableObject {
                 }
             }
             
+            DebugLogger.shared.log("loadChapter: 不使用 WebView，走纯文本流程")
             useWebView = false
             
             // 尝试从缓存加载

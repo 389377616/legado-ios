@@ -220,12 +220,17 @@ final class BookshelfViewModel: ObservableObject {
             }
             
             do {
+                DebugLogger.shared.log("refreshEPUB: 开始解析 EPUB")
                 let epubBook = try EPUBParser.parseSync(file: URL(fileURLWithPath: bookUrl), bookId: bookId)
+                DebugLogger.shared.log("refreshEPUB: 解析完成 title=\(epubBook.title), chapters=\(epubBook.chapters.count), epubDir=\(epubBook.epubDirectory.path)")
                 
                 bookToRefresh.name = epubBook.title
                 bookToRefresh.author = epubBook.author
                 bookToRefresh.totalChapterNum = Int32(epubBook.chapters.count)
                 bookToRefresh.folderName = epubBook.epubDirectory.path
+                bookToRefresh.type = 1
+                
+                DebugLogger.shared.log("refreshEPUB: folderName 设置为 \(epubBook.epubDirectory.path)")
                 
                 if let chapters = bookToRefresh.chapters as? Set<BookChapter> {
                     for chapter in chapters {

@@ -224,11 +224,15 @@ class EPUBParser {
                 }
             }
             
+            let relativePath = chapterPath.path.hasPrefix(epubDir.path) 
+                ? String(chapterPath.path.dropFirst(epubDir.path.count + 1))
+                : item.href
+            
             chapters.append(EPUBChapter(
                 id: itemId,
                 title: chapterTitle,
                 href: item.href,
-                htmlPath: item.href,
+                htmlPath: relativePath,
                 index: index,
                 mediaType: item.mediaType
             ))
