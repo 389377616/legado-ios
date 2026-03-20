@@ -24,6 +24,10 @@ class ReaderViewModel: ObservableObject {
     @Published var theme: ReaderTheme = .light
     @Published var useReplaceRule: Bool = true
     
+    @Published var chapterHTMLURL: URL?
+    @Published var epubBaseURL: URL?
+    @Published var useWebView: Bool = false
+    
     // MARK: - 分页状态
     @Published var currentPageIndex: Int = 0 {
         didSet {
@@ -262,6 +266,27 @@ class ReaderViewModel: ObservableObject {
         
         do {
             DebugLogger.shared.log("loadChapter: index=\(index), chapterId=\(chapters[index].chapterId), isCached=\(chapters[index].isCached), cachePath=\(chapters[index].cachePath ?? "nil")")
+            
+            if let book = currentBook, book.type == 1 || book.bookUrl.lowercased().hasSuffix(".epub"),
+               let epubDirPath = book.folderName,
+               let htmlPath = chapters[index].cachePath {
+                
+                let epubDir = URL(fileURLWithPath: epubDirPath)
+                let htmlURL = epubDir.appendingPathComponent(htmlPath)
+                
+                if FileManager.default.fileExists(atPath: htmlURL.path) {
+                    DebugLogger.shared.log("loadChapter: EPUB WebView 渲染 path=\(htmlURL.path)")
+                    chapterHTMLURL = htmlURL
+                    epubBaseURL = epubDir
+                    useWebView = true
+                    chapterContent = nil
+                    isLoading = false
+                    return
+                }
+            }
+            
+            useWebView = false
+            
             // 尝试从缓存加载
             if let cachedContent = try? await loadCachedChapter(chapters[index]) {
                 DebugLogger.shared.log("loadChapter: 从缓存加载成功，长度=\(cachedContent.count)")

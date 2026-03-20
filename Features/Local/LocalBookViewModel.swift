@@ -38,7 +38,7 @@ class LocalBookViewModel: ObservableObject {
 
             DebugLogger.shared.log("文件: \(fileName), 扩展名: \(fileExtension)")
 
-            let result = try await CoreDataStack.shared.performBackgroundTask { context -> (bookId: UUID, name: String, chapters: Int, coverData: Data?) in
+            let result = try await CoreDataStack.shared.performBackgroundTask { context -> (bookId: UUID, name: String, chapters: Int, coverData: Data?, epubDir: String?) in
                 DebugLogger.shared.log("performBackgroundTask 开始")
                 
                 let book = Book.create(in: context)
@@ -54,6 +54,7 @@ class LocalBookViewModel: ObservableObject {
                 DebugLogger.shared.log("Book 创建: \(book.name)")
                 
                 var coverImageData: Data?
+                var epubDirectory: String?
 
                 if fileExtension == "txt" {
                     let content = try Self.readText(fileURL: url)
@@ -77,16 +78,17 @@ class LocalBookViewModel: ObservableObject {
                     }
                     DebugLogger.shared.log("TXT 解析完成: \(chapters.count) 章")
                 } else if fileExtension == "epub" {
-                    let epubBook = try EPUBParser.parseSync(file: url)
+                    let epubBook = try EPUBParser.parseSync(file: url, bookId: book.bookId)
                     book.name = epubBook.title
                     book.author = epubBook.author
                     book.totalChapterNum = Int32(epubBook.chapters.count)
+                    book.folderName = epubBook.epubDirectory.path
 
                     book.durChapterIndex = 0
                     book.durChapterTitle = epubBook.chapters.first?.title
                     
-                    // 暂存封面数据
                     coverImageData = epubBook.coverImage
+                    epubDirectory = epubBook.epubDirectory.path
 
                     for chapter in epubBook.chapters {
                         let chapterObj = BookChapter.create(
@@ -97,19 +99,8 @@ class LocalBookViewModel: ObservableObject {
                             title: chapter.title
                         )
                         chapterObj.book = book
-                        chapterObj.wordCount = Int32(chapter.content.count)
                         chapterObj.isCached = true
-                        
-                        // 缓存章节内容到文件
-                        let cacheFileName = "\(book.bookId.uuidString)_\(chapter.index).txt"
-                        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                        let chapterDir = documents.appendingPathComponent("chapters", isDirectory: true)
-                        if !FileManager.default.fileExists(atPath: chapterDir.path) {
-                            try FileManager.default.createDirectory(at: chapterDir, withIntermediateDirectories: true)
-                        }
-                        let cacheURL = chapterDir.appendingPathComponent(cacheFileName)
-                        try chapter.content.write(to: cacheURL, atomically: true, encoding: .utf8)
-                        chapterObj.cachePath = cacheFileName
+                        chapterObj.cachePath = chapter.htmlPath
                     }
                     DebugLogger.shared.log("EPUB 解析完成: \(epubBook.chapters.count) 章")
                 } else {
@@ -117,7 +108,7 @@ class LocalBookViewModel: ObservableObject {
                 }
 
                 DebugLogger.shared.log("performBackgroundTask 即将完成")
-                return (bookId: book.bookId, name: book.name, chapters: Int(book.totalChapterNum), coverData: coverImageData)
+                return (bookId: book.bookId, name: book.name, chapters: Int(book.totalChapterNum), coverData: coverImageData, epubDir: epubDirectory)
             }
             
             // 保存封面图片（在主线程）

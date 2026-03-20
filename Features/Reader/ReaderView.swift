@@ -36,14 +36,19 @@ struct ReaderView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // 背景色
                 viewModel.backgroundColor
                     .ignoresSafeArea()
                 
-                // 内容区域
-                PagedReaderView(viewModel: viewModel) {
-                    autoPageTurnManager.handleTouch()
-                    withAnimation { showUI.toggle() }
+                if viewModel.useWebView, let htmlURL = viewModel.chapterHTMLURL, let baseURL = viewModel.epubBaseURL {
+                    EPUBReaderView(htmlURL: htmlURL, baseURL: baseURL) {
+                        autoPageTurnManager.handleTouch()
+                        withAnimation { showUI.toggle() }
+                    }
+                } else {
+                    PagedReaderView(viewModel: viewModel) {
+                        autoPageTurnManager.handleTouch()
+                        withAnimation { showUI.toggle() }
+                    }
                 }
                 
                 // MARK: - 顶部工具栏（精简版）
