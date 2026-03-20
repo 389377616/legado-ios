@@ -38,6 +38,7 @@
 		1A00000000000032 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000032 /* AppConstants.swift */; };
 		1A00000000000033 /* ImageCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000033 /* ImageCacheManager.swift */; };
 		1A00000000000034 /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000034 /* EPUBParser.swift */; };
+		1A000000000000E0 /* HTMLToTextConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000E0 /* HTMLToTextConverter.swift */; };
 		1A00000000000035 /* SearchResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000035 /* SearchResultView.swift */; };
 		1A00000000000036 /* AddBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000036 /* AddBookView.swift */; };
 		1A00000000000037 /* LocalBookViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000037 /* LocalBookViewModel.swift */; };
@@ -161,6 +162,7 @@
 		1A10000000000032 /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
 		1A10000000000033 /* ImageCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheManager.swift; sourceTree = "<group>"; };
 		1A10000000000034 /* EPUBParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBParser.swift; sourceTree = "<group>"; };
+		1A100000000000E0 /* HTMLToTextConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLToTextConverter.swift; sourceTree = "<group>"; };
 		1A10000000000035 /* SearchResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultView.swift; sourceTree = "<group>"; };
 		1A10000000000036 /* AddBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookView.swift; sourceTree = "<group>"; };
 		1A10000000000037 /* LocalBookViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBookViewModel.swift; sourceTree = "<group>"; };
@@ -402,6 +404,7 @@
 			children = (
 				1A10000000000034 /* EPUBParser.swift */,
 				1A10000000000080 /* TableOfContentsParser.swift */,
+				1A100000000000E0 /* HTMLToTextConverter.swift */,
 			);
 			path = Parser;
 			sourceTree = "<group>";
@@ -755,6 +758,7 @@
 1A0000000000008C /* BackgroundCacheService.swift in Sources */,
 				1A0000000000008E /* DebugLogger.swift in Sources */,
 				1A0000000000006D /* EPUBReaderView.swift in Sources */,
+				1A000000000000E0 /* HTMLToTextConverter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
