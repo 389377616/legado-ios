@@ -35,18 +35,18 @@ struct HTMLToTextConverter {
     
     private static func extractTextSimple(html: String) -> String {
         var text = html
-        
+
         text = text.replacingOccurrences(
-            of: "<script[^>]*>.*?</script>",
+            of: "(?s)<script[^>]*>.*?</script>",
             with: "",
-            options: [.regularExpression, .dotMatchesLineSeparators]
+            options: .regularExpression
         )
         text = text.replacingOccurrences(
-            of: "<style[^>]*>.*?</style>",
+            of: "(?s)<style[^>]*>.*?</style>",
             with: "",
-            options: [.regularExpression, .dotMatchesLineSeparators]
+            options: .regularExpression
         )
-        
+
         let blockTags = ["p", "div", "br", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr", "section", "article"]
         for tag in blockTags {
             text = text.replacingOccurrences(of: "</\(tag)>", with: "</\(tag)>\n", options: .regularExpression)
