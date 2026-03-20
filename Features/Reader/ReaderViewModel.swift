@@ -26,7 +26,6 @@ class ReaderViewModel: ObservableObject {
     
     @Published var chapterHTMLURL: URL?
     @Published var epubBaseURL: URL?
-    @Published var useWebView: Bool = false
     
     // MARK: - 分页状态
     @Published var currentPageIndex: Int = 0 {
@@ -281,18 +280,16 @@ class ReaderViewModel: ObservableObject {
                 DebugLogger.shared.log("loadChapter: EPUB 检查路径=\(htmlURL.path), 存在=\(FileManager.default.fileExists(atPath: htmlURL.path))")
                 
                 if FileManager.default.fileExists(atPath: htmlURL.path) {
-                    DebugLogger.shared.log("loadChapter: EPUB WebView 渲染 path=\(htmlURL.path)")
+                    DebugLogger.shared.log("loadChapter: EPUB 提取文本 path=\(htmlURL.path)")
+                    let htmlContent = try String(contentsOf: htmlURL, encoding: .utf8)
+                    let textContent = HTMLToTextConverter.convert(html: htmlContent, baseURL: epubDir)
+                    chapterContent = applyReplaceRulesIfNeeded(textContent, chapter: chapters[index])
                     chapterHTMLURL = htmlURL
                     epubBaseURL = epubDir
-                    useWebView = true
-                    chapterContent = nil
                     isLoading = false
                     return
                 }
             }
-            
-            DebugLogger.shared.log("loadChapter: 不使用 WebView，走纯文本流程")
-            useWebView = false
             
             // 尝试从缓存加载
             if let cachedContent = try? await loadCachedChapter(chapters[index]) {

@@ -39,22 +39,10 @@ struct ReaderView: View {
                 viewModel.backgroundColor
                     .ignoresSafeArea()
                 
-                if viewModel.useWebView, let htmlURL = viewModel.chapterHTMLURL, let baseURL = viewModel.epubBaseURL {
-                    EPUBReaderView(
-                        htmlURL: htmlURL,
-                        baseURL: baseURL,
-                        onTap: {
-                            autoPageTurnManager.handleTouch()
-                            withAnimation { showUI.toggle() }
-                        },
-                        fontSize: viewModel.fontSize
-                    )
-                } else {
-                    PagedReaderView(viewModel: viewModel) {
+                PagedReaderView(viewModel: viewModel) {
                         autoPageTurnManager.handleTouch()
                         withAnimation { showUI.toggle() }
                     }
-                }
                 
                 // MARK: - 顶部工具栏（精简版）
                 VStack {
