@@ -92,6 +92,7 @@
 		1A0000000000006A /* DataMigrationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000006A /* DataMigrationManager.swift */; };
 		1A0000000000006B /* SearchOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000006B /* SearchOptimizer.swift */; };
 		1A0000000000006C /* ReplaceEngineEnhanced.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000006C /* ReplaceEngineEnhanced.swift */; };
+		1A0000000000006D /* EPUBReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000006D /* EPUBReaderView.swift */; };
 		1A00000000000070 /* BookGroup+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000070 /* BookGroup+CoreDataClass.swift */; };
 		1A00000000000071 /* SearchBook+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000071 /* SearchBook+CoreDataClass.swift */; };
 		1A00000000000072 /* SearchKeyword+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000072 /* SearchKeyword+CoreDataClass.swift */; };
@@ -242,6 +243,7 @@
 		1A1000000000008C /* BackgroundCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundCacheService.swift; sourceTree = "<group>"; };
 1A1000000000008D /* IntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationTests.swift; sourceTree = "<group>"; };
 		1A1000000000008E /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
+		1A1000000000006D /* EPUBReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/EPUBReaderView.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -752,6 +754,7 @@
 				1A0000000000008B /* RemoteBookView.swift in Sources */,
 1A0000000000008C /* BackgroundCacheService.swift in Sources */,
 				1A0000000000008E /* DebugLogger.swift in Sources */,
+				1A0000000000006D /* EPUBReaderView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
