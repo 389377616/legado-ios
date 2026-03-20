@@ -9,12 +9,14 @@ import Foundation
 import CoreData
 
 @objc(TxtTocRule)
-public class TxtTocRule: NSManagedObject {
+public class TxtTocRule: NSManagedObject, Identifiable {
     @NSManaged public var name: String
     @NSManaged public var rule: String
     @NSManaged public var serialNumber: Int32
     @NSManaged public var example: String?
     @NSManaged public var enabled: Bool
+    
+    public var id: NSManagedObjectID { objectID }
 }
 
 // MARK: - Fetch Request

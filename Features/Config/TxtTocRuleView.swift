@@ -13,7 +13,7 @@ struct TxtTocRuleView: View {
     
     var body: some View {
         List {
-            ForEach(rules, id: \.name) { rule in
+            ForEach(rules) { rule in
                 Button(action: { editingRule = rule }) {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
