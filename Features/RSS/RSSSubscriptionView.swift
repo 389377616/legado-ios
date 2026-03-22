@@ -1,59 +1,279 @@
-//
-//  RSSSubscriptionView.swift
-//  Legado-iOS
-//
-//  RSS 订阅源功能 - 支持添加、管理和阅读 RSS 订阅
-//
-
 import SwiftUI
 import CoreData
 
-// MARK: - RSS 订阅源数据模型
-struct RSSSource: Identifiable, Codable {
-    var id = UUID()
-    var name: String
-    var url: String
-    var iconUrl: String?
-    var lastUpdateTime: Date?
-    var sortOrder: Int = 0
-    var enabled: Bool = true
-    var sourceGroup: String?
+struct RSSSubscriptionView: View {
+    @Environment(\.managedObjectContext) private var viewContext
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(key: "sortOrder", ascending: true)],
+        animation: .default
+    ) private var sources: FetchedResults<RssSource>
+    
+    @State private var searchText = ""
+    @State private var showingAddSource = false
+    @State private var selectedSource: RssSource?
+    
+    private let columns = [
+        GridItem(.flexible()),
+        GridItem(.flexible()),
+        GridItem(.flexible()),
+        GridItem(.flexible())
+    ]
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            searchBar
+            
+            if filteredSources.isEmpty {
+                emptyView
+            } else {
+                sourceGrid
+            }
+        }
+        .navigationTitle("RSS")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $selectedSource) { source in
+            RSSArticlesView(source: source)
+        }
+        .sheet(isPresented: $showingAddSource) {
+            AddRSSSourceView()
+        }
+    }
+    
+    private var searchBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+            
+            TextField("搜索订阅源", text: $searchText)
+                .textFieldStyle(.plain)
+            
+            if !searchText.isEmpty {
+                Button(action: { searchText = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(10)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+    
+    private var emptyView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "antenna.radiowaves.left.and.right")
+                .font(.system(size: 50))
+                .foregroundColor(.secondary.opacity(0.5))
+            
+            Text("暂无订阅源")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            Text("点击右上角 + 添加订阅源")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private var sourceGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(filteredSources, id: \.sourceId) { source in
+                    RSSSourceItem(source: source) {
+                        selectedSource = source
+                    }
+                }
+            }
+            .padding()
+        }
+    }
+    
+    private var filteredSources: [RssSource] {
+        if searchText.isEmpty {
+            return Array(sources)
+        }
+        return sources.filter {
+            $0.sourceName?.localizedCaseInsensitiveContains(searchText) ?? false ||
+            $0.sourceUrl?.localizedCaseInsensitiveContains(searchText) ?? false
+        }
+    }
+}
+
+struct RSSSourceItem: View {
+    let source: RssSource
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 8) {
+                AsyncImage(url: source.iconUrl.flatMap { URL(string: $0) }) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    default:
+                        ZStack {
+                            Color(.systemGray5)
+                            Image(systemName: "antenna.radiowaves.left.and.right")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .frame(width: 50, height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                Text(source.sourceName ?? "未知")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct RSSArticlesView: View {
+    let source: RssSource
+    @Environment(\.dismiss) private var dismiss
+    @State private var articles: [RSSArticle] = []
+    @State private var isLoading = true
+    
+    var body: some View {
+        NavigationView {
+            Group {
+                if isLoading {
+                    ProgressView("加载中...")
+                } else if articles.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "newspaper")
+                            .font(.system(size: 50))
+                            .foregroundColor(.secondary.opacity(0.5))
+                        Text("暂无文章")
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    List(articles) { article in
+                        Link(destination: URL(string: article.link) ?? URL(string: "about:blank")!) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(article.title)
+                                    .font(.headline)
+                                    .lineLimit(2)
+                                
+                                if let desc = article.description, !desc.isEmpty {
+                                    Text(desc.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(2)
+                                }
+                                
+                                if let date = article.pubDate {
+                                    Text(date.formatted(.relative(presentation: .named)))
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(source.sourceName ?? "RSS")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") { dismiss() }
+                }
+            }
+            .task { await loadArticles() }
+        }
+    }
+    
+    private func loadArticles() async {
+        guard let url = source.sourceUrl else { return }
+        
+        do {
+            let (_, items) = try await RSSParser.fetchAndParse(url: url)
+            articles = items
+        } catch {
+            print("RSS load error: \(error)")
+        }
+        
+        isLoading = false
+    }
+}
+
+struct AddRSSSourceView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var url = ""
+    @State private var name = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("订阅地址") {
+                    TextField("RSS/Atom 链接", text: $url)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+                
+                Section("名称（可选）") {
+                    TextField("自定义名称", text: $name)
+                }
+            }
+            .navigationTitle("添加订阅")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("添加") { addSource() }
+                        .disabled(url.isEmpty)
+                }
+            }
+        }
+    }
+    
+    private func addSource() {
+        let context = CoreDataStack.shared.viewContext
+        let source = RssSource.create(in: context)
+        source.sourceUrl = url
+        source.sourceName = name.isEmpty ? url : name
+        try? context.save()
+        dismiss()
+    }
 }
 
 struct RSSArticle: Identifiable {
-    var id = UUID()
-    var title: String = ""
-    var link: String = ""
-    var description: String?
-    var pubDate: Date?
-    var author: String?
-    var imageUrl: String?
-    var isRead: Bool = false
-    var sourceName: String = ""
+    let id = UUID()
+    let title: String
+    let link: String
+    let description: String?
+    let pubDate: Date?
+    let author: String?
 }
 
-// MARK: - RSS 解析器
 class RSSParser {
-    
-    /// 解析 RSS/Atom feed
     static func parse(xmlData: Data, sourceUrl: String) -> [RSSArticle] {
         let parser = XMLFeedParser(data: xmlData, sourceUrl: sourceUrl)
         parser.parse()
         return parser.articles
     }
     
-    /// 从 URL 获取并解析 RSS
-    static func fetchAndParse(url: String) async throws -> (name: String, articles: [RSSArticle]) {
+    static func fetchAndParse(url: String) async throws -> (String, [RSSArticle]) {
         guard let feedUrl = URL(string: url) else {
-            throw RSSError.invalidUrl
+            throw URLError(.badURL)
         }
         
         var request = URLRequest(url: feedUrl)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X)", forHTTPHeaderField: "User-Agent")
+        request.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 15
         
         let (data, _) = try await URLSession.shared.data(for: request)
-        
         let parser = XMLFeedParser(data: data, sourceUrl: url)
         parser.parse()
         
@@ -61,11 +281,8 @@ class RSSParser {
     }
 }
 
-// MARK: - XML Feed 解析器
 private class XMLFeedParser: NSObject, XMLParserDelegate {
-    private let data: Data
     private let sourceUrl: String
-    
     var feedTitle: String?
     var articles: [RSSArticle] = []
     
@@ -74,457 +291,64 @@ private class XMLFeedParser: NSObject, XMLParserDelegate {
     private var currentLink = ""
     private var currentDescription = ""
     private var currentPubDate = ""
-    private var currentAuthor = ""
-    private var currentImageUrl = ""
     private var isInItem = false
-    private var isInEntry = false  // Atom format
-    private var isInChannel = false
     
     init(data: Data, sourceUrl: String) {
-        self.data = data
         self.sourceUrl = sourceUrl
     }
     
     func parse() {
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: sourceUrl)) else { return }
         let parser = XMLParser(data: data)
         parser.delegate = self
         parser.parse()
     }
     
-    func parser(_ parser: XMLParser, didStartElement elementName: String,
-                namespaceURI: String?, qualifiedName qName: String?,
-                attributes attributeDict: [String: String] = [:]) {
+    func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String: String] = [:]) {
         currentElement = elementName
-        
-        switch elementName {
-        case "item":
+        if elementName == "item" || elementName == "entry" {
             isInItem = true
-            resetCurrentValues()
-        case "entry":
-            isInEntry = true
-            resetCurrentValues()
-        case "channel":
-            isInChannel = true
-        case "link":
-            if isInEntry || isInItem {
-                if let href = attributeDict["href"] {
-                    currentLink = href
-                }
-            }
-        case "enclosure", "media:content", "media:thumbnail":
-            if let url = attributeDict["url"], currentImageUrl.isEmpty {
-                currentImageUrl = url
-            }
-        default:
-            break
         }
     }
     
     func parser(_ parser: XMLParser, foundCharacters string: String) {
-        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        
         switch currentElement {
-        case "title":
-            if isInItem || isInEntry {
-                currentTitle += trimmed
-            } else if isInChannel && feedTitle == nil {
-                feedTitle = (feedTitle ?? "") + trimmed
-            }
-        case "link":
-            if isInItem || isInEntry {
-                currentLink += trimmed
-            }
-        case "description", "summary", "content":
-            if isInItem || isInEntry {
-                currentDescription += trimmed
-            }
-        case "pubDate", "published", "updated":
-            if isInItem || isInEntry {
-                currentPubDate += trimmed
-            }
-        case "author", "dc:creator":
-            if isInItem || isInEntry {
-                currentAuthor += trimmed
-            }
-        default:
-            break
+        case "title": currentTitle += string
+        case "link": currentLink += string
+        case "description", "summary": currentDescription += string
+        case "pubDate", "published": currentPubDate += string
+        default: break
         }
     }
     
-    func parser(_ parser: XMLParser, didEndElement elementName: String,
-                namespaceURI: String?, qualifiedName qName: String?) {
+    func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
         if elementName == "item" || elementName == "entry" {
-            var article = RSSArticle()
-            article.title = currentTitle
-            article.link = currentLink
-            article.description = stripHtmlTags(currentDescription)
-            article.pubDate = parseDate(currentPubDate)
-            article.author = currentAuthor
-            article.imageUrl = currentImageUrl.isEmpty ? extractImageFromHtml(currentDescription) : currentImageUrl
+            let article = RSSArticle(
+                title: currentTitle.trimmingCharacters(in: .whitespacesAndNewlines),
+                link: currentLink.trimmingCharacters(in: .whitespacesAndNewlines),
+                description: currentDescription.trimmingCharacters(in: .whitespacesAndNewlines),
+                pubDate: parseDate(currentPubDate),
+                author: nil
+            )
+            articles.append(article)
             
-            if !article.title.isEmpty {
-                articles.append(article)
-            }
-            
+            currentTitle = ""
+            currentLink = ""
+            currentDescription = ""
+            currentPubDate = ""
             isInItem = false
-            isInEntry = false
-        } else if elementName == "channel" {
-            isInChannel = false
         }
     }
     
-    private func resetCurrentValues() {
-        currentTitle = ""
-        currentLink = ""
-        currentDescription = ""
-        currentPubDate = ""
-        currentAuthor = ""
-        currentImageUrl = ""
-    }
-    
-    private func parseDate(_ dateStr: String) -> Date? {
-        let formatters: [DateFormatter] = {
-            let formats = [
-                "EEE, dd MMM yyyy HH:mm:ss Z",
-                "yyyy-MM-dd'T'HH:mm:ssZ",
-                "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
-                "yyyy-MM-dd HH:mm:ss"
-            ]
-            return formats.map { format in
-                let f = DateFormatter()
-                f.dateFormat = format
-                f.locale = Locale(identifier: "en_US_POSIX")
-                return f
-            }
-        }()
-        
-        for formatter in formatters {
-            if let date = formatter.date(from: dateStr) {
-                return date
-            }
-        }
-        return nil
-    }
-    
-    private func stripHtmlTags(_ html: String) -> String {
-        html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    
-    private func extractImageFromHtml(_ html: String) -> String? {
-        if let regex = try? NSRegularExpression(pattern: "<img[^>]+src=\"([^\"]+)\""),
-           let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-           let range = Range(match.range(at: 1), in: html) {
-            return String(html[range])
-        }
-        return nil
+    private func parseDate(_ string: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss z"
+        return formatter.date(from: string)
     }
 }
 
-// MARK: - RSS ViewModel
-@MainActor
-class RSSViewModel: ObservableObject {
-    @Published var sources: [RSSSource] = []
-    @Published var articles: [RSSArticle] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-    
-    private let sourcesKey = "rss_sources"
-    
-    init() {
-        loadSources()
-    }
-    
-    func loadSources() {
-        if let data = UserDefaults.standard.data(forKey: sourcesKey),
-           let decoded = try? JSONDecoder().decode([RSSSource].self, from: data) {
-            sources = decoded
-        }
-    }
-    
-    func saveSources() {
-        if let data = try? JSONEncoder().encode(sources) {
-            UserDefaults.standard.set(data, forKey: sourcesKey)
-        }
-    }
-    
-    func addSource(name: String, url: String, group: String? = nil) {
-        let source = RSSSource(name: name, url: url, sourceGroup: group)
-        sources.append(source)
-        saveSources()
-    }
-    
-    func removeSource(at index: Int) {
-        sources.remove(at: index)
-        saveSources()
-    }
-    
-    func refreshAll() async {
-        isLoading = true
-        errorMessage = nil
-        var allArticles: [RSSArticle] = []
-        
-        for source in sources where source.enabled {
-            do {
-                let (_, articles) = try await RSSParser.fetchAndParse(url: source.url)
-                let tagged = articles.map { article -> RSSArticle in
-                    var a = article
-                    a.sourceName = source.name
-                    return a
-                }
-                allArticles.append(contentsOf: tagged)
-            } catch {
-                print("RSS 加载失败 [\(source.name)]: \(error)")
-            }
-        }
-        
-        // 按发布时间排序
-        articles = allArticles.sorted { ($0.pubDate ?? .distantPast) > ($1.pubDate ?? .distantPast) }
-        isLoading = false
-    }
-}
-
-// MARK: - RSS 订阅管理视图
-struct RSSSubscriptionView: View {
-    @StateObject private var viewModel = RSSViewModel()
-    @State private var showingAddSource = false
-    @State private var newSourceName = ""
-    @State private var newSourceUrl = ""
-    
-    var body: some View {
-        List {
-            if viewModel.sources.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "antenna.radiowaves.left.and.right")
-                        .font(.system(size: 40))
-                        .foregroundColor(.orange.opacity(0.6))
-                    Text("还没有订阅源")
-                        .font(.headline)
-                    Text("点击右上角 + 添加 RSS 订阅")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
-                .listRowBackground(Color.clear)
-            } else {
-                // 订阅源列表
-                Section("订阅源") {
-                    ForEach(viewModel.sources) { source in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(source.name)
-                                    .font(.headline)
-                                Text(source.url)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            }
-                            Spacer()
-                            Circle()
-                                .fill(source.enabled ? Color.green : Color.gray)
-                                .frame(width: 8, height: 8)
-                        }
-                    }
-                    .onDelete { indexSet in
-                        if let index = indexSet.first {
-                            viewModel.removeSource(at: index)
-                        }
-                    }
-                }
-                
-                // 文章列表
-                if !viewModel.articles.isEmpty {
-                    Section("最新文章") {
-                        ForEach(viewModel.articles.prefix(50)) { article in
-                            NavigationLink(destination: RSSArticleDetailView(article: article)) {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(article.title)
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.primary)
-                                        .lineLimit(2)
-                                    
-                                    HStack {
-                                        Text(article.sourceName)
-                                            .font(.caption2)
-                                            .foregroundColor(.blue)
-                                        
-                                        if let date = article.pubDate {
-                                            Text("·")
-                                                .foregroundColor(.secondary)
-                                            Text(date, style: .relative)
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                    
-                                    if let desc = article.description, !desc.isEmpty {
-                                        Text(desc)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                            .lineLimit(2)
-                                    }
-                                }
-                                .padding(.vertical, 2)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .listStyle(.insetGrouped)
-        .navigationTitle("订阅源")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showingAddSource = true }) {
-                    Image(systemName: "plus")
-                }
-            }
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { Task { await viewModel.refreshAll() } }) {
-                    if viewModel.isLoading {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                }
-            }
-        }
-        .task {
-            await viewModel.refreshAll()
-        }
-        .alert("添加订阅源", isPresented: $showingAddSource) {
-            TextField("名称", text: $newSourceName)
-            TextField("RSS URL", text: $newSourceUrl)
-                .textInputAutocapitalization(.never)
-            Button("取消", role: .cancel) {
-                newSourceName = ""
-                newSourceUrl = ""
-            }
-            Button("添加") {
-                if !newSourceName.isEmpty && !newSourceUrl.isEmpty {
-                    viewModel.addSource(name: newSourceName, url: newSourceUrl)
-                    newSourceName = ""
-                    newSourceUrl = ""
-                    Task { await viewModel.refreshAll() }
-                }
-            }
-        }
-    }
-}
-
-struct RSSArticleDetailView: View {
-    let article: RSSArticle
-
-    @State private var isFetching = false
-    @State private var fetchError: String?
-    @State private var fullText: FullTextResult?
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text(article.title)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-
-                HStack(spacing: 8) {
-                    Text(article.sourceName)
-                        .font(.caption)
-                        .foregroundColor(.blue)
-
-                    if let date = article.pubDate {
-                        Text("·")
-                            .foregroundColor(.secondary)
-                        Text(date, style: .date)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                if let desc = article.description, !desc.isEmpty {
-                    Text(desc)
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                }
-
-                Divider()
-
-                HStack(spacing: 12) {
-                    if let url = URL(string: article.link) {
-                        Link("打开原文", destination: url)
-                    }
-
-                    Button(isFetching ? "抓取中..." : "抓取全文") {
-                        Task { @MainActor in
-                            await fetchFullText()
-                        }
-                    }
-                    .disabled(isFetching)
-                }
-
-                if isFetching {
-                    ProgressView()
-                }
-
-                if let err = fetchError {
-                    Text(err)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
-
-                if let full = fullText {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(full.title)
-                            .font(.headline)
-
-                        if let author = full.author, !author.isEmpty {
-                            Text(author)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Text(full.content)
-                            .font(.body)
-                            .textSelection(.enabled)
-                    }
-                }
-            }
-            .padding()
-        }
-        .navigationTitle("正文")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func fetchFullText() async {
-        guard !isFetching else { return }
-        isFetching = true
-        fetchError = nil
-        fullText = nil
-
-        do {
-            let result = try await FullTextFetcher.shared.fetchFullText(from: article.link)
-            fullText = result
-        } catch {
-            fetchError = error.localizedDescription
-        }
-
-        isFetching = false
-    }
-}
-
-// MARK: - 错误类型
-enum RSSError: LocalizedError {
-    case invalidUrl
-    case parseFailed
-    case networkError(String)
-    
-    var errorDescription: String? {
-        switch self {
-        case .invalidUrl: return "无效的 RSS URL"
-        case .parseFailed: return "RSS 解析失败"
-        case .networkError(let msg): return "网络错误：\(msg)"
-        }
+#Preview {
+    NavigationStack {
+        RSSSubscriptionView()
     }
 }
