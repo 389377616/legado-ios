@@ -1,10 +1,3 @@
-//
-//  BookDetailView.swift
-//  Legado-iOS
-//
-//  书籍详情视图（完善版）
-//
-
 import SwiftUI
 import CoreData
 
@@ -12,6 +5,7 @@ struct BookDetailView: View {
     @StateObject private var viewModel: BookDetailViewModel
     @State private var showingChapterList = false
     @State private var showingSourceSelection = false
+    @State private var showingGroupSelection = false
     @State private var navigatingToReader = false
     @Environment(\.dismiss) var dismiss
     
@@ -24,36 +18,18 @@ struct BookDetailView: View {
     
     var body: some View {
         ZStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    // 封面和基本信息
-                    bookHeader
-                    
-                    // 操作按钮
-                    actionButtons
-                    
-                    // 简介
-                    if let intro = book.displayIntro, !intro.isEmpty {
-                        introductionSection
+            backgroundView
+            
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        arcHeaderView
+                        infoSection
                     }
-                    
-                    // 目录预览
-                    tocPreviewSection
-                    
-                    // 书籍信息
-                    bookInfoSection
                 }
-                .padding()
-            }
-
-            if viewModel.isLoading {
-                Color.black.opacity(0.2)
-                    .ignoresSafeArea()
-
-                ProgressView("处理中...")
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(12)
+                
+                Divider()
+                bottomActionBar
             }
         }
         .navigationTitle("书籍详情")
@@ -61,35 +37,20 @@ struct BookDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    Button(action: { viewModel.toggleFavorite() }) {
-                        Label(
-                            viewModel.isFavorite ? "取消收藏" : "收藏",
-                            systemImage: viewModel.isFavorite ? "heart.fill" : "heart"
-                        )
-                    }
-                    
-                    Button(action: { showingSourceSelection = true }) {
-                        Label("换源", systemImage: "arrow.2.circlepath")
-                    }
-                    
                     Button(action: { viewModel.cacheAllChapters() }) {
                         Label("缓存全本", systemImage: "arrow.down.circle")
                     }
-                    
-                    Divider()
-                    
-                    Button("刷新书籍信息") {
-                        Task { await viewModel.refreshBookInfo() }
+                    Button(action: { Task { await viewModel.refreshBookInfo() } }) {
+                        Label("刷新书籍信息", systemImage: "arrow.clockwise")
                     }
-                    
                     Divider()
-                    
-                    Button("删除", role: .destructive) {
+                    Button("从书架移除", role: .destructive) {
                         viewModel.deleteBook(book)
                         dismiss()
                     }
                 } label: {
                     Image(systemName: "ellipsis")
+                        .foregroundColor(.white)
                 }
             }
         }
@@ -99,11 +60,17 @@ struct BookDetailView: View {
         .sheet(isPresented: $showingSourceSelection) {
             SourceSelectionSheet(book: book, selectedSource: $viewModel.currentSource)
         }
+        .sheet(isPresented: $showingGroupSelection) {
+            GroupSelectionSheet(book: book)
+        }
         .navigationDestination(isPresented: $navigatingToReader) {
             ReaderView(bookId: book.bookId)
         }
-        .background {
-            // 背景模糊效果
+        .task { await viewModel.loadChapters() }
+    }
+    
+    private var backgroundView: some View {
+        Group {
             if let coverUrl = book.displayCoverUrl, !coverUrl.isEmpty {
                 AsyncImage(url: URL(string: coverUrl)) { phase in
                     switch phase {
@@ -112,245 +79,260 @@ struct BookDetailView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .blur(radius: 30)
-                            .overlay(Color.black.opacity(0.6))
+                            .overlay(Color.black.opacity(0.5))
                             .ignoresSafeArea()
                     default:
-                        Color.clear
+                        Color.primary.colorInvert()
+                            .ignoresSafeArea()
+                    }
+                }
+            } else {
+                Color.primary.colorInvert()
+                    .ignoresSafeArea()
+            }
+        }
+    }
+    
+    private var arcHeaderView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 16)
+            
+            BookCoverView(url: book.displayCoverUrl)
+                .frame(width: 110, height: 160)
+                .cornerRadius(5)
+                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+            
+            Spacer().frame(height: 24)
+        }
+    }
+    
+    private var infoSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            nameAndLabels
+            infoRows
+            introView
+        }
+        .background(Color.primary.colorInvert())
+    }
+    
+    private var nameAndLabels: some View {
+        VStack(spacing: 8) {
+            Text(book.name)
+                .font(.system(size: 18, weight: .medium))
+                .lineLimit(1)
+            
+            if let kind = book.kind, !kind.isEmpty {
+                HStack(spacing: 4) {
+                    ForEach(kind.split(separator: ",").prefix(3), id: \.self) { tag in
+                        Text(tag.trimmingCharacters(in: .whitespaces))
+                            .font(.system(size: 11))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.blue.opacity(0.15))
+                            .foregroundColor(.blue)
+                            .cornerRadius(3)
                     }
                 }
             }
         }
-        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .task {
-            await viewModel.loadChapters()
-        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
     }
     
-    // MARK: - 书籍头部
-    private var bookHeader: some View {
-        HStack(alignment: .top, spacing: 16) {
-            // 封面 - 增强阴影效果
-            BookCoverView(url: book.displayCoverUrl)
-                .frame(width: 120, height: 160)
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
-                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
-                .shadow(color: .black.opacity(0.15), radius: 16, x: 0, y: 8)
-            VStack(alignment: .leading, spacing: 8) {
-                Text(book.name)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .lineLimit(2)
-                
-                Text(book.author)
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                
-                if let kind = book.kind, !kind.isEmpty {
-                    Text(kind)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.blue.opacity(0.1))
-                        .foregroundColor(.blue)
-                        .cornerRadius(4)
-                }
-                
-                if let wordCount = book.wordCount {
-                    Label(wordCount, systemImage: "text.word.count")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                // 阅读进度
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("阅读进度")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("\(Int(book.readProgress * 100))%")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
-                    ProgressView(value: book.readProgress)
-                        .progressViewStyle(.linear)
-                        .tint(.blue)
-                }
+    private var infoRows: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            infoRow(icon: "person.fill", text: book.author) {
+                EmptyView()
             }
             
-            Spacer()
+            infoRow(icon: "globe", text: book.originName) {
+                Button("换源") {
+                    showingSourceSelection = true
+                }
+                .font(.system(size: 13))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(4)
+            }
+            
+            infoRow(icon: "book.fill", text: book.latestChapterTitle ?? "暂无最新章节") {
+                EmptyView()
+            }
+            
+            infoRow(icon: "folder.fill", text: book.group?.name ?? "默认分组") {
+                Button("换组") {
+                    showingGroupSelection = true
+                }
+                .font(.system(size: 13))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(4)
+            }
+            
+            infoRow(icon: "list.bullet", text: "共 \(book.totalChapterNum) 章") {
+                Button("查看") {
+                    showingChapterList = true
+                }
+                .font(.system(size: 13))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(4)
+            }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
     
-    // MARK: - 操作按钮
-    private var actionButtons: some View {
-        HStack(spacing: 16) {
+    private func infoRow<Trailing: View>(icon: String, text: String, @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+                .frame(width: 18)
+            
+            Text(text)
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+            
+            Spacer()
+            
+            trailing()
+        }
+        .padding(.vertical, 6)
+    }
+    
+    private var introView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let intro = book.displayIntro, !intro.isEmpty {
+                Text(intro)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .lineLimit(viewModel.isIntroExpanded ? nil : 4)
+                    .lineSpacing(4)
+                
+                if intro.count > 100 {
+                    Button(action: { viewModel.isIntroExpanded.toggle() }) {
+                        Text(viewModel.isIntroExpanded ? "收起" : "展开")
+                            .font(.system(size: 13))
+                            .foregroundColor(.blue)
+                            .padding(.top, 8)
+                    }
+                }
+            }
+        }
+        .padding(16)
+    }
+    
+    private var bottomActionBar: some View {
+        HStack(spacing: 0) {
+            Button(action: {
+                viewModel.deleteBook(book)
+                dismiss()
+            }) {
+                Text("移出书架")
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+            }
+            
             Button(action: {
                 if viewModel.startReading() {
                     navigatingToReader = true
                 }
             }) {
-                Label(book.readProgress > 0 ? "继续阅读" : "开始阅读", systemImage: "book.fill")
+                Text(book.readProgress > 0 ? "继续阅读" : "开始阅读")
+                    .font(.system(size: 15))
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            
-            Button(action: { showingChapterList = true }) {
-                Label("目录", systemImage: "list.bullet")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-        }
-    }
-    
-    // MARK: - 简介
-    private var introductionSection: some View {
-        SectionCard(title: "简介") {
-            Text(book.displayIntro ?? "")
-                .font(.body)
-                .lineSpacing(4)
-                .lineLimit(viewModel.isIntroExpanded ? nil : 4)
-            
-            if (book.displayIntro ?? "").count > 100 {
-                Button(action: { viewModel.isIntroExpanded.toggle() }) {
-                    Text(viewModel.isIntroExpanded ? "收起" : "展开")
-                        .font(.caption)
-                        .foregroundColor(.blue)
-                }
+                    .frame(height: 50)
+                    .background(Color.blue)
             }
         }
+        .background(Color.primary.colorInvert())
     }
+}
+
+struct GroupSelectionSheet: View {
+    let book: Book
+    @Environment(\.dismiss) var dismiss
+    @State private var groups: [BookGroup] = []
     
-    // MARK: - 目录预览
-    private var tocPreviewSection: some View {
-        SectionCard(title: "目录") {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("共 \(book.totalChapterNum) 章")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    if let latest = book.latestChapterTitle {
-                        Text("最新：\(latest)")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    }
-                }
-                
-                if !viewModel.previewChapters.isEmpty {
-                    Divider()
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(viewModel.previewChapters) { chapter in
-                            Button(action: {
-                                if viewModel.readChapter(chapter) {
-                                    navigatingToReader = true
-                                }
-                            }) {
-                                HStack {
-                                    Text("\(chapter.index + 1). \(chapter.title)")
-                                        .font(.body)
-                                        .foregroundColor(.primary)
-                                        .lineLimit(1)
-                                    
-                                    Spacer()
-                                    
-                                    if chapter.isCached {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.green)
-                                            .font(.caption)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    if viewModel.previewChapters.count < book.totalChapterNum {
-                        Button(action: { showingChapterList = true }) {
-                            Text("查看全部章节 →")
-                                .font(.caption)
+    var body: some View {
+        NavigationView {
+            List {
+                Button(action: {
+                    book.group = nil
+                    try? CoreDataStack.shared.save()
+                    dismiss()
+                }) {
+                    HStack {
+                        Text("默认分组")
+                        Spacer()
+                        if book.group == nil {
+                            Image(systemName: "checkmark")
                                 .foregroundColor(.blue)
                         }
                     }
                 }
-            }
-        }
-    }
-    
-    // MARK: - 书籍信息
-    private var bookInfoSection: some View {
-        SectionCard(title: "书籍信息") {
-            Grid {
-                GridRow {
-                    Label("书源", systemImage: "link")
-                    Text(book.originName)
-                }
                 
-                GridRow {
-                    Label("章节", systemImage: "list.bullet")
-                    Text("\(book.totalChapterNum) 章")
-                }
-                
-                GridRow {
-                    Label("进度", systemImage: "gauge")
-                    Text("\(Int(book.readProgress * 100))%")
-                }
-                
-                if let wordCount = book.wordCount {
-                    GridRow {
-                        Label("字数", systemImage: "text.alignleft")
-                        Text(wordCount)
+                ForEach(groups, id: \.groupId) { group in
+                    Button(action: {
+                        book.group = group
+                        try? CoreDataStack.shared.save()
+                        dismiss()
+                    }) {
+                        HStack {
+                            Text(group.name)
+                            Spacer()
+                            if book.group?.groupId == group.groupId {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
                     }
                 }
             }
-            .font(.caption)
+            .navigationTitle("选择分组")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") { dismiss() }
+                }
+            }
+            .task { loadGroups() }
         }
     }
-}
-
-// MARK: - Section Card
-struct SectionCard<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
     
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.headline)
-            
-            content
-        }
-        .padding()
-        .background(Color.gray.opacity(0.05))
-        .cornerRadius(8)
+    private func loadGroups() {
+        let request = BookGroup.fetchRequest() as NSFetchRequest<BookGroup>
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \BookGroup.order, ascending: true)]
+        do {
+            groups = try CoreDataStack.shared.viewContext.fetch(request)
+        } catch { }
     }
 }
 
-// MARK: - ViewModel
 @MainActor
 class BookDetailViewModel: ObservableObject {
     @Published var isLoading = false
-    @Published var isFavorite = false
     @Published var isIntroExpanded = false
-    @Published var showingAlert = false
-    @Published var alertMessage = ""
     @Published var currentSource: BookSource?
     @Published var previewChapters: [ChapterPreview] = []
     
     let book: Book
     private let context = CoreDataStack.shared.viewContext
-    private static let favoriteTag = "favorite"
     
     init(book: Book) {
         self.book = book
         self.currentSource = book.source
-        self.isFavorite = Self.tags(from: book.customTag).contains(Self.favoriteTag)
     }
     
     func loadChapters() async {
@@ -367,25 +349,26 @@ class BookDetailViewModel: ObservableObject {
                 title: $0.title,
                 isCached: $0.isCached
             )}
-        } catch {
-            print("加载章节失败: \(error)")
-        }
+        } catch { }
     }
     
     @discardableResult
     func startReading() -> Bool {
-        prepareReading(startAt: nil)
-    }
-
-    @discardableResult
-    func readChapter(_ chapter: ChapterPreview) -> Bool {
-        prepareReading(startAt: chapter.index, chapterTitle: chapter.title)
+        if book.durChapterIndex < 0 { book.durChapterIndex = 0 }
+        if book.durChapterPos < 0 { book.durChapterPos = 0 }
+        book.durChapterTime = Int64(Date().timeIntervalSince1970)
+        do {
+            try CoreDataStack.shared.save()
+            return true
+        } catch {
+            context.rollback()
+            return false
+        }
     }
     
     func refreshBookInfo() async {
         isLoading = true
         defer { isLoading = false }
-
         do {
             let source = try resolveSource()
             try await WebBook.getBookInfo(source: source, book: book)
@@ -393,102 +376,35 @@ class BookDetailViewModel: ObservableObject {
             book.totalChapterNum = Int32(chapterCount)
             try CoreDataStack.shared.save()
             await loadChapters()
-            showingAlert = true
-            alertMessage = "刷新完成（共 \(chapterCount) 章）"
-        } catch {
-            showingAlert = true
-            alertMessage = "刷新失败：\(error.localizedDescription)"
-        }
-    }
-    
-    func toggleFavorite() {
-        var tags = Self.tags(from: book.customTag)
-        if tags.contains(Self.favoriteTag) {
-            tags.remove(Self.favoriteTag)
-        } else {
-            tags.insert(Self.favoriteTag)
-        }
-
-        book.customTag = Self.encodeTags(tags)
-        isFavorite = tags.contains(Self.favoriteTag)
-
-        do {
-            try CoreDataStack.shared.save()
-        } catch {
-            context.rollback()
-            isFavorite = Self.tags(from: book.customTag).contains(Self.favoriteTag)
-            showingAlert = true
-            alertMessage = "收藏状态保存失败：\(error.localizedDescription)"
-        }
+        } catch { }
     }
     
     func cacheAllChapters() {
         Task {
-            await cacheAllChaptersTask()
-        }
-    }
-
-    private func cacheAllChaptersTask() async {
-        guard !book.isLocal else {
-            showingAlert = true
-            alertMessage = "本地书籍无需缓存"
-            return
-        }
-
-        isLoading = true
-        defer { isLoading = false }
-
-        do {
-            let source = try resolveSource()
-
-            _ = try await refreshChapterList(source: source)
-            let request = BookChapter.fetchRequest(byBookId: book.bookId)
-            let chapters = try context.fetch(request)
-
-            var cachedCount = 0
-            var failedCount = 0
-
-            for chapter in chapters {
-                if chapter.isCached, cacheFileExists(for: chapter) {
-                    continue
-                }
-
-                do {
-                    let content = try await WebBook.getContent(source: source, book: book, chapter: chapter)
-                    try cacheChapterToDisk(chapter: chapter, content: content)
-                    cachedCount += 1
-
-                    if cachedCount % 20 == 0 {
-                        try CoreDataStack.shared.save()
+            isLoading = true
+            defer { isLoading = false }
+            do {
+                let source = try resolveSource()
+                _ = try await refreshChapterList(source: source)
+                let request = BookChapter.fetchRequest(byBookId: book.bookId)
+                let chapters = try context.fetch(request)
+                for chapter in chapters {
+                    if !chapter.isCached {
+                        let content = try await WebBook.getContent(source: source, book: book, chapter: chapter)
+                        try cacheChapterToDisk(chapter: chapter, content: content)
                     }
-                } catch {
-                    failedCount += 1
                 }
-            }
-
-            try CoreDataStack.shared.save()
-            await loadChapters()
-            showingAlert = true
-            if failedCount > 0 {
-                alertMessage = "缓存完成：新增 \(cachedCount) 章，失败 \(failedCount) 章"
-            } else {
-                alertMessage = "缓存完成：新增 \(cachedCount) 章"
-            }
-        } catch {
-            showingAlert = true
-            alertMessage = "缓存失败：\(error.localizedDescription)"
+                try CoreDataStack.shared.save()
+                await loadChapters()
+            } catch { }
         }
     }
-
+    
     private func resolveSource() throws -> BookSource {
-        if let currentSource {
-            return currentSource
-        }
-
+        if let currentSource { return currentSource }
         guard let sourceUUID = UUID(uuidString: book.origin) else {
-            throw NSError(domain: "BookDetailViewModel", code: 1, userInfo: [NSLocalizedDescriptionKey: "未找到书源"])
+            throw NSError(domain: "BookDetailViewModel", code: 1, userInfo: nil)
         }
-
         let request: NSFetchRequest<BookSource> = BookSource.fetchRequest()
         request.fetchLimit = 1
         request.predicate = NSPredicate(format: "sourceId == %@", sourceUUID as CVarArg)
@@ -496,142 +412,53 @@ class BookDetailViewModel: ObservableObject {
             currentSource = source
             return source
         }
-
-        throw NSError(domain: "BookDetailViewModel", code: 2, userInfo: [NSLocalizedDescriptionKey: "未找到书源"])
+        throw NSError(domain: "BookDetailViewModel", code: 2, userInfo: nil)
     }
-
+    
     private func refreshChapterList(source: BookSource) async throws -> Int {
         let webChapters = try await WebBook.getChapterList(source: source, book: book)
-
         let request = BookChapter.fetchRequest(byBookId: book.bookId)
         let existing = try context.fetch(request)
-
         var existingByUrl: [String: BookChapter] = [:]
         for chapter in existing where !chapter.chapterUrl.isEmpty {
             if existingByUrl[chapter.chapterUrl] == nil {
                 existingByUrl[chapter.chapterUrl] = chapter
             }
         }
-
-        var newUrlSet = Set<String>()
-        newUrlSet.reserveCapacity(webChapters.count)
-
         for web in webChapters {
             let url = web.url
             guard !url.isEmpty else { continue }
-            newUrlSet.insert(url)
-
             if let chapter = existingByUrl[url] {
                 chapter.title = web.title
                 chapter.index = Int32(web.index)
-                chapter.isVIP = web.isVip
-                chapter.updateTime = Int64(Date().timeIntervalSince1970)
             } else {
-                let chapter = BookChapter.create(
-                    in: context,
-                    bookId: book.bookId,
-                    url: url,
-                    index: Int32(web.index),
-                    title: web.title
-                )
+                let chapter = BookChapter.create(in: context, bookId: book.bookId, url: url, index: Int32(web.index), title: web.title)
                 chapter.book = book
                 chapter.sourceId = source.sourceId.uuidString
-                chapter.isVIP = web.isVip
             }
         }
-
-        for chapter in existing where !newUrlSet.contains(chapter.chapterUrl) {
-            context.delete(chapter)
-        }
-
         book.totalChapterNum = Int32(webChapters.count)
         try CoreDataStack.shared.save()
         return webChapters.count
     }
-
-    private func chapterCacheDir() -> URL {
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return documents.appendingPathComponent("chapters", isDirectory: true)
-    }
-
-    private func cacheFileURL(for chapter: BookChapter) -> URL? {
-        if let cachePath = chapter.cachePath, !cachePath.isEmpty {
-            if cachePath.hasPrefix("/") {
-                return URL(fileURLWithPath: cachePath)
-            }
-            return chapterCacheDir().appendingPathComponent(cachePath)
-        }
-        return nil
-    }
-
-    private func cacheFileExists(for chapter: BookChapter) -> Bool {
-        guard let url = cacheFileURL(for: chapter) else { return false }
-        return FileManager.default.fileExists(atPath: url.path)
-    }
-
+    
     private func cacheChapterToDisk(chapter: BookChapter, content: String) throws {
-        let dir = chapterCacheDir()
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("chapters", isDirectory: true)
         if !FileManager.default.fileExists(atPath: dir.path) {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
-
         let fileName = "\(chapter.bookId.uuidString)_\(chapter.index).txt"
-        let fileURL = dir.appendingPathComponent(fileName)
-        try content.write(to: fileURL, atomically: true, encoding: .utf8)
-
+        try content.write(to: dir.appendingPathComponent(fileName), atomically: true, encoding: .utf8)
         chapter.isCached = true
         chapter.cachePath = fileName
     }
-
-    @discardableResult
-    private func prepareReading(startAt chapterIndex: Int?, chapterTitle: String? = nil) -> Bool {
-        if let chapterIndex {
-            let safeIndex = max(0, chapterIndex)
-            book.durChapterIndex = Int32(safeIndex)
-            book.durChapterPos = 0
-            book.durChapterTitle = chapterTitle
-        } else {
-            if book.durChapterIndex < 0 {
-                book.durChapterIndex = 0
-            }
-            if book.durChapterPos < 0 {
-                book.durChapterPos = 0
-            }
-        }
-        book.durChapterTime = Int64(Date().timeIntervalSince1970)
-
-        do {
-            try CoreDataStack.shared.save()
-            return true
-        } catch {
-            context.rollback()
-            showingAlert = true
-            alertMessage = "保存阅读进度失败：\(error.localizedDescription)"
-            return false
-        }
-    }
-
-    private static func tags(from raw: String?) -> Set<String> {
-        guard let raw, !raw.isEmpty else { return [] }
-        let values = raw
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-            .filter { !$0.isEmpty }
-        return Set(values)
-    }
-
-    private static func encodeTags(_ tags: Set<String>) -> String? {
-        guard !tags.isEmpty else { return nil }
-        return tags.sorted().joined(separator: ",")
-    }
-
+    
     func deleteBook(_ book: Book) {
         context.delete(book)
         try? CoreDataStack.shared.save()
     }
 }
 
-// MARK: - 章节预览
 struct ChapterPreview: Identifiable {
     let id: UUID
     let index: Int
@@ -639,7 +466,6 @@ struct ChapterPreview: Identifiable {
     let isCached: Bool
 }
 
-// MARK: - 书源选择 Sheet
 struct SourceSelectionSheet: View {
     let book: Book
     @Binding var selectedSource: BookSource?
@@ -653,14 +479,11 @@ struct SourceSelectionSheet: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text(source.bookSourceName)
-                                .font(.body)
-                            Text(source.bookSourceGroup ?? "默认分组")
+                            Text(source.bookSourceGroup ?? "")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        
                         Spacer()
-                        
                         if source.sourceId == selectedSource?.sourceId {
                             Image(systemName: "checkmark")
                                 .foregroundColor(.blue)
@@ -680,25 +503,19 @@ struct SourceSelectionSheet: View {
                     Button("取消") { dismiss() }
                 }
             }
-            .task {
-                await loadSources()
-            }
+            .task { await loadSources() }
         }
     }
     
     private func loadSources() async {
         let request: NSFetchRequest<BookSource> = BookSource.fetchRequest()
         request.predicate = NSPredicate(format: "enabled == YES")
-        
         do {
             sources = try CoreDataStack.shared.viewContext.fetch(request)
-        } catch {
-            print("加载书源失败: \(error)")
-        }
+        } catch { }
     }
 }
 
-// MARK: - 预览
 #Preview {
     NavigationView {
         BookDetailView(book: Book())
