@@ -666,7 +666,6 @@ enum ReaderError: LocalizedError {
         }
     }
 }
-// MARK: - 设置视图
 struct ReaderSettingsView: View {
     @ObservedObject var viewModel: ReaderViewModel
     @Binding var isPresented: Bool
@@ -712,51 +711,155 @@ struct ReaderSettingsView: View {
     }
 }
 
-// MARK: - 目录列表
 struct ChapterListView: View {
     @ObservedObject var viewModel: ReaderViewModel
     let book: Book
     @Environment(\.dismiss) var dismiss
+    @State private var sortOrder: ChapterOrder = .asc
+    @State private var scrollToCurrent = false
+    
+    enum ChapterOrder: Int, CaseIterable {
+        case asc = 0
+        case desc = 1
+        var title: String {
+            switch self { case .asc: return "正序"; case .desc: return "倒序" }
+        }
+    }
+    
+    private var sortedChapters: [(index: Int, chapter: BookChapter)] {
+        let enumerated = Array(viewModel.chapters.enumerated())
+        return sortOrder == .asc ? enumerated : enumerated.reversed()
+    }
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach(Array(viewModel.chapters.enumerated()), id: \.element.chapterId) { index, chapter in
-                    Button(action: {
-                        viewModel.jumpToChapter(index)
-                        dismiss()
-                    }) {
-                        HStack {
-                            Text("\(index + 1)")
-                                .frame(width: 40)
-                            
-                            Text(chapter.title)
-                                .lineLimit(2)
-                            
-                            Spacer()
-                            
-                            if index == viewModel.currentChapterIndex {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
-                            }
-                            
-                            if chapter.isCached {
-                                Image(systemName: "arrow.down.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.caption)
-                            }
-                        }
-                    }
-                }
+            VStack(spacing: 0) {
+                tabBar
+                chapterList
+                bottomInfoBar
             }
             .navigationTitle("目录")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
-                        dismiss()
-                    }
+                    Button("完成") { dismiss() }
                 }
             }
         }
+    }
+    
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(ChapterOrder.allCases, id: \.self) { order in
+                Button(action: { sortOrder = order }) {
+                    Text(order.title)
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .foregroundColor(sortOrder == order ? .blue : .primary)
+                }
+            }
+        }
+        .background(Color(.systemGray6))
+    }
+    
+    private var chapterList: some View {
+        ScrollViewReader { proxy in
+            List {
+                ForEach(sortedChapters, id: \.chapter.chapterId) { item in
+                    Button(action: {
+                        viewModel.jumpToChapter(item.index)
+                        dismiss()
+                    }) {
+                        ChapterItemView(
+                            index: item.index + 1,
+                            chapter: item.chapter,
+                            isCurrent: item.index == viewModel.currentChapterIndex
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .listStyle(.plain)
+            .onChange(of: scrollToCurrent) { _ in
+                if let current = viewModel.chapters[safe: viewModel.currentChapterIndex] {
+                    withAnimation { proxy.scrollTo(current.chapterId, anchor: .center) }
+                }
+            }
+        }
+    }
+    
+    private var bottomInfoBar: some View {
+        HStack {
+            Text("当前：\(viewModel.currentChapter?.title ?? "")")
+                .font(.system(size: 12))
+                .lineLimit(1)
+                .onTapGesture { scrollToCurrent = true }
+            
+            Spacer()
+            
+            Button(action: { scrollToCurrent = true }) {
+                Image(systemName: "chevron.up")
+                    .frame(width: 36, height: 36)
+            }
+            
+            Button(action: { }) {
+                Image(systemName: "chevron.down")
+                    .frame(width: 36, height: 36)
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 36)
+        .background(Color(.systemGray6))
+    }
+}
+
+private struct ChapterItemView: View {
+    let index: Int
+    let chapter: BookChapter
+    let isCurrent: Bool
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            if chapter.isVIP {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.orange)
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(chapter.title)
+                    .font(.subheadline)
+                    .lineLimit(1)
+                
+                if let tag = chapter.tag, !tag.isEmpty {
+                    Text(tag)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            if isCurrent {
+                Image(systemName: "checkmark")
+                    .foregroundColor(.blue)
+            }
+            
+            if chapter.isCached {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 14))
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .contentShape(Rectangle())
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
