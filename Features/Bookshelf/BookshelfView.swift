@@ -215,7 +215,7 @@ struct BookshelfView: View {
             Label("更新目录", systemImage: "arrow.clockwise")
         }
         
-        NavigationLink(destination: BookDetailView(bookId: book.bookId)) {
+        NavigationLink(destination: BookDetailView(book: book)) {
             Label("书籍详情", systemImage: "info.circle")
         }
         
@@ -502,16 +502,64 @@ struct BookshelfConfigSheet: View {
 
 extension Book {
     var hasNewChapter: Bool {
-        latestChapterTime != nil && latestChapterTime! > lastReadTime ?? Date.distantPast
+        latestChapterTime > durChapterTime
     }
     
     var readProgressText: String {
-        if totalChapterCount == 0 { return "未读" }
-        let percent = Int(readProgress * 100)
-        return "阅读 \(currentChapterIndex + 1)/\(totalChapterCount) (\(percent)%)"
+        if totalChapterNum == 0 { return "未读" }
+        let percent = Int(Double(durChapterIndex) / Double(totalChapterNum) * 100)
+        return "阅读 \(durChapterIndex + 1)/\(totalChapterNum) (\(percent)%)"
     }
     
     var isUpdating: Bool { false }
+}
+
+struct BookCoverView: View {
+    let url: String?
+    @State private var image: UIImage?
+    
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                ZStack {
+                    Color(.systemGray5)
+                    Image(systemName: "book.closed")
+                        .foregroundColor(.gray.opacity(0.5))
+                }
+            }
+        }
+        .task(id: url) {
+            guard image == nil, let urlString = url, !urlString.isEmpty else { return }
+            image = await ImageCacheManager.shared.loadImage(from: urlString)
+        }
+    }
+}
+
+struct EmptyStateView: View {
+    let title: String
+    let subtitle: String
+    let imageName: String
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: imageName)
+                .font(.system(size: 60))
+                .foregroundColor(.gray.opacity(0.5))
+            
+            Text(title)
+                .font(.title2)
+                .fontWeight(.medium)
+            
+            Text(subtitle)
+                .font(.body)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 }
 
 #Preview {

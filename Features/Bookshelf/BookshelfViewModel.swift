@@ -114,7 +114,7 @@ final class BookshelfViewModel: ObservableObject {
             request.fetchLimit = 1
             
             guard let bookToUpdate = try? context.fetch(request).first else { return }
-            bookToUpdate.lastCheckTime = Date()
+            bookToUpdate.lastCheckTime = Int64(Date().timeIntervalSince1970 * 1000)
             try? context.save()
         }
     }
@@ -122,7 +122,7 @@ final class BookshelfViewModel: ObservableObject {
     func updateAllToc() {
         Task { @MainActor in
             for book in books {
-                book.lastCheckTime = Date()
+                book.lastCheckTime = Int64(Date().timeIntervalSince1970 * 1000)
             }
             try? CoreDataStack.shared.save()
         }
