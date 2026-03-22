@@ -1,10 +1,3 @@
-//
-//  SearchViewModel.swift
-//  Legado-iOS
-//
-//  搜索 ViewModel
-//
-
 import Foundation
 import CoreData
 
@@ -17,6 +10,7 @@ class SearchViewModel: ObservableObject {
     @Published var selectedSources: [BookSource] = []
     
     private var ruleEngine: RuleEngine = RuleEngine()
+    private var searchTask: Task<Void, Never>?
 
     init() {
         loadDefaultSources()
@@ -31,16 +25,24 @@ class SearchViewModel: ObservableObject {
         }
     }
     
-    // MARK: - 搜索结果
+    func cancelSearch() {
+        searchTask?.cancel()
+        searchTask = nil
+        isSearching = false
+    }
+    
     struct SearchResult: Identifiable {
         let id = UUID()
         let name: String
         let author: String
         let coverUrl: String?
         let intro: String?
+        let kind: String?
+        let lastChapter: String?
         let sourceName: String
         let sourceId: UUID
         let bookUrl: String
+        var sourceCount: Int = 1
         
         var displayName: String {
             name.trimmingCharacters(in: .whitespaces)
@@ -51,7 +53,6 @@ class SearchViewModel: ObservableObject {
         }
     }
     
-    // MARK: - 执行搜索
     func search(keyword: String, sources: [BookSource]) async {
         guard !keyword.isEmpty else {
             searchResults = []
@@ -86,9 +87,7 @@ class SearchViewModel: ObservableObject {
         isSearching = false
     }
     
-    // MARK: - 在单个书源中搜索
     private func searchInSource(keyword: String, source: BookSource) async throws -> [SearchResult] {
-        // 使用 WebBook 进行搜索
         let results = try await WebBook.searchBook(source: source, key: keyword)
         
         return results.map { searchBook in
@@ -97,6 +96,8 @@ class SearchViewModel: ObservableObject {
                 author: searchBook.author,
                 coverUrl: searchBook.coverUrl,
                 intro: searchBook.intro,
+                kind: searchBook.kind,
+                lastChapter: searchBook.latestChapterTitle,
                 sourceName: source.bookSourceName,
                 sourceId: source.sourceId,
                 bookUrl: searchBook.bookUrl
@@ -104,8 +105,7 @@ class SearchViewModel: ObservableObject {
         }
     }
     
-    // MARK: - 添加到书架
-    func addToBookshelf(result: SearchResult) async throws -> Book {
+func addToBookshelf(result: SearchResult) async throws -> Book {
         let context = CoreDataStack.shared.viewContext
 
         if let existing = findBook(bookUrl: result.bookUrl, origin: result.sourceId.uuidString, in: context) {
@@ -148,7 +148,6 @@ class SearchViewModel: ObservableObject {
     }
 }
 
-// MARK: - 错误类型
 enum SearchError: LocalizedError {
     case invalidSource
     case noSearchRule
