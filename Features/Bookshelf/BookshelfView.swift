@@ -377,11 +377,11 @@ struct BookListCell: View {
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                     
-                    if showUpdateTime, let time = book.latestChapterTime {
+                    if showUpdateTime, book.latestChapterTime > 0 {
                         Text("·")
                             .foregroundColor(.secondary)
                         
-                        Text(time.formatted(.relative(presentation: .named)))
+                        Text(Date(timeIntervalSince1970: TimeInterval(book.latestChapterTime / 1000)).formatted(.relative(presentation: .named)))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
