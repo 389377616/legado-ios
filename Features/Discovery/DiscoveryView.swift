@@ -157,8 +157,7 @@ class DiscoveryViewModel: ObservableObject {
         
         if let sources = try? context.fetch(request) {
             exploreGroups = sources.compactMap { source in
-                guard let sourceId = source.sourceId else { return nil }
-                var group = ExploreGroup(sourceId: sourceId, sourceName: source.bookSourceName)
+                var group = ExploreGroup(sourceId: source.sourceId, sourceName: source.bookSourceName)
                 
                 if let exploreUrl = source.exploreUrl, !exploreUrl.isEmpty {
                     group.exploreKinds = parseExploreUrl(exploreUrl)
