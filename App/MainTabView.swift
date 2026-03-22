@@ -53,118 +53,63 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             List {
-                // 阅读设置
-                Section(header: Label("阅读", systemImage: "book")) {
-                    NavigationLink("阅读设置") {
-                        ReaderSettingsFullView()
+                Section {
+                    NavigationLink(destination: SourceManageView()) {
+                        Label("书源管理", systemImage: "books.vertical")
                     }
                     
-                    NavigationLink("替换规则") {
-                        ReplaceRuleView()
+                    NavigationLink(destination: TxtTocRuleView()) {
+                        Label("TXT目录规则", systemImage: "list.bullet.rectangle")
                     }
                     
-                    NavigationLink("TXT目录规则") {
-                        TxtTocRuleView()
+                    NavigationLink(destination: ReplaceRuleView()) {
+                        Label("替换净化", systemImage: "arrow.3.trianglepath")
                     }
                     
-                    NavigationLink("主题") {
-                        ThemeSettingsView()
+                    NavigationLink(destination: DictRuleView()) {
+                        Label("词典规则", systemImage: "book")
+                    }
+                    
+                    NavigationLink(destination: ThemeSettingsView()) {
+                        Label("主题模式", systemImage: "circle.lefthalf.filled")
                     }
                 }
                 
-                // 数据管理
-                Section(header: Label("数据", systemImage: "database")) {
-                    NavigationLink("备份与恢复") {
-                        BackupRestoreView()
-                    }
-
-                    NavigationLink("阅读统计") {
-                        ReadingStatisticsView()
-                    }
-
-                    NavigationLink("数据迁移") {
-                        DataMigrationView()
+                Section("设置") {
+                    NavigationLink(destination: BackupRestoreView()) {
+                        Label("备份恢复", systemImage: "externaldrive")
                     }
                     
-                    NavigationLink("词典规则") {
-                        DictRuleView()
+                    NavigationLink(destination: ReaderSettingsFullView()) {
+                        Label("阅读设置", systemImage: "book.pages")
                     }
                     
-                    NavigationLink("文件管理") {
-                        FileManageView()
-                    }
-                    
-                    NavigationLink("清理缓存") {
-                        CacheCleanView()
+                    NavigationLink(destination: Text("其他设置")) {
+                        Label("其他设置", systemImage: "gearshape")
                     }
                 }
                 
-                // 书源管理
-                Section(header: Label("书源", systemImage: "square.grid.2x2")) {
-                    NavigationLink("书源管理") {
-                        SourceManageView()
-                    }
-
-                    NavigationLink("书源订阅") {
-                        SourceSubscriptionView()
-                    }
-
-                    NavigationLink("书源调试") {
-                        SourceDebugView(viewModel: SourceDebugViewModel(source: nil))
+                Section("其他") {
+                    NavigationLink(destination: Text("全部书签")) {
+                        Label("书签", systemImage: "bookmark")
                     }
                     
-                    Button(action: { showingQRScanner = true }) {
-                        HStack {
-                            Text("扫码导入书源")
-                            Spacer()
-                            Image(systemName: "qrcode.viewfinder")
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                
-                // 关于
-                Section(header: Label("关于", systemImage: "info.circle")) {
-                    HStack {
-                        Text("版本")
-                        Spacer()
-                        Text("1.0.0 (Alpha)")
-                            .foregroundColor(.secondary)
+                    NavigationLink(destination: ReadingStatisticsView()) {
+                        Label("阅读记录", systemImage: "clock")
                     }
                     
-                    Link("开源地址", destination: URL(string: "https://github.com/chrn11/legado-ios")!)
-                    
-                    Link("帮助文档", destination: URL(string: "https://www.legado.top/")!)
-                    
-                    Button("免责声明") {
-                        showingAbout = true
-                    }
-                }
-                
-                Section(header: Label("调试", systemImage: "ladybug")) {
-                    NavigationLink("查看日志") {
-                        DebugLogView()
+                    NavigationLink(destination: FileManageView()) {
+                        Label("文件管理", systemImage: "folder")
                     }
                     
-                    ShareLink(item: URL(fileURLWithPath: DebugLogger.shared.logFilePath)) {
-                        HStack {
-                            Text("导出日志")
-                            Spacer()
-                            Image(systemName: "square.and.arrow.up")
-                                .foregroundColor(.secondary)
-                        }
+                    NavigationLink(destination: AboutView()) {
+                        Label("关于", systemImage: "info.circle")
                     }
                 }
             }
             .listStyle(.insetGrouped)
             .navigationTitle("我的")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showingAbout) {
-                AboutView()
-            }
-            .sheet(isPresented: $showingQRScanner) {
-                QRCodeScanView()
-            }
         }
     }
 }
