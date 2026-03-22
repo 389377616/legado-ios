@@ -1,10 +1,3 @@
-//
-//  BookshelfViewModel.swift
-//  Legado-iOS
-//
-//  书架 ViewModel
-//
-
 import Foundation
 import CoreData
 import Combine
@@ -12,22 +5,18 @@ import Combine
 @MainActor
 final class BookshelfViewModel: ObservableObject {
     @Published var books: [Book] = []
+    @Published var groups: [BookGroup] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var hasMore = true
-
-    @Published var debugDiskBookCount: Int = 0
-    @Published var debugStorePath: String = ""
-    @Published var coreDataStatus: String = ""
-    
-    init() {
-        _ = CoreDataStack.shared.persistentContainer
-        coreDataStatus = CoreDataStack.shared.debugInfo
-    }
+    @Published var showingAddUrl = false
     
     @Published var viewMode: ViewMode = .grid
-    @Published var groupFilter: Int32 = 0
-    @Published var sortBy: SortBy = .lastRead
+    @Published var sortMode: SortMode = .readTime
+    @Published var showUnread = true
+    @Published var showUpdateTime = true
+    @Published var showFastScroller = false
+    
+    var totalBookCount: Int { books.count }
     
     private let pageSize = 50
     private var currentPage = 0
@@ -37,11 +26,11 @@ final class BookshelfViewModel: ObservableObject {
         case list = 1
     }
     
-    enum SortBy: Int, CaseIterable {
-        case lastRead = 0
-        case name = 1
-        case author = 2
-        case update = 3
+    enum SortMode: Int, CaseIterable {
+        case readTime = 0
+        case updateTime = 1
+        case name = 2
+        case author = 3
     }
     
     private var loadTask: Task<Void, Never>?
@@ -52,210 +41,103 @@ final class BookshelfViewModel: ObservableObject {
     
     func loadBooks() async {
         guard !isLoading else { return }
-
         isLoading = true
-        currentPage = 0
-        coreDataStatus = CoreDataStack.shared.debugInfo
-
-        do {
-            debugStorePath = CoreDataStack.shared.storeURL?.path ?? ""
-
-            let count = try await countBooks()
-            let firstPage = try await fetchBooks(page: 0, size: pageSize)
-            
-            debugDiskBookCount = count
-            books = firstPage
-            hasMore = firstPage.count == pageSize
-            
-            DebugLogger.shared.log("loadBooks 完成: UI=\(firstPage.count), 磁盘=\(count)")
-        } catch {
-            errorMessage = "加载失败：\(error.localizedDescription)"
-            DebugLogger.shared.log("loadBooks 失败: \(error)")
-        }
-
-        isLoading = false
-    }
-    
-    func forceReload() async {
-        DebugLogger.shared.log("forceReload 开始")
-        coreDataStatus = CoreDataStack.shared.debugInfo
         
-        debugStorePath = CoreDataStack.shared.storeURL?.path ?? ""
-
         do {
-            let count = try await countBooks()
-            let allBooks = try await fetchBooks(page: 0, size: pageSize)
-            
-            debugDiskBookCount = count
-            books = allBooks
-            hasMore = allBooks.count == pageSize
-            
-            DebugLogger.shared.log("forceReload 完成: UI=\(allBooks.count), 磁盘=\(count)")
+            books = try await fetchBooks()
+            groups = try await fetchGroups()
         } catch {
             errorMessage = "加载失败：\(error.localizedDescription)"
-            DebugLogger.shared.log("forceReload 失败: \(error)")
         }
-    }
-
-    var debugSummary: String {
-        let status = coreDataStatus.isEmpty ? "" : "\(coreDataStatus) | "
-        if debugStorePath.isEmpty {
-            return "\(status)store=<none>, 磁盘书籍=\(debugDiskBookCount)"
-        }
-        let parts = debugStorePath.split(separator: "/")
-        let tail = parts.suffix(3).joined(separator: "/")
-        return "\(status).../\(tail), 磁盘=\(debugDiskBookCount), 内存=\(books.count)"
-    }
-    
-    func loadMoreBooks() async {
-        guard !isLoading && hasMore else { return }
-
-        isLoading = true
-
-        do {
-            currentPage += 1
-            let nextPage = try await fetchBooks(page: currentPage, size: pageSize)
-            books.append(contentsOf: nextPage)
-            hasMore = nextPage.count == pageSize
-        } catch {
-            errorMessage = "加载更多失败：\(error.localizedDescription)"
-        }
-
+        
         isLoading = false
-    }
-    
-    private func fetchBooks(page: Int, size: Int) async throws -> [Book] {
-        let context = CoreDataStack.shared.viewContext
-
-        let groupFilter = self.groupFilter
-        let sortBy = self.sortBy
-
-        return try await context.perform {
-            let request: NSFetchRequest<Book> = Book.fetchRequest()
-            request.fetchLimit = size
-            request.fetchOffset = page * size
-            request.returnsObjectsAsFaults = false
-
-            if groupFilter != 0 {
-                request.predicate = NSPredicate(format: "group == %d", groupFilter)
-            }
-
-            switch sortBy {
-            case .lastRead:
-                request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
-            case .name:
-                request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-            case .author:
-                request.sortDescriptors = [NSSortDescriptor(key: "author", ascending: true)]
-            case .update:
-                request.sortDescriptors = [NSSortDescriptor(key: "lastCheckTime", ascending: false)]
-            }
-
-            return try context.fetch(request)
-        }
-    }
-
-    private func countBooks() async throws -> Int {
-        let context = CoreDataStack.shared.viewContext
-
-        return try await context.perform {
-            let request: NSFetchRequest<Book> = Book.fetchRequest()
-            request.includesPendingChanges = false
-            return try context.count(for: request)
-        }
     }
     
     func refreshBooks() async {
         await loadBooks()
     }
     
-    func removeBook(_ book: Book) {
-        let bookId = book.bookId
-        let bookName = book.name
-        DebugLogger.shared.log("removeBook 开始: bookId=\(bookId), name=\(bookName)")
+    private func fetchBooks() async throws -> [Book] {
+        let context = CoreDataStack.shared.viewContext
+        let sortMode = self.sortMode
         
-        Task { @MainActor in
-            let context = CoreDataStack.shared.viewContext
-            
+        return try await context.perform {
             let request: NSFetchRequest<Book> = Book.fetchRequest()
-            request.predicate = NSPredicate(format: "bookId == %@", bookId as CVarArg)
-            request.fetchLimit = 1
+            request.fetchLimit = self.pageSize
+            request.returnsObjectsAsFaults = false
             
-            guard let bookToDelete = try? context.fetch(request).first else {
-                DebugLogger.shared.log("removeBook: 找不到书籍")
-                return
+            switch sortMode {
+            case .readTime:
+                request.sortDescriptors = [NSSortDescriptor(key: "durChapterTime", ascending: false)]
+            case .updateTime:
+                request.sortDescriptors = [NSSortDescriptor(key: "lastCheckTime", ascending: false)]
+            case .name:
+                request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+            case .author:
+                request.sortDescriptors = [NSSortDescriptor(key: "author", ascending: true)]
             }
             
-            context.delete(bookToDelete)
-            
-            do {
-                try context.save()
-                DebugLogger.shared.log("removeBook 成功")
-            } catch {
-                DebugLogger.shared.log("removeBook 失败: \(error.localizedDescription)")
-            }
+            return try context.fetch(request)
         }
     }
     
-    func updateGroup(for book: Book, group: Int32) {
-        book.group = Int64(group)
-        try? CoreDataStack.shared.save()
+    private func fetchGroups() async throws -> [BookGroup] {
+        let context = CoreDataStack.shared.viewContext
+        
+        return try await context.perform {
+            let request: NSFetchRequest<BookGroup> = BookGroup.fetchRequest()
+            request.sortDescriptors = [NSSortDescriptor(key: "order", ascending: true)]
+            request.predicate = NSPredicate(format: "show == YES")
+            return try context.fetch(request)
+        }
     }
     
-    func refreshEPUB(_ book: Book) {
+    func removeBook(_ book: Book) {
         let bookId = book.bookId
-        let bookUrl = book.bookUrl
-        DebugLogger.shared.log("refreshEPUB 开始: bookId=\(bookId), url=\(bookUrl)")
-        
         Task { @MainActor in
             let context = CoreDataStack.shared.viewContext
-            
             let request: NSFetchRequest<Book> = Book.fetchRequest()
             request.predicate = NSPredicate(format: "bookId == %@", bookId as CVarArg)
             request.fetchLimit = 1
             
-            guard let bookToRefresh = try? context.fetch(request).first else {
-                DebugLogger.shared.log("refreshEPUB: 找不到书籍")
-                return
-            }
+            guard let bookToDelete = try? context.fetch(request).first else { return }
+            context.delete(bookToDelete)
+            try? context.save()
+        }
+    }
+    
+    func updateBook(_ book: Book) {
+        Task { @MainActor in
+            let context = CoreDataStack.shared.viewContext
+            let request: NSFetchRequest<Book> = Book.fetchRequest()
+            request.predicate = NSPredicate(format: "bookId == %@", book.bookId as CVarArg)
+            request.fetchLimit = 1
             
-            do {
-                DebugLogger.shared.log("refreshEPUB: 开始解析 EPUB")
-                let epubBook = try EPUBParser.parseSync(file: URL(fileURLWithPath: bookUrl), bookId: bookId)
-                DebugLogger.shared.log("refreshEPUB: 解析完成 title=\(epubBook.title), chapters=\(epubBook.chapters.count), epubDir=\(epubBook.epubDirectory.path)")
-                
-                bookToRefresh.name = epubBook.title
-                bookToRefresh.author = epubBook.author
-                bookToRefresh.totalChapterNum = Int32(epubBook.chapters.count)
-                bookToRefresh.folderName = epubBook.epubDirectory.path
-                bookToRefresh.type = 1
-                
-                DebugLogger.shared.log("refreshEPUB: folderName 设置为 \(epubBook.epubDirectory.path)")
-                
-                if let chapters = bookToRefresh.chapters as? Set<BookChapter> {
-                    for chapter in chapters {
-                        context.delete(chapter)
-                    }
-                }
-                
-                for chapter in epubBook.chapters {
-                    let chapterObj = BookChapter.create(
-                        in: context,
-                        bookId: bookId,
-                        url: chapter.href,
-                        index: Int32(chapter.index),
-                        title: chapter.title
-                    )
-                    chapterObj.book = bookToRefresh
-                    chapterObj.isCached = true
-                    chapterObj.cachePath = chapter.htmlPath
-                }
-                
-                try context.save()
-                DebugLogger.shared.log("refreshEPUB 成功: \(epubBook.chapters.count) 章")
-            } catch {
-                DebugLogger.shared.log("refreshEPUB 失败: \(error.localizedDescription)")
+            guard let bookToUpdate = try? context.fetch(request).first else { return }
+            bookToUpdate.lastCheckTime = Date()
+            try? context.save()
+        }
+    }
+    
+    func updateAllToc() {
+        Task { @MainActor in
+            for book in books {
+                book.lastCheckTime = Date()
             }
+            try? CoreDataStack.shared.save()
+        }
+    }
+    
+    func addBookByUrl(_ url: String) {
+        guard !url.isEmpty else { return }
+        Task { @MainActor in
+            let context = CoreDataStack.shared.viewContext
+            let book = Book.create(in: context)
+            book.bookUrl = url
+            book.name = URL(string: url)?.lastPathComponent ?? "未知书籍"
+            book.type = 0
+            try? context.save()
+            await loadBooks()
         }
     }
 }

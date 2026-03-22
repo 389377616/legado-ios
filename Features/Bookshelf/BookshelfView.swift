@@ -1,141 +1,74 @@
-//
-//  BookshelfView.swift
-//  Legado-iOS
-//
-//  书架主界面
-//
-
 import SwiftUI
 import CoreData
 
 struct BookshelfView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(key: "durChapterTime", ascending: false)],
-        animation: .default
-    ) private var fetchedBooks: FetchedResults<Book>
     @StateObject private var viewModel = BookshelfViewModel()
     @StateObject private var localBookViewModel = LocalBookViewModel()
-    @State private var showingSourceManage = false
     @State private var showingSearch = false
-
+    @State private var showingAddMenu = false
+    @State private var showingLayoutConfig = false
+    @State private var selectedGroupId: Int64?
+    
     var body: some View {
-        Group {
-            if fetchedBooks.isEmpty && !viewModel.isLoading {
-                VStack(spacing: 12) {
-                    EmptyStateView(
-                        title: "书架空空如也",
-                        subtitle: "点击右上角 + 导入本地书籍",
-                        imageName: "books.vertical"
-                    )
-                    VStack(spacing: 4) {
-                        Text(viewModel.coreDataStatus)
-                            .font(.caption)
-                            .foregroundColor(viewModel.coreDataStatus.contains("❌") ? .red : .secondary)
-                        Text(viewModel.debugSummary)
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                        Text("显示书籍=\(fetchedBooks.count)")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                    }
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                }
-            } else {
-                bookshelfContent
+        VStack(spacing: 0) {
+            if !viewModel.groups.isEmpty {
+                groupTabs
             }
+            bookshelfContent
         }
         .navigationTitle("书架")
-        .navigationDestination(for: NSManagedObjectID.self) { objectID in
-            readerDestination(for: objectID)
-        }
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Picker("", selection: $viewModel.viewMode) {
-                    Image(systemName: "square.grid.2x2")
-                        .tag(BookshelfViewModel.ViewMode.grid)
-                    Image(systemName: "list.bullet")
-                        .tag(BookshelfViewModel.ViewMode.list)
+                Button(action: { showingLayoutConfig = true }) {
+                    Image(systemName: viewModel.viewMode == .grid ? "square.grid.2x2" : "list.bullet")
                 }
-                .pickerStyle(.segmented)
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
                     Button(action: { showingSearch = true }) {
                         Image(systemName: "magnifyingglass")
                     }
-
-                    Button(action: { showingSourceManage = true }) {
-                        Image(systemName: "gearshape")
-                    }
                     
-                    Button(action: {
-                        DocumentPickerHelper.shared.present(contentTypes: [.plainText, .text, .utf8PlainText, .data, .epub]) { urls in
-                            guard let url = urls.first else { return }
-                            Task { @MainActor in
-                                do {
-                                    try await localBookViewModel.importBook(url: url)
-                                    DebugLogger.shared.log("BookshelfView 导入后准备 forceReload")
-                                    await viewModel.forceReload()
-                                } catch {
-                                    localBookViewModel.errorMessage = "导入失败：\(error.localizedDescription)"
-                                }
-                            }
+                    Menu {
+                        Button(action: importLocalBook) {
+                            Label("导入本地", systemImage: "folder")
                         }
-                    }) {
+                        Button(action: { viewModel.showingAddUrl = true }) {
+                            Label("添加网址", systemImage: "link")
+                        }
+                        Divider()
+                        NavigationLink(destination: Text("书架管理")) {
+                            Label("书架管理", systemImage: "slider.horizontal.3")
+                        }
+                        NavigationLink(destination: Text("分组管理")) {
+                            Label("分组管理", systemImage: "folder.badge.gearshape")
+                        }
+                        Divider()
+                        NavigationLink(destination: Text("下载管理")) {
+                            Label("下载管理", systemImage: "arrow.down.circle")
+                        }
+                        Button(action: { viewModel.updateAllToc() }) {
+                            Label("更新目录", systemImage: "arrow.clockwise")
+                        }
+                    } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
         }
-        .sheet(isPresented: $showingSourceManage) {
-            SourceManageView()
-        }
         .sheet(isPresented: $showingSearch) {
-            NavigationStack { SearchResultView() }
+            NavigationStack { SearchView() }
         }
-        .alert("导入成功", isPresented: Binding(
-            get: { localBookViewModel.successMessage != nil },
-            set: { isPresented in 
-                if !isPresented { 
-                    localBookViewModel.successMessage = nil
-                    DebugLogger.shared.log("导入成功弹窗关闭，准备 forceReload")
-                    Task { 
-                        await viewModel.forceReload()
-                    }
-                }
-            }
-        )) {
-            Button("确定", role: .cancel) { 
-                localBookViewModel.successMessage = nil
-                DebugLogger.shared.log("导入成功弹窗点击确定，准备 forceReload")
-                Task { 
-                    await viewModel.forceReload()
-                }
-            }
-        } message: {
-            Text(localBookViewModel.successMessage ?? "")
+        .sheet(isPresented: $viewModel.showingAddUrl) {
+            AddBookByUrlSheet(viewModel: viewModel)
         }
-        .alert("导入失败", isPresented: Binding(
-            get: { localBookViewModel.errorMessage != nil },
-            set: { if !$0 { localBookViewModel.errorMessage = nil } }
-        )) {
-            Button("确定", role: .cancel) { localBookViewModel.errorMessage = nil }
-        } message: {
-            Text(localBookViewModel.errorMessage ?? "未知错误")
-        }
-        .alert("书架加载失败", isPresented: Binding(
-            get: { viewModel.errorMessage != nil },
-            set: { if !$0 { viewModel.errorMessage = nil } }
-        )) {
-            Button("确定", role: .cancel) { viewModel.errorMessage = nil }
-        } message: {
-            Text(viewModel.errorMessage ?? "")
+        .sheet(isPresented: $showingLayoutConfig) {
+            BookshelfConfigSheet(viewModel: viewModel)
         }
         .task {
-            DebugLogger.shared.log("BookshelfView.task 触发 loadBooks")
             await viewModel.loadBooks()
         }
         .refreshable {
@@ -143,53 +76,112 @@ struct BookshelfView: View {
         }
     }
     
-    @ViewBuilder
-    private var bookshelfContent: some View {
-        switch viewModel.viewMode {
-        case .grid:
-            bookGridView
-        case .list:
-            bookListView
-        }
-    }
-    
-    private var bookGridView: some View {
-        ScrollView {
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 16) {
-                ForEach(fetchedBooks, id: \.bookId) { book in
-                    NavigationLink(value: book.objectID) {
-                        BookGridItemView(book: book)
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        if book.isLocal && book.bookUrl.lowercased().hasSuffix(".epub") {
-                            Button {
-                                viewModel.refreshEPUB(book)
-                            } label: {
-                                Label("刷新", systemImage: "arrow.clockwise")
-                            }
-                        }
-                        Button(role: .destructive) {
-                            viewModel.removeBook(book)
-                        } label: {
-                            Label("删除", systemImage: "trash")
-                        }
+    private var groupTabs: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                GroupTabButton(
+                    title: "全部",
+                    isSelected: selectedGroupId == nil,
+                    count: viewModel.totalBookCount
+                ) {
+                    selectedGroupId = nil
+                }
+                
+                ForEach(viewModel.groups, id: \.groupId) { group in
+                    GroupTabButton(
+                        title: group.groupName,
+                        isSelected: selectedGroupId == group.groupId,
+                        count: 0
+                    ) {
+                        selectedGroupId = group.groupId
                     }
                 }
             }
-            .padding()
+            .padding(.horizontal, 8)
+        }
+        .frame(height: 44)
+        .background(Color(.systemGray6))
+    }
+    
+    // MARK: - 书架内容
+    @ViewBuilder
+    private var bookshelfContent: some View {
+        let books = filteredBooks
+        
+        if books.isEmpty && !viewModel.isLoading {
+            emptyView
+        } else {
+            switch viewModel.viewMode {
+            case .grid:
+                gridView(books)
+            case .list:
+                listView(books)
+            }
         }
     }
     
-    private var bookListView: some View {
+    private var filteredBooks: [Book] {
+        guard let groupId = selectedGroupId else {
+            return viewModel.books
+        }
+        return viewModel.books.filter { $0.group == groupId }
+    }
+    
+    // MARK: - 空视图
+    private var emptyView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "books.vertical")
+                .font(.system(size: 60))
+                .foregroundColor(.gray.opacity(0.5))
+            
+            Text("书架空空如也")
+                .font(.title2)
+                .fontWeight(.medium)
+            
+            Text("点击右上角 + 导入书籍")
+                .font(.body)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    // MARK: - 网格视图（参考 Android item_bookshelf_grid）
+    private func gridView(_ books: [Book]) -> some View {
+        ScrollView {
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ], spacing: 16) {
+                ForEach(books, id: \.bookId) { book in
+                    NavigationLink(value: book.objectID) {
+                        BookGridCell(book: book, showUnread: viewModel.showUnread)
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        bookContextMenu(book)
+                    }
+                }
+            }
+            .padding(12)
+        }
+        .navigationDestination(for: NSManagedObjectID.self) { objectID in
+            if let book = try? viewContext.existingObject(with: objectID) as? Book {
+                ReaderView(bookId: book.bookId)
+            }
+        }
+    }
+    
+    // MARK: - 列表视图（参考 Android item_bookshelf_list）
+    private func listView(_ books: [Book]) -> some View {
         List {
-            ForEach(fetchedBooks, id: \.bookId) { book in
+            ForEach(books, id: \.bookId) { book in
                 NavigationLink(value: book.objectID) {
-                    BookListItemView(book: book)
+                    BookListCell(
+                        book: book,
+                        showUnread: viewModel.showUnread,
+                        showUpdateTime: viewModel.showUpdateTime
+                    )
                 }
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
@@ -198,156 +190,332 @@ struct BookshelfView: View {
                         Label("删除", systemImage: "trash")
                     }
                 }
-                .swipeActions(edge: .leading) {
-                    if book.isLocal && book.bookUrl.lowercased().hasSuffix(".epub") {
-                        Button {
-                            viewModel.refreshEPUB(book)
-                        } label: {
-                            Label("刷新", systemImage: "arrow.clockwise")
-                        }
-                        .tint(.blue)
-                    }
-                }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
+        .navigationDestination(for: NSManagedObjectID.self) { objectID in
+            if let book = try? viewContext.existingObject(with: objectID) as? Book {
+                ReaderView(bookId: book.bookId)
+            }
+        }
     }
-
+    
+    // MARK: - 书籍上下文菜单
     @ViewBuilder
-    private func readerDestination(for objectID: NSManagedObjectID) -> some View {
-        if let book = try? viewContext.existingObject(with: objectID) as? Book {
-            ReaderView(bookId: book.bookId)
-        } else {
-            Text("书籍不存在")
-                .foregroundColor(.secondary)
+    private func bookContextMenu(_ book: Book) -> some View {
+        Button {
+            // 置顶
+        } label: {
+            Label("置顶", systemImage: "pin")
+        }
+        
+        Button {
+            viewModel.updateBook(book)
+        } label: {
+            Label("更新目录", systemImage: "arrow.clockwise")
+        }
+        
+        NavigationLink(destination: BookDetailView(bookId: book.bookId)) {
+            Label("书籍详情", systemImage: "info.circle")
+        }
+        
+        Divider()
+        
+        Button(role: .destructive) {
+            viewModel.removeBook(book)
+        } label: {
+            Label("删除", systemImage: "trash")
+        }
+    }
+    
+    // MARK: - 导入本地书籍
+    private func importLocalBook() {
+        DocumentPickerHelper.shared.present(contentTypes: [.plainText, .text, .epub, .data]) { urls in
+            guard let url = urls.first else { return }
+            Task { @MainActor in
+                try? await localBookViewModel.importBook(url: url)
+                await viewModel.loadBooks()
+            }
         }
     }
 }
 
-struct BookGridItemView: View {
-    let book: Book
+// MARK: - 分组标签按钮
+struct GroupTabButton: View {
+    let title: String
+    let isSelected: Bool
+    let count: Int
+    let action: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            BookCoverView(url: book.coverUrl)
-                .frame(maxWidth: .infinity)
-                .aspectRatio(3/4, contentMode: .fill)
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
-                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(isSelected ? .semibold : .regular)
+                
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .foregroundColor(isSelected ? .blue : .primary)
+            .frame(minWidth: 60)
+            .padding(.vertical, 8)
+            .background(
+                Rectangle()
+                    .fill(isSelected ? Color.blue : Color.clear)
+                    .frame(height: 2)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            )
+        }
+    }
+}
+
+// MARK: - 网格单元格（参考 Android item_bookshelf_grid）
+struct BookGridCell: View {
+    let book: Book
+    let showUnread: Bool
+    
+    var body: some View {
+        VStack(alignment: .center, spacing: 6) {
+            // 封面容器
+            ZStack(alignment: .topTrailing) {
+                // 封面
+                BookCoverView(url: book.coverUrl)
+                    .frame(maxWidth: .infinity)
+                    .aspectRatio(3/4, contentMode: .fill)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
+                
+                // 未读角标
+                if showUnread && book.hasNewChapter {
+                    Text("新")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.red)
+                        .clipShape(Capsule())
+                        .offset(x: -4, y: 4)
+                }
+                
+                // 更新中动画
+                if book.isUpdating {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .padding(4)
+                        .background(Color.black.opacity(0.5))
+                        .clipShape(Circle())
+                        .offset(x: -4, y: 4)
+                }
+            }
             
+            // 书名（2行居中）
             Text(book.name)
                 .font(.caption)
-                .fontWeight(.medium)
-                .lineLimit(1)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
                 .foregroundColor(.primary)
-            
-            Text(book.author)
-                .font(.caption2)
-                .lineLimit(1)
-                .foregroundColor(.secondary)
-            
-            ProgressView(value: book.readProgress)
-                .progressViewStyle(.linear)
-                .tint(.blue)
+                .frame(height: 32)
         }
+        .contentShape(Rectangle())
     }
 }
 
-struct BookListItemView: View {
+// MARK: - 列表单元格（参考 Android item_bookshelf_list）
+struct BookListCell: View {
     let book: Book
+    let showUnread: Bool
+    let showUpdateTime: Bool
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
+            // 封面
             BookCoverView(url: book.coverUrl)
-                .frame(width: 60, height: 80)
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(4)
+                .frame(width: 66, height: 90)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
             
+            // 书籍信息
             VStack(alignment: .leading, spacing: 4) {
-                Text(book.name)
-                    .font(.body)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
+                // 书名 + 未读角标
+                HStack(spacing: 4) {
+                    Text(book.name)
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    if showUnread && book.hasNewChapter {
+                        Text("新")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.red)
+                            .clipShape(Capsule())
+                    }
+                    
+                    if book.isUpdating {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    }
+                }
                 
-                Text(book.author)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                
-                if let chapter = book.latestChapterTitle {
-                    Text(chapter)
+                // 作者（带图标）
+                HStack(spacing: 2) {
+                    Image(systemName: "person.fill")
                         .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Text(book.author.isEmpty ? "未知" : book.author)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    
+                    if showUpdateTime, let time = book.latestChapterTime {
+                        Text("·")
+                            .foregroundColor(.secondary)
+                        
+                        Text(time.formatted(.relative(presentation: .named)))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                // 阅读进度（带图标）
+                HStack(spacing: 2) {
+                    Image(systemName: "book.fill")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Text(book.readProgressText)
+                        .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
                 
-                Spacer()
+                // 最新章节（带图标）
+                if let latestChapter = book.latestChapterTitle, !latestChapter.isEmpty {
+                    HStack(spacing: 2) {
+                        Image(systemName: "text.page.fill")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        
+                        Text(latestChapter)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
                 
-                HStack {
-                    ProgressView(value: book.readProgress)
-                        .progressViewStyle(.linear)
-                        .frame(width: 100)
-                    
-                    Text("\(Int(book.readProgress * 100))%")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                Spacer()
+            }
+        }
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+    }
+}
+
+// MARK: - 添加网址弹窗
+struct AddBookByUrlSheet: View {
+    let viewModel: BookshelfViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var url = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section {
+                    TextField("输入书籍网址", text: $url)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text("添加网址")
+                } footer: {
+                    Text("支持直接输入书籍详情页URL")
                 }
             }
-            
-            Spacer()
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-struct BookCoverView: View {
-    let url: String?
-    @State private var image: UIImage?
-    
-    var body: some View {
-        Group {
-            if let image = image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                Image(systemName: "books.vertical")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .foregroundColor(.gray.opacity(0.5))
+            .navigationTitle("添加书籍")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("添加") {
+                        viewModel.addBookByUrl(url)
+                        dismiss()
+                    }
+                    .disabled(url.isEmpty)
+                }
             }
         }
-        .task(id: url) {
-            guard image == nil, let urlString = url, !urlString.isEmpty else { return }
-            image = await ImageCacheManager.shared.loadImage(from: urlString)
+    }
+}
+
+// MARK: - 书架配置弹窗
+struct BookshelfConfigSheet: View {
+    @ObservedObject var viewModel: BookshelfViewModel
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("布局方式") {
+                    Picker("布局", selection: $viewModel.viewMode) {
+                        Text("网格布局").tag(BookshelfViewModel.ViewMode.grid)
+                        Text("列表布局").tag(BookshelfViewModel.ViewMode.list)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                
+                Section("排序方式") {
+                    Picker("排序", selection: $viewModel.sortMode) {
+                        Text("按阅读时间").tag(BookshelfViewModel.SortMode.readTime)
+                        Text("按更新时间").tag(BookshelfViewModel.SortMode.updateTime)
+                        Text("按书名").tag(BookshelfViewModel.SortMode.name)
+                        Text("按作者").tag(BookshelfViewModel.SortMode.author)
+                    }
+                }
+                
+                Section("显示选项") {
+                    Toggle("显示未读角标", isOn: $viewModel.showUnread)
+                    Toggle("显示更新时间", isOn: $viewModel.showUpdateTime)
+                    Toggle("显示快速滚动条", isOn: $viewModel.showFastScroller)
+                }
+            }
+            .navigationTitle("书架设置")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") { dismiss() }
+                }
+            }
         }
     }
 }
 
-struct EmptyStateView: View {
-    let title: String
-    let subtitle: String
-    let imageName: String
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: imageName)
-                .font(.system(size: 60))
-                .foregroundColor(.gray.opacity(0.5))
-            
-            Text(title)
-                .font(.title2)
-                .fontWeight(.medium)
-            
-            Text(subtitle)
-                .font(.body)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+extension Book {
+    var hasNewChapter: Bool {
+        latestChapterTime != nil && latestChapterTime! > lastReadTime ?? Date.distantPast
     }
+    
+    var readProgressText: String {
+        if totalChapterCount == 0 { return "未读" }
+        let percent = Int(readProgress * 100)
+        return "阅读 \(currentChapterIndex + 1)/\(totalChapterCount) (\(percent)%)"
+    }
+    
+    var isUpdating: Bool { false }
 }
 
 #Preview {
-    BookshelfView()
+    NavigationStack {
+        BookshelfView()
+    }
 }
