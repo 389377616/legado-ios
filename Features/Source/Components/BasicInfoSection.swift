@@ -4,7 +4,23 @@ struct BasicInfoSection: View {
     @ObservedObject var viewModel: SourceEditViewModel
 
     var body: some View {
-        Section(header: Text("基本信息")) {
+        Section {
+            HStack {
+                Text("类型")
+                Spacer()
+                Picker("", selection: $viewModel.source.bookSourceType) {
+                    Text("文本").tag(Int32(0))
+                    Text("音频").tag(Int32(1))
+                    Text("图片").tag(Int32(2))
+                }
+                .pickerStyle(.menu)
+            }
+            
+            Toggle("启用", isOn: $viewModel.source.enabled)
+            Toggle("发现", isOn: $viewModel.source.enabledExplore)
+        }
+        
+        Section("基本信息") {
             RuleFieldEditor(
                 title: "书源地址",
                 text: $viewModel.source.bookSourceUrl,
@@ -22,12 +38,6 @@ struct BasicInfoSection: View {
                 text: $viewModel.source.bookSourceGroup.orEmpty,
                 placeholder: "可选分组"
             )
-
-            Picker("书源类型", selection: $viewModel.source.bookSourceType) {
-                Text("文本").tag(Int32(0))
-                Text("音频").tag(Int32(1))
-                Text("图片").tag(Int32(2))
-            }
 
             RuleFieldEditor(
                 title: "请求头 Header (JSON)",
