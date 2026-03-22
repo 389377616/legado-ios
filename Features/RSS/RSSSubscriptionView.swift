@@ -96,8 +96,8 @@ struct RSSSubscriptionView: View {
             return Array(sources)
         }
         return sources.filter {
-            $0.sourceName?.localizedCaseInsensitiveContains(searchText) ?? false ||
-            $0.sourceUrl?.localizedCaseInsensitiveContains(searchText) ?? false
+            $0.sourceName.localizedCaseInsensitiveContains(searchText) ||
+            $0.sourceUrl.localizedCaseInsensitiveContains(searchText)
         }
     }
 }
@@ -109,7 +109,7 @@ struct RSSSourceItem: View {
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 8) {
-                AsyncImage(url: source.iconUrl.flatMap { URL(string: $0) }) { phase in
+                AsyncImage(url: source.sourceIcon.flatMap { URL(string: $0) }) { phase in
                     switch phase {
                     case .success(let image):
                         image
@@ -126,7 +126,7 @@ struct RSSSourceItem: View {
                 .frame(width: 50, height: 50)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 
-                Text(source.sourceName ?? "未知")
+                Text(source.sourceName)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
@@ -181,7 +181,7 @@ struct RSSArticlesView: View {
                     }
                 }
             }
-            .navigationTitle(source.sourceName ?? "RSS")
+            .navigationTitle(source.sourceName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -193,7 +193,7 @@ struct RSSArticlesView: View {
     }
     
     private func loadArticles() async {
-        guard let url = source.sourceUrl else { return }
+        let url = source.sourceUrl
         
         do {
             let (_, items) = try await RSSParser.fetchAndParse(url: url)

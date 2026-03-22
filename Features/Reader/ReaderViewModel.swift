@@ -728,7 +728,11 @@ struct ChapterListView: View {
     
     private var sortedChapters: [(index: Int, chapter: BookChapter)] {
         let enumerated = Array(viewModel.chapters.enumerated())
-        return sortOrder == .asc ? enumerated : enumerated.reversed()
+        if sortOrder == .asc {
+            return enumerated.map { ($0.offset, $0.element) }
+        } else {
+            return enumerated.reversed().map { ($0.offset, $0.element) }
+        }
     }
     
     var body: some View {

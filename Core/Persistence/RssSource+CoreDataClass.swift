@@ -9,8 +9,8 @@ import Foundation
 import CoreData
 
 @objc(RssSource)
-public class RssSource: NSManagedObject {
-    // MARK: - 基本信息
+public class RssSource: NSManagedObject, Identifiable {
+    @NSManaged public var sourceId: UUID
     @NSManaged public var sourceUrl: String
     @NSManaged public var sourceName: String
     @NSManaged public var sourceIcon: String?
@@ -19,7 +19,7 @@ public class RssSource: NSManagedObject {
     @NSManaged public var enabled: Bool
     @NSManaged public var sortUrl: String?
     @NSManaged public var singleUrl: Bool
-    @NSManaged public var articleStyle: Int32  // 0=默认, 1=全文, 2=图片
+    @NSManaged public var articleStyle: Int32
 
     // MARK: - 请求配置
     @NSManaged public var header: String?
@@ -72,6 +72,7 @@ extension RssSource {
     static func create(in context: NSManagedObjectContext) -> RssSource {
         let entity = NSEntityDescription.entity(forEntityName: "RssSource", in: context)!
         let source = RssSource(entity: entity, insertInto: context)
+        source.sourceId = UUID()
         source.sourceUrl = ""
         source.sourceName = ""
         source.enabled = true

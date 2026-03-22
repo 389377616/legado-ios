@@ -96,8 +96,8 @@ class SearchViewModel: ObservableObject {
                 author: searchBook.author,
                 coverUrl: searchBook.coverUrl,
                 intro: searchBook.intro,
-                kind: searchBook.kind,
-                lastChapter: searchBook.latestChapterTitle,
+                kind: nil,
+                lastChapter: searchBook.lastChapter,
                 sourceName: source.bookSourceName,
                 sourceId: source.sourceId,
                 bookUrl: searchBook.bookUrl

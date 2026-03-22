@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreData
 
 struct SearchView: View {
     @StateObject private var viewModel = SearchViewModel()

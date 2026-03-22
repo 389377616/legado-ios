@@ -5,7 +5,6 @@ struct BookDetailView: View {
     @StateObject private var viewModel: BookDetailViewModel
     @State private var showingChapterList = false
     @State private var showingSourceSelection = false
-    @State private var showingGroupSelection = false
     @State private var navigatingToReader = false
     @Environment(\.dismiss) var dismiss
     
@@ -59,9 +58,6 @@ struct BookDetailView: View {
         }
         .sheet(isPresented: $showingSourceSelection) {
             SourceSelectionSheet(book: book, selectedSource: $viewModel.currentSource)
-        }
-        .sheet(isPresented: $showingGroupSelection) {
-            GroupSelectionSheet(book: book)
         }
         .navigationDestination(isPresented: $navigatingToReader) {
             ReaderView(bookId: book.bookId)
@@ -161,16 +157,8 @@ struct BookDetailView: View {
                 EmptyView()
             }
             
-            infoRow(icon: "folder.fill", text: book.group?.name ?? "默认分组") {
-                Button("换组") {
-                    showingGroupSelection = true
-                }
-                .font(.system(size: 13))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(4)
+            infoRow(icon: "folder.fill", text: "分组 \(book.group)") {
+                EmptyView()
             }
             
             infoRow(icon: "list.bullet", text: "共 \(book.totalChapterNum) 章") {
@@ -257,66 +245,6 @@ struct BookDetailView: View {
             }
         }
         .background(Color.primary.colorInvert())
-    }
-}
-
-struct GroupSelectionSheet: View {
-    let book: Book
-    @Environment(\.dismiss) var dismiss
-    @State private var groups: [BookGroup] = []
-    
-    var body: some View {
-        NavigationView {
-            List {
-                Button(action: {
-                    book.group = nil
-                    try? CoreDataStack.shared.save()
-                    dismiss()
-                }) {
-                    HStack {
-                        Text("默认分组")
-                        Spacer()
-                        if book.group == nil {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                }
-                
-                ForEach(groups, id: \.groupId) { group in
-                    Button(action: {
-                        book.group = group
-                        try? CoreDataStack.shared.save()
-                        dismiss()
-                    }) {
-                        HStack {
-                            Text(group.name)
-                            Spacer()
-                            if book.group?.groupId == group.groupId {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("选择分组")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") { dismiss() }
-                }
-            }
-            .task { loadGroups() }
-        }
-    }
-    
-    private func loadGroups() {
-        let request = BookGroup.fetchRequest() as NSFetchRequest<BookGroup>
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \BookGroup.order, ascending: true)]
-        do {
-            groups = try CoreDataStack.shared.viewContext.fetch(request)
-        } catch { }
     }
 }
 
