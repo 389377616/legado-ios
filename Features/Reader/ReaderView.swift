@@ -1,10 +1,3 @@
-//
-//  ReaderView.swift
-//  Legado-iOS
-//
-//  阅读器主界面 - 参考 Android ReadMenu 布局
-//
-
 import SwiftUI
 import CoreData
 
@@ -25,6 +18,7 @@ struct ReaderView: View {
     @State private var showUI = true
     @State private var brightness: Double = UIScreen.main.brightness
     @State private var isNightMode = false
+    @State private var autoBrightness = true
     
     let bookId: UUID
     
@@ -39,41 +33,31 @@ struct ReaderView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                viewModel.backgroundColor
-                    .ignoresSafeArea()
+                viewModel.backgroundColor.ignoresSafeArea()
                 
                 PagedReaderView(viewModel: viewModel) {
-                        autoPageTurnManager.handleTouch()
-                        withAnimation { showUI.toggle() }
-                    }
-                
-                // MARK: - 主UI容器
-                VStack {
-                    // MARK: - 顶部工具栏
-                    topBar
-                        .opacity(showUI ? 1.0 : 0.0)
-                        .animation(.easeInOut(duration: 0.25), value: showUI)
-                    
-                    Spacer()
-                    
-                    // MARK: - 浮动按钮行（参考Android）
-                    floatingButtons
-                        .opacity(showUI ? 1.0 : 0.0)
-                        .animation(.easeInOut(duration: 0.25), value: showUI)
-                    
-                    // MARK: - 底部工具栏
-                    bottomBar
-                        .opacity(showUI ? 1.0 : 0.0)
-                        .animation(.easeInOut(duration: 0.25), value: showUI)
+                    autoPageTurnManager.handleTouch()
+                    withAnimation { showUI.toggle() }
                 }
                 
-                // MARK: - 左侧亮度滑块（参考Android）
                 if showUI {
+                    VStack(spacing: 0) {
+                        topBar
+                            .transition(.move(edge: .top))
+                        
+                        Spacer()
+                        
+                        floatingButtons
+                            .transition(.opacity)
+                        
+                        bottomBar
+                            .transition(.move(edge: .bottom))
+                    }
+                    
                     brightnessSlider
                         .transition(.opacity)
                 }
                 
-                // 设置面板
                 if showingSettings {
                     ReaderSettingsView(viewModel: viewModel, isPresented: $showingSettings)
                         .transition(.move(edge: .bottom))
@@ -91,7 +75,6 @@ struct ReaderView: View {
                 
                 AutoPageTurnOverlay(manager: autoPageTurnManager)
                 
-                // 加载指示器
                 if viewModel.isLoading {
                     ProgressView()
                         .scaleEffect(1.5)
@@ -101,7 +84,6 @@ struct ReaderView: View {
                         .cornerRadius(10)
                 }
                 
-                // 错误提示
                 if let error = viewModel.errorMessage {
                     VStack {
                         Text(error)
@@ -117,9 +99,7 @@ struct ReaderView: View {
                 viewModel.loadBook(byId: bookId)
                 autoPageTurnManager.onTurnPage = { viewModel.turnToNextPage() }
                 autoPageTurnManager.onChapterComplete = {
-                    Task { @MainActor in
-                        await viewModel.nextChapter()
-                    }
+                    Task { @MainActor in await viewModel.nextChapter() }
                 }
                 readingEnhancementManager.onNightModeChanged = { isNight in
                     viewModel.applyTheme(isNight ? .dark : .light)
@@ -132,27 +112,17 @@ struct ReaderView: View {
                 autoPageTurnManager.stop()
                 readingEnhancementManager.endReadingSession()
             }
-            .onChange(of: viewModel.currentPageIndex) { _ in
-                autoPageTurnManager.reset()
-            }
+            .onChange(of: viewModel.currentPageIndex) { _ in autoPageTurnManager.reset() }
             .alert("阅读提醒", isPresented: Binding(
                 get: { readingEnhancementManager.showReminder },
-                set: { newValue in
-                    if !newValue {
-                        readingEnhancementManager.dismissReminder()
-                    }
-                }
+                set: { if !$0 { readingEnhancementManager.dismissReminder() } }
             )) {
-                Button("知道了") {
-                    readingEnhancementManager.dismissReminder()
-                }
+                Button("知道了") { readingEnhancementManager.dismissReminder() }
             } message: {
                 Text("阅读一段时间了，休息一下眼睛。")
             }
             .sheet(isPresented: $showingChapterList) {
-                if let book = book {
-                    ChapterListView(viewModel: viewModel, book: book)
-                }
+                if let book = book { ChapterListView(viewModel: viewModel, book: book) }
             }
             .sheet(isPresented: $showingChangeSource) {
                 if let book = book {
@@ -162,9 +132,7 @@ struct ReaderView: View {
                 }
             }
             .sheet(isPresented: $showingBookmarks) {
-                if let book = book {
-                    BookmarkSheet(viewModel: viewModel, book: book)
-                }
+                if let book = book { BookmarkSheet(viewModel: viewModel, book: book) }
             }
         }
         .navigationBarHidden(true)
@@ -172,38 +140,40 @@ struct ReaderView: View {
     }
     
     private var topBar: some View {
-        HStack {
-            Button(action: {
-                viewModel.saveProgress()
-                dismiss()
-            }) {
-                Image(systemName: "chevron.left")
-                    .font(.title3)
-                    .frame(width: 44, height: 44)
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Button(action: { viewModel.saveProgress(); dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.title3)
+                        .frame(width: 44, height: 44)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(book?.name ?? "")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                    Text(viewModel.currentChapter?.title ?? "")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                Button(action: { showingChangeSource = true }) {
+                    Text(book?.originName ?? "书源")
+                        .font(.caption)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.2))
+                        .cornerRadius(4)
+                }
             }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(book?.name ?? "")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-                Text(viewModel.currentChapter?.title ?? "")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-            
-            Spacer()
-            
-            Button(action: { showingChapterList = true }) {
-                Image(systemName: "list.bullet")
-                    .font(.title3)
-                    .frame(width: 44, height: 44)
-            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
         }
-        .padding(.horizontal)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
         .background(.ultraThinMaterial)
     }
     
@@ -243,50 +213,37 @@ struct ReaderView: View {
                 
                 HStack(spacing: 20) {
                     Button(action: { Task { await viewModel.prevChapter() } }) {
-                        VStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.title3)
-                            Text("上一章")
-                                .font(.caption2)
-                        }
-                        .frame(maxWidth: .infinity)
+                        Text("上一章")
+                            .font(.subheadline)
                     }
                     .disabled(viewModel.currentChapterIndex <= 0)
                     .opacity(viewModel.currentChapterIndex <= 0 ? 0.5 : 1)
                     
-                    Divider()
-                        .frame(height: 30)
+                    Spacer()
                     
                     Button(action: { Task { await viewModel.nextChapter() } }) {
-                        VStack(spacing: 4) {
-                            Image(systemName: "chevron.right")
-                                .font(.title3)
-                            Text("下一章")
-                                .font(.caption2)
-                        }
-                        .frame(maxWidth: .infinity)
+                        Text("下一章")
+                            .font(.subheadline)
                     }
                     .disabled(viewModel.currentChapterIndex >= viewModel.totalChapters - 1)
                     .opacity(viewModel.currentChapterIndex >= viewModel.totalChapters - 1 ? 0.5 : 1)
                 }
             }
-            .padding(.horizontal)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
+            .padding(.horizontal, 20)
+            .padding(.top, 5)
+            .padding(.bottom, 5)
             
             Divider()
-                .padding(.horizontal)
             
             HStack(spacing: 0) {
-                ToolBarButton(icon: "a.square", title: "设置", action: { showingSettings = true })
+                ToolBarButton(icon: "list.bullet", title: "目录", action: { showingChapterList = true })
                 ToolBarButton(icon: "speaker.wave.2", title: "朗读", action: { showingTTSControls = true })
-                ToolBarButton(icon: "timer", title: "自动", action: { showingAutoPageTurn = true })
-                ToolBarButton(icon: "bookmark", title: "书签", action: { showingBookmarks = true })
-                ToolBarButton(icon: "arrow.triangle.2.circlepath", title: "换源", action: { showingChangeSource = true })
+                ToolBarButton(icon: "a.square", title: "界面", action: { showingSettings = true })
+                ToolBarButton(icon: "gearshape", title: "设置", action: { showingSettings = true })
             }
-            .padding(.vertical, 12)
+            .padding(.vertical, 7)
         }
-        .background(.ultraThinMaterial)
+        .background(Color(.systemGray6))
     }
     
     private var brightnessSlider: some View {
@@ -294,8 +251,11 @@ struct ReaderView: View {
             Spacer()
             HStack {
                 VStack(spacing: 8) {
-                    Image(systemName: "sun.max")
-                        .font(.caption)
+                    Button(action: { autoBrightness.toggle() }) {
+                        Image(systemName: autoBrightness ? "sun.max.circle.fill" : "sun.max.circle")
+                            .font(.title3)
+                    }
+                    .padding(8)
                     
                     Slider(value: $brightness, in: 0...1)
                         .frame(height: 120)
@@ -304,6 +264,7 @@ struct ReaderView: View {
                     
                     Image(systemName: "sun.min")
                         .font(.caption)
+                        .padding(8)
                 }
                 .padding(12)
                 .background(Color.black.opacity(0.6))
@@ -316,7 +277,7 @@ struct ReaderView: View {
             Spacer()
         }
         .onChange(of: brightness) { newValue in
-            UIScreen.main.brightness = newValue
+            if !autoBrightness { UIScreen.main.brightness = newValue }
         }
     }
     
@@ -342,7 +303,6 @@ private struct FloatingButton: View {
     }
 }
 
-// MARK: - 工具栏按钮组件
 struct ToolBarButton: View {
     let icon: String
     let title: String
@@ -350,29 +310,16 @@ struct ToolBarButton: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 Image(systemName: icon)
-                    .font(.title3)
+                    .font(.system(size: 20))
                 Text(title)
-                    .font(.caption2)
+                    .font(.caption)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: 60)
             .foregroundColor(.primary)
         }
     }
 }
 
-// MARK: - 旧分页视图（保留向后兼容）
-struct ReaderPageView: View {
-    @ObservedObject var viewModel: ReaderViewModel
-    
-    var body: some View {
-        PagedReaderView(viewModel: viewModel) {
-            // 默认无操作
-        }
-    }
-}
-
-#Preview {
-    Text("ReaderView Preview")
-}
+#Preview { Text("ReaderView Preview") }
