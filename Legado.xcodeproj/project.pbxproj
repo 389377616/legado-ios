@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		99D84558 /* OtherSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFDD6B9 /* OtherSettingsView.swift */; };
+		AA79879E /* AllBookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82228130 /* AllBookmarksView.swift */; };
+		AA471B63 /* BookshelfManageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC21BB11 /* BookshelfManageView.swift */; };
+		88CE479F /* GroupManageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91B5B3B9 /* GroupManageView.swift */; };
+		8D320709 /* DownloadManageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD6B8F6F /* DownloadManageView.swift */; };
+		B5894EDE /* ChapterListDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98DA8EA6 /* ChapterListDrawer.swift */; };
 		1A00000000000001 /* LegadoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000001 /* LegadoApp.swift */; };
 		1A00000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A10000000000003 /* Assets.xcassets */; };
 		1A00000000000004 /* Legado.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000004 /* Legado.xcdatamodeld */; };
@@ -129,6 +135,12 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		AEFDD6B9 /* OtherSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherSettingsView.swift; sourceTree = "<group>"; };
+		82228130 /* AllBookmarksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllBookmarksView.swift; sourceTree = "<group>"; };
+		AC21BB11 /* BookshelfManageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshelfManageView.swift; sourceTree = "<group>"; };
+		91B5B3B9 /* GroupManageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupManageView.swift; sourceTree = "<group>"; };
+		AD6B8F6F /* DownloadManageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManageView.swift; sourceTree = "<group>"; };
+		98DA8EA6 /* ChapterListDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterListDrawer.swift; sourceTree = "<group>"; };
 		1A10000000000001 /* LegadoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegadoApp.swift; sourceTree = "<group>"; };
 
 		1A10000000000003 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
