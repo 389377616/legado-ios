@@ -132,12 +132,23 @@ final class BookshelfViewModel: ObservableObject {
         guard !url.isEmpty else { return }
         Task { @MainActor in
             let context = CoreDataStack.shared.viewContext
-            let book = Book.create(in: context)
-            book.bookUrl = url
-            book.name = URL(string: url)?.lastPathComponent ?? "未知书籍"
-            book.type = 0
-            try? context.save()
-            await loadBooks()
+            
+            let bookData = BookImportData(
+                name: URL(string: url)?.lastPathComponent ?? "未知书籍",
+                author: "",
+                bookUrl: url,
+                tocUrl: "",
+                origin: "url",
+                originName: "URL导入"
+            )
+            
+            do {
+                _ = try BookDeduplicator.importBook(bookData, context: context)
+                try context.save()
+                await loadBooks()
+            } catch {
+                errorMessage = "添加失败：\(error.localizedDescription)"
+            }
         }
     }
 }
