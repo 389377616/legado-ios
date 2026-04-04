@@ -191,9 +191,9 @@
 		1A100000000000E2 /* FileManageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileManageView.swift; sourceTree = "<group>"; };
 		1A10000000000036 /* AddBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookView.swift; sourceTree = "<group>"; };
 		1A10000000000037 /* LocalBookViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBookViewModel.swift; sourceTree = "<group>"; };
-		1A100000000000E3 /* LocalBookScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBookScanner.swift; sourceTree = "<group>"; };
+		1A100000000000E3 /* LocalBookScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Local/LocalBookScanner.swift"; sourceTree = "<group>"; };
 		1A10000000000038 /* BackupRestoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupRestoreView.swift; sourceTree = "<group>"; };
-		1A100000000000E4 /* GroupManageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupManageView.swift; sourceTree = "<group>"; };
+		1A100000000000E4 /* GroupManageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Source/GroupManageView.swift"; sourceTree = "<group>"; };
 		1A10000000000039 /* ReaderSettingsFullView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsFullView.swift; sourceTree = "<group>"; };
 		1A1000000000003A /* ReplaceRuleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplaceRuleView.swift; sourceTree = "<group>"; };
 		1A10000000000040 /* AnalyzeUrl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyzeUrl.swift; sourceTree = "<group>"; };
