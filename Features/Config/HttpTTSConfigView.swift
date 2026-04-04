@@ -187,7 +187,7 @@ struct HttpTTSEditorView: View {
             try context.save()
             dismiss()
         } catch {
-            DebugLogger.shared.logError("保存TTS引擎失败: \(error)")
+            DebugLogger.shared.log("保存TTS引擎失败: \(error)")
         }
     }
 }

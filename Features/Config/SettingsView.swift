@@ -249,7 +249,7 @@ struct AllBookmarksView: View {
             try context.save()
             bookmarks.remove(atOffsets: offsets)
         } catch {
-            DebugLogger.shared.logError("删除书签失败: \(error)")
+            DebugLogger.shared.log("删除书签失败: \(error)")
         }
     }
 }
