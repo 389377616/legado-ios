@@ -23,19 +23,27 @@ final class HttpTTSPlaybackController: ObservableObject {
     @Published private(set) var engines: [HttpTTS] = []
     @Published var selectedEngineID: Int64?
 
-    private let playbackManager = HttpTTSPlaybackManager()
+    private var playbackManager: HttpTTSPlaybackManager?
+    private var isInitialized = false
 
     init() {
-        Task {
-            await playbackManager.setCallbacks(
-                onStateChange: { [weak self] newState in
-                    self?.state = newState
-                },
-                onProgressChange: { [weak self] newProgress in
-                    self?.progress = newProgress
-                }
-            )
-        }
+    }
+
+    private func ensureInitialized() async {
+        guard !isInitialized else { return }
+        isInitialized = true
+        
+        let manager = HttpTTSPlaybackManager()
+        await manager.setupDelegates()
+        await manager.setCallbacks(
+            onStateChange: { [weak self] newState in
+                self?.state = newState
+            },
+            onProgressChange: { [weak self] newProgress in
+                self?.progress = newProgress
+            }
+        )
+        self.playbackManager = manager
     }
 
     func loadEngines() {
@@ -85,25 +93,26 @@ final class HttpTTSPlaybackController: ObservableObject {
         }
 
         Task {
-            await playbackManager.speak(text: text, config: engine)
+            await ensureInitialized()
+            await playbackManager?.speak(text: text, config: engine)
         }
     }
 
     func pause() {
         Task {
-            await playbackManager.pause()
+            await playbackManager?.pause()
         }
     }
 
     func resume() {
         Task {
-            await playbackManager.resume()
+            await playbackManager?.resume()
         }
     }
 
     func stop() {
         Task {
-            await playbackManager.stop()
+            await playbackManager?.stop()
         }
     }
 }
@@ -126,8 +135,8 @@ struct TTSControlsView: View {
 
     private var engineModeBinding: Binding<TTSEngineMode> {
         Binding(
-            get: { engineMode },
-            set: { engineMode = $0 }
+            get: { TTSEngineMode(rawValue: engineModeRaw) ?? .local },
+            set: { engineModeRaw = $0.rawValue }
         )
     }
 

@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreData
+import SwiftUI
 
 @MainActor
 class SourceViewModel: ObservableObject {
