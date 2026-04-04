@@ -14,6 +14,11 @@ struct SourceManageView: View {
     @StateObject private var viewModel = SourceViewModel()
     @State private var showingEdit = false
     @State private var showingImport = false
+    @State private var showingFileImporter = false
+    @State private var isImportingFromFile = false
+    @State private var showingImportResult = false
+    @State private var importResultMessage = ""
+    @State private var showingGroupManage = false
     @State private var editViewModel: SourceEditViewModel?
     
     // 批量操作状态
@@ -27,14 +32,14 @@ struct SourceManageView: View {
     var body: some View {
         ZStack {
             List {
-                if viewModel.sources.isEmpty {
+                if viewModel.filteredSources.isEmpty {
                     EmptyStateView(
                         title: "暂无书源",
                         subtitle: "点击右上角导入或创建书源",
                         imageName: "square.grid.2x2"
                     )
                 } else {
-                    ForEach(viewModel.sources, id: \.sourceId) { source in
+                    ForEach(viewModel.filteredSources, id: \.sourceId) { source in
                         SourceItemView(
                             source: source,
                             isSelected: selectedSources.contains(source.sourceId),
@@ -87,8 +92,28 @@ struct SourceManageView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
                         Menu {
+                            Picker("分组筛选", selection: $viewModel.selectedGroup) {
+                                Text("全部分组").tag(String?.none)
+                                Divider()
+                                ForEach(viewModel.allGroups, id: \.self) { group in
+                                    Text(group).tag(String?.some(group))
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            Button(action: { showingGroupManage = true }) {
+                                Label("分组管理", systemImage: "folder")
+                            }
+                            
+                            Divider()
+                            
                             Button(action: { showingImport = true }) {
                                 Label("导入书源", systemImage: "square.and.arrow.down")
+                            }
+
+                            Button(action: { showingFileImporter = true }) {
+                                Label("从文件导入", systemImage: "doc.badge.arrow.down")
                             }
                             
                             Button(action: exportAllSources) {
@@ -117,8 +142,30 @@ struct SourceManageView: View {
                     SourceEditView(viewModel: editViewModel)
                 }
             }
+            .sheet(isPresented: $showingGroupManage) {
+                GroupManageView(viewModel: viewModel)
+            }
             .sheet(isPresented: $showingImport) {
                 SourceImportView(viewModel: viewModel)
+            }
+            .fileImporter(
+                isPresented: $showingFileImporter,
+                allowedContentTypes: [.json, .plainText, .text],
+                allowsMultipleSelection: true
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    isImportingFromFile = true
+                    Task { @MainActor in
+                        let summary = await viewModel.importFromFiles(urls)
+                        importResultMessage = summary.message
+                        isImportingFromFile = false
+                        showingImportResult = true
+                    }
+                case .failure(let error):
+                    importResultMessage = "选择文件失败：\(error.localizedDescription)"
+                    showingImportResult = true
+                }
             }
             .fileExporter(
                 isPresented: $showingExporter,
@@ -143,6 +190,11 @@ struct SourceManageView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "未知错误")
             }
+            .alert("导入结果", isPresented: $showingImportResult) {
+                Button("确定", role: .cancel) { }
+            } message: {
+                Text(importResultMessage)
+            }
             
             // MARK: - 底部批量操作栏
             if isEditMode && !viewModel.sources.isEmpty {
@@ -158,6 +210,16 @@ struct SourceManageView: View {
                         onDelete: batchDelete
                     )
                 }
+            }
+
+            if isImportingFromFile {
+                Color.black.opacity(0.08)
+                    .ignoresSafeArea()
+
+                ProgressView("正在导入文件书源…")
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
     }

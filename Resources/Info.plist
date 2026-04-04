@@ -124,5 +124,12 @@
             </dict>
         </dict>
     </array>
+
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>用于在局域网设备访问本机 Web 服务。</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_http._tcp</string>
+    </array>
 </dict>
 </plist>

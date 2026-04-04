@@ -36,6 +36,9 @@ struct BookshelfView: View {
                         Button(action: importLocalBook) {
                             Label("导入本地", systemImage: "folder")
                         }
+                        NavigationLink(destination: LocalBookView(onImportTapped: importLocalBook)) {
+                            Label("本地书籍", systemImage: "books.vertical")
+                        }
                         Button(action: { viewModel.showingAddUrl = true }) {
                             Label("添加网址", systemImage: "link")
                         }

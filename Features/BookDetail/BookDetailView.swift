@@ -359,10 +359,18 @@ class BookDetailViewModel: ObservableObject {
             if let chapter = existingByUrl[url] {
                 chapter.title = web.title
                 chapter.index = Int32(web.index)
+                chapter.isVIP = web.isVip
+                if let updateTime = web.updateTime {
+                    chapter.updateTime = updateTime
+                }
             } else {
                 let chapter = BookChapter.create(in: context, bookId: book.bookId, url: url, index: Int32(web.index), title: web.title)
                 chapter.book = book
                 chapter.sourceId = source.sourceId.uuidString
+                chapter.isVIP = web.isVip
+                if let updateTime = web.updateTime {
+                    chapter.updateTime = updateTime
+                }
             }
         }
         book.totalChapterNum = Int32(webChapters.count)

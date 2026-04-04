@@ -43,6 +43,7 @@ class ExecutionContext {
     var document: Any?
     var jsonString: String?
     var jsonDict: [String: Any]?
+    var jsonValue: Any?
     var baseURL: URL?
     var source: BookSource?
     var variables: [String: String] = [:]
@@ -343,28 +344,22 @@ class RuleEngine {
               let json = try? JSONSerialization.jsonObject(with: data) else {
             throw RuleError.noDocument
         }
-        
-        let path = ruleStr.replacingOccurrences(of: "$.", with: "")
-        let keys = path.split(separator: ".").map { String($0) }
-        
-        var current: Any? = json
-        for key in keys {
-            if let dict = current as? [String: Any] {
-                current = dict[key]
-            } else if let array = current as? [Any], let index = Int(key) {
-                current = index < array.count ? array[index] : nil
-            } else {
-                break
-            }
-        }
-        
-        if let array = current as? [[String: Any]] {
-            return array.map { ElementContext(element: $0) }
-        } else if let array = current as? [Any] {
+
+        let path = normalizeJSONPath(ruleStr)
+        let values = JSONPathParser.evaluate(path: path, root: json)
+
+        if values.count == 1, let array = values.first as? [Any] {
             return array.map { ElementContext(element: $0) }
         }
-        
-        return []
+
+        return values.map { ElementContext(element: $0) }
+    }
+
+    private func normalizeJSONPath(_ rule: String) -> String {
+        let trimmed = rule.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("$") { return trimmed }
+        if trimmed.hasPrefix("[") { return "$\(trimmed)" }
+        return "$.\(trimmed)"
     }
     
     // MARK: - 在元素上下文中提取字符串
@@ -467,21 +462,10 @@ class RuleEngine {
     
     /// 从 JSON 字典中提取字符串
     private func getStringFromJson(ruleStr: String, json: [String: Any]) -> String {
-        let path = ruleStr.replacingOccurrences(of: "$.", with: "")
-        let keys = path.split(separator: ".").map { String($0) }
-        
-        var current: Any? = json
-        for key in keys {
-            if let dict = current as? [String: Any] {
-                current = dict[key]
-            } else {
-                return ""
-            }
-        }
-        
-        if let str = current as? String { return str }
-        if let num = current as? NSNumber { return num.stringValue }
-        return ""
+        let path = normalizeJSONPath(ruleStr)
+        let values = JSONPathParser.evaluate(path: path, root: json)
+        guard let first = values.first else { return "" }
+        return JSONPathParser.stringify(first) ?? ""
     }
     
     /// 解析相对 URL
@@ -518,7 +502,7 @@ class CSSParser: RuleExecutor {
     var kind: RuleKind { .css }
     
     func canExecute(_ rule: String) -> Bool {
-        return !rule.hasPrefix("//") && !rule.hasPrefix("$.") && !rule.hasPrefix("{{")
+        return !rule.hasPrefix("//") && !rule.hasPrefix("$") && !rule.hasPrefix("{{")
     }
     
     func execute(_ rule: String, context: ExecutionContext) throws -> RuleResult {
@@ -597,52 +581,531 @@ class JSONPathParser: RuleExecutor {
     var kind: RuleKind { .jsonPath }
     
     func canExecute(_ rule: String) -> Bool {
-        return rule.hasPrefix("$.")
+        return rule.hasPrefix("$")
     }
     
     func execute(_ rule: String, context: ExecutionContext) throws -> RuleResult {
-        if context.jsonDict == nil, let jsonString = context.jsonString {
-            let data = jsonString.data(using: .utf8)!
-            context.jsonDict = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let root = try loadJSONRoot(from: context)
+        let values = Self.evaluate(path: rule, root: root)
+        return Self.toRuleResult(values)
+    }
+
+    static func evaluate(path: String, root: Any) -> [Any] {
+        JSONPathEvaluator.evaluate(path: path, root: root)
+    }
+
+    static func stringify(_ value: Any) -> String? {
+        JSONPathEvaluator.stringify(value)
+    }
+
+    private func loadJSONRoot(from context: ExecutionContext) throws -> Any {
+        if let cached = context.jsonValue {
+            return cached
         }
-        
-        guard let dict = context.jsonDict else {
-            throw RuleError.noDocument
+
+        if let dict = context.jsonDict {
+            context.jsonValue = dict
+            return dict
         }
-        
-        let value = evaluateJSONPath(rule, json: dict)
-        
-        if let string = value as? String {
-            return .string(string)
-        } else if let array = value as? [Any] {
-            let strings = array.compactMap { $0 as? String }
+
+        if let jsonString = context.jsonString,
+           let data = jsonString.data(using: .utf8) {
+            let object = try JSONSerialization.jsonObject(with: data)
+            context.jsonValue = object
+            if let dict = object as? [String: Any] {
+                context.jsonDict = dict
+            }
+            return object
+        }
+
+        throw RuleError.noDocument
+    }
+
+    private static func toRuleResult(_ values: [Any]) -> RuleResult {
+        guard !values.isEmpty else { return .none }
+
+        if values.count == 1, let array = values[0] as? [Any] {
+            let strings = array.compactMap { stringify($0) }
+            guard !strings.isEmpty else { return .none }
+            if strings.count == 1 {
+                return .string(strings[0])
+            }
             return .list(strings)
         }
-        
-        return .none
+
+        if values.count == 1, let string = stringify(values[0]) {
+            return .string(string)
+        }
+
+        let strings = values.compactMap { stringify($0) }
+        guard !strings.isEmpty else { return .none }
+        if strings.count == 1 {
+            return .string(strings[0])
+        }
+        return .list(strings)
     }
-    
-    private func evaluateJSONPath(_ path: String, json: [String: Any]) -> Any? {
-        let cleanPath = path.replacingOccurrences(of: "$.", with: "")
-        let keys = cleanPath.split(separator: ".").map { String($0) }
-        
-        var current: Any? = json
-        for key in keys {
-            guard let dict = current as? [String: Any] else { return nil }
-            
-            if let bracketRange = key.range(of: "["), key.hasSuffix("]") {
-                let arrayKey = String(key[..<bracketRange.lowerBound])
-                let indexStr = String(key[bracketRange.upperBound...].dropLast())
-                guard let index = Int(indexStr),
-                      let array = dict[arrayKey] as? [[String: Any]],
-                      index < array.count else { return nil }
-                current = array[index]
-            } else {
-                current = dict[key]
+}
+
+private enum JSONPathEvaluator {
+    private enum Segment {
+        case key(String)
+        case wildcard
+        case index(Int)
+        case slice(Int?, Int?)
+        case filter(FilterExpression)
+    }
+
+    private struct FilterExpression {
+        let keyPath: [String]
+        let `operator`: FilterOperator
+        let expected: FilterValue
+    }
+
+    private enum FilterOperator: String {
+        case equal = "=="
+        case notEqual = "!="
+        case lessThan = "<"
+        case lessThanOrEqual = "<="
+        case greaterThan = ">"
+        case greaterThanOrEqual = ">="
+    }
+
+    private enum FilterValue: Equatable {
+        case string(String)
+        case number(Double)
+        case bool(Bool)
+        case null
+    }
+
+    static func evaluate(path: String, root: Any) -> [Any] {
+        guard let segments = parse(path: path) else { return [] }
+
+        var current: [Any] = [root]
+        for segment in segments {
+            current = apply(segment: segment, to: current)
+            if current.isEmpty { break }
+        }
+        return current
+    }
+
+    static func stringify(_ value: Any) -> String? {
+        if let string = value as? String { return string }
+        if let bool = boolValue(from: value) { return bool ? "true" : "false" }
+        if let number = numberValue(from: value) { return number.stringValue }
+        if value is NSNull { return "null" }
+
+        if JSONSerialization.isValidJSONObject(value),
+           let data = try? JSONSerialization.data(withJSONObject: value),
+           let jsonString = String(data: data, encoding: .utf8) {
+            return jsonString
+        }
+
+        return nil
+    }
+
+    private static func parse(path: String) -> [Segment]? {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasPrefix("$") else { return nil }
+        if trimmed == "$" { return [] }
+
+        var segments: [Segment] = []
+        var index = trimmed.index(after: trimmed.startIndex)
+
+        while index < trimmed.endIndex {
+            let char = trimmed[index]
+
+            if char == "." {
+                index = trimmed.index(after: index)
+                guard index < trimmed.endIndex else { return nil }
+
+                if trimmed[index] == "*" {
+                    segments.append(.wildcard)
+                    index = trimmed.index(after: index)
+                    continue
+                }
+
+                let keyStart = index
+                while index < trimmed.endIndex {
+                    let currentChar = trimmed[index]
+                    if currentChar == "." || currentChar == "[" { break }
+                    index = trimmed.index(after: index)
+                }
+
+                let key = String(trimmed[keyStart..<index]).trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !key.isEmpty else { return nil }
+                segments.append(.key(key))
+                continue
+            }
+
+            if char == "[" {
+                guard let closeIndex = findClosingBracket(in: trimmed, from: index) else { return nil }
+                let rawContent = String(trimmed[trimmed.index(after: index)..<closeIndex])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                guard let segment = parseBracketSegment(rawContent) else { return nil }
+                segments.append(segment)
+                index = trimmed.index(after: closeIndex)
+                continue
+            }
+
+            let keyStart = index
+            while index < trimmed.endIndex {
+                let currentChar = trimmed[index]
+                if currentChar == "." || currentChar == "[" { break }
+                index = trimmed.index(after: index)
+            }
+
+            let key = String(trimmed[keyStart..<index]).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !key.isEmpty else { return nil }
+            segments.append(.key(key))
+        }
+
+        return segments
+    }
+
+    private static func findClosingBracket(in path: String, from openIndex: String.Index) -> String.Index? {
+        var index = path.index(after: openIndex)
+        var inSingleQuote = false
+        var inDoubleQuote = false
+        var parenthesesDepth = 0
+
+        while index < path.endIndex {
+            let char = path[index]
+
+            if char == "\\" {
+                index = path.index(after: index)
+                if index < path.endIndex {
+                    index = path.index(after: index)
+                }
+                continue
+            }
+
+            if char == "'" && !inDoubleQuote {
+                inSingleQuote.toggle()
+                index = path.index(after: index)
+                continue
+            }
+
+            if char == "\"" && !inSingleQuote {
+                inDoubleQuote.toggle()
+                index = path.index(after: index)
+                continue
+            }
+
+            if !inSingleQuote && !inDoubleQuote {
+                if char == "(" {
+                    parenthesesDepth += 1
+                } else if char == ")" && parenthesesDepth > 0 {
+                    parenthesesDepth -= 1
+                } else if char == "]" && parenthesesDepth == 0 {
+                    return index
+                }
+            }
+
+            index = path.index(after: index)
+        }
+
+        return nil
+    }
+
+    private static func parseBracketSegment(_ content: String) -> Segment? {
+        if content == "*" {
+            return .wildcard
+        }
+
+        if content.hasPrefix("?("), content.hasSuffix(")") {
+            let filterExpr = String(content.dropFirst(2).dropLast())
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let filter = parseFilter(filterExpr) else { return nil }
+            return .filter(filter)
+        }
+
+        if content.contains(":") {
+            let parts = content.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+            guard parts.count == 2 else { return nil }
+
+            let startText = String(parts[0]).trimmingCharacters(in: .whitespacesAndNewlines)
+            let endText = String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+
+            let start = startText.isEmpty ? nil : Int(startText)
+            let end = endText.isEmpty ? nil : Int(endText)
+
+            if (!startText.isEmpty && start == nil) || (!endText.isEmpty && end == nil) {
+                return nil
+            }
+            if start == nil && end == nil {
+                return nil
+            }
+
+            return .slice(start, end)
+        }
+
+        if let quotedKey = parseQuotedString(content) {
+            return .key(quotedKey)
+        }
+
+        if let index = Int(content) {
+            return .index(index)
+        }
+
+        if !content.isEmpty {
+            return .key(content)
+        }
+
+        return nil
+    }
+
+    private static func parseQuotedString(_ input: String) -> String? {
+        guard input.count >= 2,
+              let first = input.first,
+              let last = input.last,
+              first == last,
+              first == "'" || first == "\"" else {
+            return nil
+        }
+
+        var value = String(input.dropFirst().dropLast())
+        if first == "'" {
+            value = value.replacingOccurrences(of: "\\'", with: "'")
+        } else {
+            value = value.replacingOccurrences(of: "\\\"", with: "\"")
+        }
+        value = value.replacingOccurrences(of: "\\\\", with: "\\")
+        return value
+    }
+
+    private static func parseFilter(_ expression: String) -> FilterExpression? {
+        let pattern = #"^@\.(.+?)\s*(==|!=|<=|>=|<|>)\s*(.+)$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(
+                in: expression,
+                range: NSRange(expression.startIndex..., in: expression)
+              ),
+              let pathRange = Range(match.range(at: 1), in: expression),
+              let opRange = Range(match.range(at: 2), in: expression),
+              let expectedRange = Range(match.range(at: 3), in: expression) else {
+            return nil
+        }
+
+        let keyPath = expression[pathRange]
+            .split(separator: ".")
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !keyPath.isEmpty else { return nil }
+
+        guard let op = FilterOperator(rawValue: String(expression[opRange])) else {
+            return nil
+        }
+
+        let expectedText = String(expression[expectedRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let expected = parseFilterValue(expectedText) else { return nil }
+
+        return FilterExpression(keyPath: keyPath, operator: op, expected: expected)
+    }
+
+    private static func parseFilterValue(_ input: String) -> FilterValue? {
+        if let quoted = parseQuotedString(input) {
+            return .string(quoted)
+        }
+
+        switch input.lowercased() {
+        case "true":
+            return .bool(true)
+        case "false":
+            return .bool(false)
+        case "null":
+            return .null
+        default:
+            break
+        }
+
+        if let number = Double(input) {
+            return .number(number)
+        }
+
+        if !input.isEmpty {
+            return .string(input)
+        }
+
+        return nil
+    }
+
+    private static func apply(segment: Segment, to values: [Any]) -> [Any] {
+        switch segment {
+        case .key(let key):
+            return values.compactMap { applyKey($0, key: key) }
+
+        case .wildcard:
+            return values.flatMap { value in
+                if let dict = value as? [String: Any] {
+                    return Array(dict.values)
+                }
+                if let array = value as? [Any] {
+                    return array
+                }
+                return []
+            }
+
+        case .index(let index):
+            return values.compactMap { value in
+                guard let array = value as? [Any] else { return nil }
+                return valueAtIndex(array, index: index)
+            }
+
+        case .slice(let start, let end):
+            return values.flatMap { value in
+                guard let array = value as? [Any] else { return [] }
+                return slice(array, start: start, end: end)
+            }
+
+        case .filter(let filter):
+            return values.flatMap { value in
+                guard let array = value as? [Any] else { return [] }
+                return array.filter { matchesFilter(item: $0, filter: filter) }
             }
         }
-        
+    }
+
+    private static func applyKey(_ value: Any, key: String) -> Any? {
+        if let dict = value as? [String: Any] {
+            return dict[key]
+        }
+
+        if let array = value as? [Any], let index = Int(key) {
+            return valueAtIndex(array, index: index)
+        }
+
+        return nil
+    }
+
+    private static func valueAtIndex(_ array: [Any], index: Int) -> Any? {
+        let resolvedIndex = index >= 0 ? index : array.count + index
+        guard resolvedIndex >= 0, resolvedIndex < array.count else { return nil }
+        return array[resolvedIndex]
+    }
+
+    private static func slice(_ array: [Any], start: Int?, end: Int?) -> [Any] {
+        guard !array.isEmpty else { return [] }
+
+        let lowerBound = normalizedSliceBound(start, count: array.count, defaultValue: 0)
+        let upperBound = normalizedSliceBound(end, count: array.count, defaultValue: array.count)
+
+        guard lowerBound < upperBound else { return [] }
+        return Array(array[lowerBound..<upperBound])
+    }
+
+    private static func normalizedSliceBound(_ value: Int?, count: Int, defaultValue: Int) -> Int {
+        guard let value else { return defaultValue }
+        let resolved = value >= 0 ? value : count + value
+        return min(max(resolved, 0), count)
+    }
+
+    private static func matchesFilter(item: Any, filter: FilterExpression) -> Bool {
+        guard let value = value(at: filter.keyPath, in: item),
+              let lhs = filterValue(from: value) else {
+            return false
+        }
+
+        return compare(lhs: lhs, rhs: filter.expected, op: filter.operator)
+    }
+
+    private static func value(at keyPath: [String], in item: Any) -> Any? {
+        var current: Any? = item
+
+        for key in keyPath {
+            guard let value = current else { return nil }
+
+            if let dict = value as? [String: Any] {
+                current = dict[key]
+                continue
+            }
+
+            if let array = value as? [Any], let index = Int(key) {
+                current = valueAtIndex(array, index: index)
+                continue
+            }
+
+            return nil
+        }
+
         return current
+    }
+
+    private static func filterValue(from value: Any) -> FilterValue? {
+        if value is NSNull { return .null }
+        if let string = value as? String { return .string(string) }
+        if let bool = boolValue(from: value) { return .bool(bool) }
+        if let number = numberValue(from: value) { return .number(number.doubleValue) }
+        return nil
+    }
+
+    private static func compare(lhs: FilterValue, rhs: FilterValue, op: FilterOperator) -> Bool {
+        switch op {
+        case .equal:
+            return lhs == rhs
+        case .notEqual:
+            return lhs != rhs
+        case .lessThan, .lessThanOrEqual, .greaterThan, .greaterThanOrEqual:
+            return compareOrdered(lhs: lhs, rhs: rhs, op: op)
+        }
+    }
+
+    private static func compareOrdered(
+        lhs: FilterValue,
+        rhs: FilterValue,
+        op: FilterOperator
+    ) -> Bool {
+        switch (lhs, rhs) {
+        case (.number(let left), .number(let right)):
+            switch op {
+            case .lessThan:
+                return left < right
+            case .lessThanOrEqual:
+                return left <= right
+            case .greaterThan:
+                return left > right
+            case .greaterThanOrEqual:
+                return left >= right
+            default:
+                return false
+            }
+
+        case (.string(let left), .string(let right)):
+            let result = left.compare(right)
+            switch op {
+            case .lessThan:
+                return result == .orderedAscending
+            case .lessThanOrEqual:
+                return result == .orderedAscending || result == .orderedSame
+            case .greaterThan:
+                return result == .orderedDescending
+            case .greaterThanOrEqual:
+                return result == .orderedDescending || result == .orderedSame
+            default:
+                return false
+            }
+
+        default:
+            return false
+        }
+    }
+
+    private static func boolValue(from value: Any) -> Bool? {
+        if let bool = value as? Bool { return bool }
+        guard let number = value as? NSNumber else { return nil }
+        if CFGetTypeID(number) == CFBooleanGetTypeID() {
+            return number.boolValue
+        }
+        return nil
+    }
+
+    private static func numberValue(from value: Any) -> NSNumber? {
+        if value is Bool { return nil }
+        guard let number = value as? NSNumber else { return nil }
+        if CFGetTypeID(number) == CFBooleanGetTypeID() {
+            return nil
+        }
+        return number
     }
 }
 

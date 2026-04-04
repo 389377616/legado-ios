@@ -136,17 +136,6 @@ extension BookSource {
         }
     }
     
-    /// 目录规则
-    struct TocRule: Codable {
-        var chapterList: String?
-        var chapterName: String?
-        var chapterUrl: String?
-        var isVip: String?
-        var isPay: String?
-        var updateTime: String?
-        var nextTocUrl: String?
-    }
-    
     /// 正文规则
     struct ContentRule: Codable {
         var content: String?

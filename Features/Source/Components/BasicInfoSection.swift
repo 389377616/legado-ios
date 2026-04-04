@@ -33,11 +33,30 @@ struct BasicInfoSection: View {
                 placeholder: "书源名称"
             )
 
-            RuleFieldEditor(
-                title: "书源分组",
-                text: $viewModel.source.bookSourceGroup.orEmpty,
-                placeholder: "可选分组"
-            )
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("书源分组")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    if !viewModel.allGroups.isEmpty {
+                        Menu {
+                            ForEach(viewModel.allGroups, id: \.self) { group in
+                                Button(group) {
+                                    viewModel.source.bookSourceGroup = group
+                                }
+                            }
+                        } label: {
+                            Text("选择现有")
+                                .font(.caption)
+                        }
+                    }
+                }
+                
+                TextField("可选分组", text: $viewModel.source.bookSourceGroup.orEmpty)
+            }
 
             RuleFieldEditor(
                 title: "请求头 Header (JSON)",

@@ -14,6 +14,12 @@ import UniformTypeIdentifiers
 class LocalBookViewModel: ObservableObject {
     @Published var localBooks: [Book] = []
     @Published var isImporting = false
+    @Published var isScanning = false
+    @Published var scanProgress: Double = 0
+    @Published var scanStatusMessage = ""
+    @Published var scanResults: [URL] = []
+    @Published var selectedScanPaths: Set<String> = []
+    @Published var showingScanResults = false
     @Published var errorMessage: String?
     @Published var successMessage: String?
     
@@ -152,6 +158,9 @@ class LocalBookViewModel: ObservableObject {
                 DebugLogger.shared.log("错误: 导入后找不到书籍")
                 throw LocalBookError.parseFailed
             }
+
+            LocalBookScanner.shared.markScanned(url)
+            await loadLocalBooks()
             return importedBook
         } catch {
             isImporting = false
@@ -198,6 +207,108 @@ class LocalBookViewModel: ObservableObject {
         } catch {
             errorMessage = "加载失败：\(error.localizedDescription)"
         }
+    }
+
+    func scanDirectory(from directoryURL: URL, recursive: Bool = true) {
+        errorMessage = nil
+        successMessage = nil
+        isScanning = true
+        showingScanResults = false
+        scanResults = []
+        selectedScanPaths = []
+        scanProgress = 0
+        scanStatusMessage = "准备扫描"
+
+        let didStartAccess = directoryURL.startAccessingSecurityScopedResource()
+        Task.detached(priority: .userInitiated) { [directoryURL, recursive] in
+            defer {
+                if didStartAccess {
+                    directoryURL.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            let scanner = LocalBookScanner.shared
+            let results = scanner.scanDirectory(url: directoryURL, recursive: recursive) { [weak self] processed, total, found in
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.scanProgress = total > 0 ? Double(processed) / Double(total) : 0
+                    self.scanStatusMessage = total > 0
+                        ? "已扫描 \(processed)/\(total)，发现 \(found) 个文件"
+                        : "已发现 \(found) 个文件"
+                }
+            }
+
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.isScanning = false
+                self.scanResults = results
+                self.selectedScanPaths = Set(results.map { Self.scanKey(for: $0) })
+                self.scanProgress = 1
+
+                if results.isEmpty {
+                    self.scanStatusMessage = "未发现可导入的 TXT/EPUB 文件"
+                    self.successMessage = self.scanStatusMessage
+                } else {
+                    self.scanStatusMessage = "扫描完成，发现 \(results.count) 个可导入文件"
+                    self.successMessage = self.scanStatusMessage
+                    self.showingScanResults = true
+                }
+            }
+        }
+    }
+
+    func toggleScanSelection(_ url: URL) {
+        let key = Self.scanKey(for: url)
+        if selectedScanPaths.contains(key) {
+            selectedScanPaths.remove(key)
+        } else {
+            selectedScanPaths.insert(key)
+        }
+    }
+
+    func selectAllScanResults() {
+        selectedScanPaths = Set(scanResults.map { Self.scanKey(for: $0) })
+    }
+
+    func clearScanSelection() {
+        selectedScanPaths.removeAll()
+    }
+
+    func importSelectedScannedBooks() async {
+        let selectedURLs = scanResults.filter { selectedScanPaths.contains(Self.scanKey(for: $0)) }
+        guard !selectedURLs.isEmpty else {
+            errorMessage = "请先选择要导入的文件"
+            return
+        }
+
+        isImporting = true
+        errorMessage = nil
+        successMessage = nil
+
+        var successCount = 0
+        var failedFiles: [String] = []
+
+        for url in selectedURLs {
+            do {
+                _ = try await importBook(url: url)
+                successCount += 1
+                LocalBookScanner.shared.markScanned(url)
+            } catch {
+                failedFiles.append(url.lastPathComponent)
+            }
+        }
+
+        isImporting = false
+        await loadLocalBooks()
+
+        if failedFiles.isEmpty {
+            successMessage = "批量导入完成：成功 \(successCount) 本"
+        } else {
+            successMessage = "批量导入完成：成功 \(successCount) 本，失败 \(failedFiles.count) 本"
+            errorMessage = failedFiles.joined(separator: "、")
+        }
+
+        showingScanResults = false
     }
     
     private func parseTXT(file url: URL, book: Book) async throws {
@@ -377,6 +488,10 @@ class LocalBookViewModel: ObservableObject {
         
         return coverURL
     }
+
+    fileprivate static func scanKey(for url: URL) -> String {
+        url.standardizedFileURL.resolvingSymlinksInPath().path.lowercased()
+    }
     
     func deleteBook(_ book: Book) {
         if book.origin == "local" {
@@ -410,14 +525,26 @@ enum LocalBookError: LocalizedError {
 
 struct LocalBookView: View {
     @StateObject private var viewModel = LocalBookViewModel()
+    @State private var showingDirectoryImporter = false
+    @AppStorage("local_book_scan_recursive") private var scanRecursive = true
     var onImportTapped: () -> Void
     
     var body: some View {
         Group {
+            if viewModel.isScanning {
+                VStack(alignment: .leading, spacing: 10) {
+                    ProgressView(value: viewModel.scanProgress)
+                    Text(viewModel.scanStatusMessage)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+            }
+
             if viewModel.localBooks.isEmpty {
                 EmptyStateView(
                     title: "暂无本地书籍",
-                    subtitle: "点击右上角导入 TXT 或 EPUB 文件",
+                    subtitle: "点击右上角导入，或扫描目录批量发现 TXT/EPUB",
                     imageName: "book.closed"
                 )
             } else {
@@ -458,19 +585,105 @@ struct LocalBookView: View {
         }
         .navigationTitle("本地书籍")
         .toolbar {
-            ToolbarItem {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Button(action: onImportTapped) {
                     if viewModel.isImporting {
                         ProgressView()
                     } else {
-                        Label("导入", systemImage: "plus")
+                        Image(systemName: "plus")
                     }
                 }
-                .disabled(viewModel.isImporting)
+                .disabled(viewModel.isImporting || viewModel.isScanning)
+
+                Button {
+                    showingDirectoryImporter = true
+                } label: {
+                    Image(systemName: "folder.badge.plus")
+                }
+                .disabled(viewModel.isImporting || viewModel.isScanning)
             }
         }
         .task {
             await viewModel.loadLocalBooks()
+        }
+        .sheet(isPresented: $viewModel.showingScanResults) {
+            NavigationStack {
+                LocalBookScanResultView(viewModel: viewModel)
+            }
+        }
+        .fileImporter(
+            isPresented: $showingDirectoryImporter,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                viewModel.scanDirectory(from: url, recursive: scanRecursive)
+            case .failure(let error):
+                viewModel.errorMessage = "选择目录失败：\(error.localizedDescription)"
+            }
+        }
+    }
+}
+
+struct LocalBookScanResultView: View {
+    @ObservedObject var viewModel: LocalBookViewModel
+    @AppStorage("local_book_scan_recursive") private var scanRecursive = true
+
+    var body: some View {
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(viewModel.scanStatusMessage)
+                        .font(.headline)
+                    Text("已选中 \(viewModel.selectedScanPaths.count) 个文件")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+
+            Section {
+                Toggle("递归扫描子目录", isOn: $scanRecursive)
+            }
+
+            Section(header: Text("扫描结果")) {
+                ForEach(viewModel.scanResults, id: \.path) { url in
+                    Button {
+                        viewModel.toggleScanSelection(url)
+                    } label: {
+                        HStack {
+                            Image(systemName: viewModel.selectedScanPaths.contains(LocalBookViewModel.scanKey(for: url)) ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(.blue)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(url.lastPathComponent)
+                                    .foregroundColor(.primary)
+                                Text(url.path)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("扫描结果")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("全选") {
+                    viewModel.selectAllScanResults()
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("导入") {
+                    Task { await viewModel.importSelectedScannedBooks() }
+                }
+                .disabled(viewModel.isImporting || viewModel.selectedScanPaths.isEmpty)
+            }
         }
     }
 }

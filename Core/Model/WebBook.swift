@@ -29,12 +29,14 @@ struct WebChapter {
     var url: String = ""
     var index: Int = 0
     var isVip: Bool = false
+    var updateTime: Int64?
 }
 
 /// WebBook 核心操作类
 class WebBook {
     
     private static let ruleEngine = RuleEngine()
+    private static let tocParser = TocParser(ruleEngine: ruleEngine)
     
     // MARK: - 搜索
     
@@ -176,91 +178,47 @@ class WebBook {
         guard !body.isEmpty else {
             throw WebBookError.emptyResponse
         }
-        
-        // 2. 解析章节列表
-        var chapters: [WebChapter] = []
-        
-        let elements = try ruleEngine.getElements(
-            ruleStr: tocRule.chapterList,
+
+        var chapters = try tocParser.parseChapters(
             body: body,
-            baseUrl: redirectUrl
+            baseUrl: redirectUrl,
+            rule: tocRule,
+            startIndex: 0
         )
-        
-        for (index, elementCtx) in elements.enumerated() {
-            var chapter = WebChapter()
-            chapter.index = index
-            
-            chapter.title = ruleEngine.getString(
-                ruleStr: tocRule.chapterName,
-                elementContext: elementCtx,
-                baseUrl: redirectUrl
+
+        var pageBody = body
+        var pageUrl = redirectUrl
+        var visitedUrls: Set<String> = [redirectUrl]
+
+        while let nextUrl = tocParser.parseNextPageUrl(body: pageBody, baseUrl: pageUrl, rule: tocRule),
+              !nextUrl.isEmpty,
+              !visitedUrls.contains(nextUrl) {
+            visitedUrls.insert(nextUrl)
+            let nextAnalyzedUrl = AnalyzeUrl.analyze(
+                ruleUrl: nextUrl,
+                baseUrl: source.bookSourceUrl,
+                source: source
             )
-            
-            chapter.url = ruleEngine.getString(
-                ruleStr: tocRule.chapterUrl,
-                elementContext: elementCtx,
-                baseUrl: redirectUrl
+            let (nextBody, nextRedirectUrl) = try await AnalyzeUrl.getResponseBody(analyzedUrl: nextAnalyzedUrl)
+            guard !nextBody.isEmpty else { break }
+
+            visitedUrls.insert(nextRedirectUrl)
+            let nextChapters = try tocParser.parseChapters(
+                body: nextBody,
+                baseUrl: nextRedirectUrl,
+                rule: tocRule,
+                startIndex: chapters.count
             )
-            
-            if let isVipRule = tocRule.isVip {
-                let vipStr = ruleEngine.getString(ruleStr: isVipRule, elementContext: elementCtx)
-                chapter.isVip = vipStr == "true" || vipStr == "1"
-            }
-            
-            if !chapter.title.isEmpty {
-                chapters.append(chapter)
+            chapters.append(contentsOf: nextChapters)
+
+            pageBody = nextBody
+            pageUrl = nextRedirectUrl
+
+            if visitedUrls.count >= 100 || chapters.count > 10000 {
+                break
             }
         }
-        
-        // 3. 处理目录分页（nextTocUrl）
-        if let nextTocUrlRule = tocRule.nextTocUrl, !nextTocUrlRule.isEmpty {
-            var nextBody = body
-            var nextRedirectUrl = redirectUrl
-            
-            while true {
-                let context = ExecutionContext()
-                context.document = try SwiftSoup.parse(nextBody)
-                context.baseURL = URL(string: nextRedirectUrl)
-                
-                let elementCtx = ElementContext(
-                    element: try SwiftSoup.parse(nextBody),
-                    baseUrl: nextRedirectUrl
-                )
-                let nextUrl = ruleEngine.getString(ruleStr: nextTocUrlRule, elementContext: elementCtx, baseUrl: nextRedirectUrl)
-                
-                guard !nextUrl.isEmpty, nextUrl != nextRedirectUrl else { break }
-                
-                let nextAnalyzedUrl = AnalyzeUrl.analyze(
-                    ruleUrl: nextUrl,
-                    baseUrl: source.bookSourceUrl,
-                    source: source
-                )
-                let result = try await AnalyzeUrl.getResponseBody(analyzedUrl: nextAnalyzedUrl)
-                nextBody = result.body
-                nextRedirectUrl = result.url
-                
-                let nextElements = try ruleEngine.getElements(
-                    ruleStr: tocRule.chapterList,
-                    body: nextBody,
-                    baseUrl: nextRedirectUrl
-                )
-                
-                for elementCtx in nextElements {
-                    var chapter = WebChapter()
-                    chapter.index = chapters.count
-                    chapter.title = ruleEngine.getString(ruleStr: tocRule.chapterName, elementContext: elementCtx, baseUrl: nextRedirectUrl)
-                    chapter.url = ruleEngine.getString(ruleStr: tocRule.chapterUrl, elementContext: elementCtx, baseUrl: nextRedirectUrl)
-                    
-                    if !chapter.title.isEmpty {
-                        chapters.append(chapter)
-                    }
-                }
-                
-                // 防止无限循环，最多 100 页
-                if chapters.count > 10000 { break }
-            }
-        }
-        
+
         return chapters
     }
     

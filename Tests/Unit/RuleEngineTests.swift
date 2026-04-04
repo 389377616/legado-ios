@@ -12,6 +12,20 @@ final class RuleEngineTests: XCTestCase {
     
     var ruleEngine: RuleEngine!
     var context: ExecutionContext!
+
+    private let bookstoreJSON = """
+    {
+        "store": {
+            "book": [
+                {"title": "Book A", "author": "Author A", "price": 8.95},
+                {"title": "Book B", "author": "Author B", "price": 12.99},
+                {"title": "Book C", "author": "Author C", "price": 8.99}
+            ],
+            "bicycle": {"color": "red", "price": 19.95}
+        },
+        "expensive": 10
+    }
+    """
     
     override func setUp() async throws {
         try await super.setUp()
@@ -23,6 +37,18 @@ final class RuleEngineTests: XCTestCase {
         ruleEngine = nil
         context = nil
         try await super.tearDown()
+    }
+
+    private func evaluate(_ rule: String, json: String? = nil) throws -> RuleResult {
+        context.jsonString = json ?? bookstoreJSON
+        context.jsonDict = nil
+        context.jsonValue = nil
+        return try ruleEngine.executeSingle(rule: rule, context: context)
+    }
+
+    private func assertNone(_ result: RuleResult, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertNil(result.string, file: file, line: line)
+        XCTAssertNil(result.list, file: file, line: line)
     }
     
     // MARK: - JSONPath 测试
@@ -37,8 +63,7 @@ final class RuleEngineTests: XCTestCase {
         }
         """
         
-        context.jsonString = json
-        let result = try ruleEngine.executeSingle(rule: "$.book.name", context: context)
+        let result = try evaluate("$.book.name", json: json)
         
         XCTAssertEqual(result.string, "测试书籍")
     }
@@ -52,11 +77,75 @@ final class RuleEngineTests: XCTestCase {
             ]
         }
         """
-        
-        context.jsonString = json
-        let result = try ruleEngine.executeSingle(rule: "$.books[0].name", context: context)
+
+        let result = try evaluate("$.books[0].name", json: json)
         
         XCTAssertEqual(result.string, "书籍 1")
+    }
+
+    func testJSONPathParser_dotSyntax() throws {
+        let result = try evaluate("$.store.book")
+        XCTAssertEqual(result.list?.count, 3)
+    }
+
+    func testJSONPathParser_bracketNotationList() throws {
+        let result = try evaluate("$['store']['book']")
+        XCTAssertEqual(result.list?.count, 3)
+    }
+
+    func testJSONPathParser_bracketNotation() throws {
+        let result = try evaluate("$['store']['book'][0]['author']")
+        XCTAssertEqual(result.string, "Author A")
+    }
+
+    func testJSONPathParser_negativeIndex() throws {
+        let result = try evaluate("$.store.book[-1].author")
+        XCTAssertEqual(result.string, "Author C")
+    }
+
+    func testJSONPathParser_wildcardArray() throws {
+        let result = try evaluate("$.store.book[*].author")
+        XCTAssertEqual(result.list ?? [], ["Author A", "Author B", "Author C"])
+    }
+
+    func testJSONPathParser_wildcardObject() throws {
+        let result = try evaluate("$.*")
+        let values = result.list ?? []
+
+        XCTAssertTrue(values.contains("10"))
+        XCTAssertTrue(values.contains(where: { $0.contains("\"book\"") }))
+    }
+
+    func testJSONPathParser_slice() throws {
+        let result = try evaluate("$.store.book[0:2].author")
+        XCTAssertEqual(result.list ?? [], ["Author A", "Author B"])
+    }
+
+    func testJSONPathParser_filterExpression() throws {
+        let result = try evaluate("$.store.book[?(@.price < 10)].author")
+        XCTAssertEqual(result.list ?? [], ["Author A", "Author C"])
+    }
+
+    func testJSONPathParser_nestedPath() throws {
+        let result = try evaluate("$.store.book[0].author")
+        XCTAssertEqual(result.string, "Author A")
+    }
+
+    func testJSONPathParser_boundaryCases() throws {
+        assertNone(try evaluate("$.store.book[99].author"))
+        assertNone(try evaluate("$.store.notExist"))
+        assertNone(try evaluate("$.store.book[?(@.price < 1)].author"))
+
+        let emptyArrayJSON = """
+        {
+            "store": {
+                "book": []
+            }
+        }
+        """
+
+        assertNone(try evaluate("$.store.book[-1]", json: emptyArrayJSON))
+        assertNone(try evaluate("$.store.book[0:2]", json: emptyArrayJSON))
     }
     
     // MARK: - CSS 选择器测试

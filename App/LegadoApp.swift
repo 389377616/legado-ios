@@ -87,6 +87,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         
         let stack = CoreDataStack.shared
         _ = stack.persistentContainer
+
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: "webServer.enabled") {
+            let storedPort = defaults.integer(forKey: "webServer.port")
+            let port = storedPort == 0 ? 1122 : storedPort
+            WebServerCoordinator.shared.start(port: port)
+        }
         
         DebugLogger.shared.dumpCoreDataState()
         

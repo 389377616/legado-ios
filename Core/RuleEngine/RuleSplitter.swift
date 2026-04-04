@@ -84,7 +84,7 @@ class RuleSplitter {
         if trimmed.hasPrefix("//") {
             return (.xpath, trimmed)
         }
-        if trimmed.hasPrefix("$.") {
+        if trimmed.hasPrefix("$") {
             return (.jsonPath, trimmed)
         }
         if lowercased.hasPrefix("regex:") || lowercased.contains("{{regex") {

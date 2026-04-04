@@ -9,6 +9,10 @@ import SwiftUI
 import CoreData
 
 struct SettingsLegacyView: View {
+    @AppStorage("webServer.enabled") private var webServerEnabled = false
+    @AppStorage("webServer.port") private var webServerPort = 1122
+    @StateObject private var webServerCoordinator = WebServerCoordinator.shared
+
     var body: some View {
         NavigationView {
             List {
@@ -59,6 +63,32 @@ struct SettingsLegacyView: View {
                         FileManageView()
                     }
                 }
+
+                Section(header: Text("Web 服务")) {
+                    Toggle("启用 Web 服务", isOn: $webServerEnabled)
+
+                    Stepper(value: $webServerPort, in: 1024...65535) {
+                        Text("端口: \(webServerPort)")
+                    }
+                    .disabled(!webServerEnabled)
+
+                    HStack {
+                        Text("状态")
+                        Spacer()
+                        Text(webServerCoordinator.isRunning ? "运行中" : "已停止")
+                            .foregroundColor(webServerCoordinator.isRunning ? .green : .secondary)
+                    }
+
+                    if let lastErrorMessage = webServerCoordinator.lastErrorMessage, !lastErrorMessage.isEmpty {
+                        Text(lastErrorMessage)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+
+                    Text("局域网访问: http://<本机IP>:\(webServerPort)/health")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
                 
                 Section(header: Text("规则")) {
                     NavigationLink("替换规则") {
@@ -99,6 +129,25 @@ struct SettingsLegacyView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle("我的")
+            .onAppear {
+                syncWebServerState()
+            }
+            .onChange(of: webServerEnabled) { _ in
+                syncWebServerState()
+            }
+            .onChange(of: webServerPort) { _ in
+                if webServerEnabled {
+                    webServerCoordinator.start(port: webServerPort)
+                }
+            }
+        }
+    }
+
+    private func syncWebServerState() {
+        if webServerEnabled {
+            webServerCoordinator.start(port: webServerPort)
+        } else {
+            webServerCoordinator.stop()
         }
     }
 }

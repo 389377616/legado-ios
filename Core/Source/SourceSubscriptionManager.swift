@@ -302,7 +302,7 @@ struct ExportableSource: Codable {
     var ruleSearch: BookSource.SearchRule?
     var ruleExplore: BookSource.ExploreRule?
     var ruleBookInfo: BookSource.BookInfoRule?
-    var ruleToc: BookSource.TocRule?
+    var ruleToc: TocRule?
     var ruleContent: BookSource.ContentRule?
     
     init(from source: BookSource) {
@@ -323,7 +323,7 @@ struct ExportableSource: Codable {
         self.ruleSearch = try? source.ruleSearchData.flatMap { try JSONDecoder().decode(BookSource.SearchRule.self, from: $0) }
         self.ruleExplore = try? source.ruleExploreData.flatMap { try JSONDecoder().decode(BookSource.ExploreRule.self, from: $0) }
         self.ruleBookInfo = try? source.ruleBookInfoData.flatMap { try JSONDecoder().decode(BookSource.BookInfoRule.self, from: $0) }
-        self.ruleToc = try? source.ruleTocData.flatMap { try JSONDecoder().decode(BookSource.TocRule.self, from: $0) }
+        self.ruleToc = try? source.ruleTocData.flatMap { try JSONDecoder().decode(TocRule.self, from: $0) }
         self.ruleContent = try? source.ruleContentData.flatMap { try JSONDecoder().decode(BookSource.ContentRule.self, from: $0) }
     }
 }

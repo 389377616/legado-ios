@@ -7,10 +7,11 @@ class SourceEditViewModel: ObservableObject {
     @Published var searchRule: BookSource.SearchRule
     @Published var exploreRule: BookSource.ExploreRule
     @Published var bookInfoRule: BookSource.BookInfoRule
-    @Published var tocRule: BookSource.TocRule
+    @Published var tocRule: TocRule
     @Published var contentRule: BookSource.ContentRule
     @Published var errorMessage: String?
     @Published var didSave = false
+    @Published var allGroups: [String] = []
 
     private let context: NSManagedObjectContext
     private var persistedSource: BookSource?
@@ -29,16 +30,40 @@ class SourceEditViewModel: ObservableObject {
             self.searchRule = source.getSearchRule() ?? BookSource.SearchRule()
             self.exploreRule = source.getExploreRule() ?? BookSource.ExploreRule()
             self.bookInfoRule = source.getBookInfoRule() ?? BookSource.BookInfoRule()
-            self.tocRule = source.getTocRule() ?? BookSource.TocRule()
+            self.tocRule = source.getTocRule() ?? TocRule()
             self.contentRule = source.getContentRule() ?? BookSource.ContentRule()
         } else {
             self.searchRule = BookSource.SearchRule()
             self.exploreRule = BookSource.ExploreRule()
             self.bookInfoRule = BookSource.BookInfoRule()
-            self.tocRule = BookSource.TocRule()
+            self.tocRule = TocRule()
             self.contentRule = BookSource.ContentRule()
         }
         self.source = draftSource
+        
+        loadGroups()
+    }
+    
+    private func loadGroups() {
+        let request: NSFetchRequest<BookSource> = BookSource.fetchRequest()
+        request.propertiesToFetch = ["bookSourceGroup"]
+        request.returnsDistinctResults = true
+        request.resultType = .dictionaryResultType
+        
+        var groupSet = Set<String>()
+        if let results = try? context.fetch(request) as? [[String: Any]] {
+            for dict in results {
+                if let g = dict["bookSourceGroup"] as? String, !g.isEmpty {
+                    groupSet.insert(g)
+                }
+            }
+        }
+        
+        let customData = UserDefaults.standard.data(forKey: "customSourceGroups") ?? Data()
+        if let array = try? JSONDecoder().decode([String].self, from: customData) {
+            groupSet.formUnion(array)
+        }
+        allGroups = Array(groupSet).sorted()
     }
 
     func save() {
@@ -129,7 +154,7 @@ class SourceEditViewModel: ObservableObject {
             searchRule = payload.ruleSearch ?? BookSource.SearchRule()
             exploreRule = payload.ruleExplore ?? BookSource.ExploreRule()
             bookInfoRule = payload.ruleBookInfo ?? BookSource.BookInfoRule()
-            tocRule = payload.ruleToc ?? BookSource.TocRule()
+            tocRule = payload.ruleToc ?? TocRule()
             contentRule = payload.ruleContent ?? BookSource.ContentRule()
             errorMessage = nil
         } catch {
@@ -207,6 +232,6 @@ private struct SourcePayload: Codable {
     var ruleSearch: BookSource.SearchRule?
     var ruleExplore: BookSource.ExploreRule?
     var ruleBookInfo: BookSource.BookInfoRule?
-    var ruleToc: BookSource.TocRule?
+    var ruleToc: TocRule?
     var ruleContent: BookSource.ContentRule?
 }
