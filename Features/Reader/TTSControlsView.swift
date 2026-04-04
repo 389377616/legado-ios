@@ -34,7 +34,6 @@ final class HttpTTSPlaybackController: ObservableObject {
         isInitialized = true
         
         let manager = HttpTTSPlaybackManager()
-        await manager.setupDelegates()
         await manager.setCallbacks(
             onStateChange: { [weak self] newState in
                 self?.state = newState

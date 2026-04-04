@@ -55,7 +55,7 @@ enum HttpTTSPlaybackError: LocalizedError {
     }
 }
 
-private final class HttpTTSAudioDelegate: NSObject, AVAudioPlayerDelegate {
+private final class HttpTTSAudioDelegate: NSObject, AVAudioPlayerDelegate, @unchecked Sendable {
     var onFinish: ((Bool) -> Void)?
     var onDecodeError: ((Error?) -> Void)?
 
@@ -83,11 +83,12 @@ actor HttpTTSPlaybackManager {
     private var currentHeaders: [String: String] = [:]
     private var currentCacheKey: String = ""
     private var maxRetryCount: Int = 2
+    private var delegatesConfigured = false
 
     private var stateHandler: StateChangeHandler?
     private var progressHandler: ProgressChangeHandler?
 
-    init() {
+    nonisolated init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 120
@@ -97,28 +98,23 @@ actor HttpTTSPlaybackManager {
         let baseCache = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         self.cacheDirectory = baseCache.appendingPathComponent("HttpTTSCache", isDirectory: true)
+    }
 
+    private func configureDelegatesIfNeeded() {
+        guard !delegatesConfigured else { return }
+        delegatesConfigured = true
+        
         audioDelegate.onFinish = { [weak self] success in
-            Task {
+            Task { [weak self] in
                 await self?.handlePlaybackFinished(success: success)
             }
         }
 
         audioDelegate.onDecodeError = { [weak self] error in
-            Task {
+            Task { [weak self] in
                 await self?.handlePlaybackError(error)
             }
         }
-    }
-
-    func setCallbacks(
-        onStateChange: StateChangeHandler?,
-        onProgressChange: ProgressChangeHandler?
-    ) {
-        self.stateHandler = onStateChange
-        self.progressHandler = onProgressChange
-        notifyStateChanged()
-        notifyProgressChanged()
     }
 
     func setRetryCount(_ retryCount: Int) {
@@ -134,6 +130,8 @@ actor HttpTTSPlaybackManager {
     }
 
     func speak(text: String, config: HttpTTS) async {
+        configureDelegatesIfNeeded()
+        
         let normalizedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedText.isEmpty else {
             updateState(.failed("朗读文本为空"))
