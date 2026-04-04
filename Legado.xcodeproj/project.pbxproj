@@ -132,6 +132,7 @@
 		1A0000000000008C /* BackgroundCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008C /* BackgroundCacheService.swift */; };
 1A0000000000008D /* IntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008D /* IntegrationTests.swift */; };
 		1A0000000000008E /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008E /* DebugLogger.swift */; };
+		1A0000000000008F /* HttpTTSConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000008F /* HttpTTSConfigView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -259,6 +260,7 @@
 		1A1000000000008C /* BackgroundCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundCacheService.swift; sourceTree = "<group>"; };
 1A1000000000008D /* IntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationTests.swift; sourceTree = "<group>"; };
 		1A1000000000008E /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
+		1A1000000000008F /* HttpTTSConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HttpTTSConfigView.swift; sourceTree = "<group>"; };
 		1A1000000000006D /* EPUBReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/EPUBReaderView.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -526,6 +528,7 @@
 				1A10000000000046 /* ReplaceRuleDebugView.swift */,
 				1A100000000000E1 /* TxtTocRuleView.swift */,
 				1A100000000000E2 /* FileManageView.swift */,
+				1A1000000000008F /* HttpTTSConfigView.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -777,6 +780,7 @@
 				1A000000000000E0 /* HTMLToTextConverter.swift in Sources */,
 				1A000000000000E1 /* TxtTocRuleView.swift in Sources */,
 				1A000000000000E2 /* FileManageView.swift in Sources */,
+				1A0000000000008F /* HttpTTSConfigView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

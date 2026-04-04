@@ -40,14 +40,14 @@ struct BookshelfView: View {
                             Label("添加网址", systemImage: "link")
                         }
                         Divider()
-                        NavigationLink(destination: Text("书架管理")) {
+                        NavigationLink(destination: BookshelfManagePanel(viewModel: viewModel)) {
                             Label("书架管理", systemImage: "slider.horizontal.3")
                         }
-                        NavigationLink(destination: Text("分组管理")) {
+                        NavigationLink(destination: GroupManagePanel()) {
                             Label("分组管理", systemImage: "folder.badge.gearshape")
                         }
                         Divider()
-                        NavigationLink(destination: Text("下载管理")) {
+                        NavigationLink(destination: DownloadManagePanel()) {
                             Label("下载管理", systemImage: "arrow.down.circle")
                         }
                         Button(action: { viewModel.updateAllToc() }) {
@@ -559,6 +559,115 @@ struct EmptyStateView: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct BookshelfManagePanel: View {
+    @ObservedObject var viewModel: BookshelfViewModel
+
+    var body: some View {
+        Form {
+            Section(header: Text("显示方式")) {
+                Picker("布局", selection: $viewModel.viewMode) {
+                    Text("网格").tag(BookshelfViewModel.ViewMode.grid)
+                    Text("列表").tag(BookshelfViewModel.ViewMode.list)
+                }
+                .pickerStyle(.segmented)
+            }
+
+            Section(header: Text("排序方式")) {
+                Picker("排序", selection: $viewModel.sortMode) {
+                    Text("最近阅读").tag(BookshelfViewModel.SortMode.readTime)
+                    Text("更新时间").tag(BookshelfViewModel.SortMode.updateTime)
+                    Text("书名").tag(BookshelfViewModel.SortMode.name)
+                    Text("作者").tag(BookshelfViewModel.SortMode.author)
+                }
+            }
+
+            Section(header: Text("附加选项")) {
+                Toggle("显示未读标记", isOn: $viewModel.showUnread)
+                Toggle("显示更新时间", isOn: $viewModel.showUpdateTime)
+                Toggle("显示快速滚动条", isOn: $viewModel.showFastScroller)
+            }
+        }
+        .navigationTitle("书架管理")
+    }
+}
+
+struct GroupManagePanel: View {
+    @State private var groups: [BookGroup] = []
+    @State private var newGroupName = ""
+
+    var body: some View {
+        List {
+            Section(header: Text("新增分组")) {
+                HStack {
+                    TextField("分组名称", text: $newGroupName)
+                    Button("添加") {
+                        addGroup()
+                    }
+                    .disabled(newGroupName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+
+            Section(header: Text("已有分组")) {
+                ForEach(groups, id: \.groupId) { group in
+                    HStack {
+                        Text(group.groupName)
+                        Spacer()
+                        if group.isSystem {
+                            Text("系统")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .onDelete(perform: deleteGroup)
+            }
+        }
+        .navigationTitle("分组管理")
+        .task {
+            loadGroups()
+        }
+    }
+
+    private func loadGroups() {
+        let context = CoreDataStack.shared.viewContext
+        let request: NSFetchRequest<BookGroup> = BookGroup.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "order", ascending: true)]
+        groups = (try? context.fetch(request)) ?? []
+    }
+
+    private func addGroup() {
+        let name = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        let context = CoreDataStack.shared.viewContext
+        _ = BookGroup.create(in: context, groupName: name)
+        try? context.save()
+        newGroupName = ""
+        loadGroups()
+    }
+
+    private func deleteGroup(at offsets: IndexSet) {
+        let context = CoreDataStack.shared.viewContext
+        for index in offsets {
+            let group = groups[index]
+            guard !group.isSystem else { continue }
+            context.delete(group)
+        }
+        try? context.save()
+        loadGroups()
+    }
+}
+
+struct DownloadManagePanel: View {
+    var body: some View {
+        EmptyStateView(
+            title: "暂无下载任务",
+            subtitle: "缓存章节或批量下载后会显示在这里",
+            imageName: "arrow.down.circle"
+        )
+        .navigationTitle("下载管理")
     }
 }
 

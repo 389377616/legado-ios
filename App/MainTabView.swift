@@ -47,70 +47,8 @@ struct MainTabView: View {
 
 // MARK: - 设置视图（完善版）
 struct SettingsView: View {
-    @State private var showingAbout = false
-    @State private var showingQRScanner = false
-    
     var body: some View {
-        NavigationView {
-            List {
-                Section {
-                    NavigationLink(destination: SourceManageView()) {
-                        Label("书源管理", systemImage: "books.vertical")
-                    }
-                    
-                    NavigationLink(destination: TxtTocRuleView()) {
-                        Label("TXT目录规则", systemImage: "list.bullet.rectangle")
-                    }
-                    
-                    NavigationLink(destination: ReplaceRuleView()) {
-                        Label("替换净化", systemImage: "arrow.3.trianglepath")
-                    }
-                    
-                    NavigationLink(destination: DictRuleView()) {
-                        Label("词典规则", systemImage: "book")
-                    }
-                    
-                    NavigationLink(destination: ThemeSettingsView()) {
-                        Label("主题模式", systemImage: "circle.lefthalf.filled")
-                    }
-                }
-                
-                Section("设置") {
-                    NavigationLink(destination: BackupRestoreView()) {
-                        Label("备份恢复", systemImage: "externaldrive")
-                    }
-                    
-                    NavigationLink(destination: ReaderSettingsFullView()) {
-                        Label("阅读设置", systemImage: "book.pages")
-                    }
-                    
-                    NavigationLink(destination: Text("其他设置")) {
-                        Label("其他设置", systemImage: "gearshape")
-                    }
-                }
-                
-                Section("其他") {
-                    NavigationLink(destination: Text("全部书签")) {
-                        Label("书签", systemImage: "bookmark")
-                    }
-                    
-                    NavigationLink(destination: ReadingStatisticsView()) {
-                        Label("阅读记录", systemImage: "clock")
-                    }
-                    
-                    NavigationLink(destination: FileManageView()) {
-                        Label("文件管理", systemImage: "folder")
-                    }
-                    
-                    NavigationLink(destination: AboutView()) {
-                        Label("关于", systemImage: "info.circle")
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle("我的")
-            .navigationBarTitleDisplayMode(.inline)
-        }
+        SettingsLegacyView()
     }
 }
 
