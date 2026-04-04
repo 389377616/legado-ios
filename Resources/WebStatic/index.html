@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legado 书架管理</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Legado Web</h2>
+        <nav>
+            <a href="/static/index.html" class="active">主页</a>
+            <a href="/static/books.html">书架</a>
+            <a href="/static/sources.html">书源</a>
+        </nav>
+    </div>
+    <div class="main-content">
+        <header>
+            <h1>欢迎使用 Legado Web 管理界面</h1>
+        </header>
+        <main>
+            <div class="dashboard-cards">
+                <div class="card" onclick="location.href='/static/books.html'">
+                    <h3>我的书架</h3>
+                    <p>管理您的阅读进度和藏书</p>
+                </div>
+                <div class="card" onclick="location.href='/static/sources.html'">
+                    <h3>书源管理</h3>
+                    <p>启用或禁用您的书源配置</p>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

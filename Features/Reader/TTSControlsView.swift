@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import CoreData
+import Combine
 
 enum TTSEngineMode: String, CaseIterable {
     case local = "local"
@@ -124,9 +125,17 @@ struct TTSControlsView: View {
 
     @StateObject private var onlineController = HttpTTSPlaybackController()
     @State private var showVoicePicker = false
+    @State private var showSleepTimerOptions = false
+    @State private var showCustomSleepTimerSheet = false
+    @State private var customSleepMinutes = 90
+    @State private var sleepTimerEndDate: Date?
+    @State private var sleepTimerRemainingSeconds = 0
 
     @AppStorage("tts.engine.mode") private var engineModeRaw: String = TTSEngineMode.local.rawValue
     @AppStorage("tts.online.engineId") private var storedOnlineEngineID: Int = 0
+    @Environment(\.scenePhase) private var scenePhase
+
+    private let sleepTimerTicker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var engineMode: TTSEngineMode {
         get { TTSEngineMode(rawValue: engineModeRaw) ?? .local }
@@ -173,6 +182,10 @@ struct TTSControlsView: View {
             Divider()
 
             settingsSection
+
+            Divider()
+
+            sleepTimerSection
         }
         .padding()
         .background(Color(.systemBackground))
@@ -182,9 +195,18 @@ struct TTSControlsView: View {
         .task {
             onlineController.loadEngines()
             onlineController.restoreSelection(from: storedOnlineEngineID)
+            refreshSleepTimerCountdown(referenceDate: Date())
         }
         .onDisappear {
             onlineController.stop()
+        }
+        .onReceive(sleepTimerTicker) { _ in
+            refreshSleepTimerCountdown(referenceDate: Date())
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .active {
+                refreshSleepTimerCountdown(referenceDate: Date())
+            }
         }
         .onChange(of: onlineController.selectedEngineID) { newValue in
             storedOnlineEngineID = newValue.map { Int($0) } ?? 0
@@ -401,6 +423,104 @@ struct TTSControlsView: View {
         }
     }
 
+    private var sleepTimerSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("定时关闭", systemImage: "timer")
+                    .font(.subheadline)
+
+                Spacer()
+
+                if hasActiveSleepTimer {
+                    Text("剩余 \(formatRemainingTime(sleepTimerRemainingSeconds))")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                } else {
+                    Text("未开启")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            HStack(spacing: 12) {
+                Button(hasActiveSleepTimer ? "重新设置" : "定时关闭") {
+                    showSleepTimerOptions = true
+                }
+                .buttonStyle(.bordered)
+
+                if hasActiveSleepTimer {
+                    Button("取消定时", role: .destructive) {
+                        cancelSleepTimer()
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            Text("提示：iOS 在后台时定时器刷新可能暂停，回到前台会根据目标时间重新计算并在到时后停止朗读。")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .confirmationDialog("定时关闭", isPresented: $showSleepTimerOptions, titleVisibility: .visible) {
+            Button("15 分钟") {
+                startSleepTimer(minutes: 15)
+            }
+            Button("30 分钟") {
+                startSleepTimer(minutes: 30)
+            }
+            Button("60 分钟") {
+                startSleepTimer(minutes: 60)
+            }
+            Button("自定义时长") {
+                showCustomSleepTimerSheet = true
+            }
+
+            if hasActiveSleepTimer {
+                Button("取消定时", role: .destructive) {
+                    cancelSleepTimer()
+                }
+            }
+
+            Button("取消", role: .cancel) {}
+        }
+        .sheet(isPresented: $showCustomSleepTimerSheet) {
+            customSleepTimerSheet
+        }
+    }
+
+    private var customSleepTimerSheet: some View {
+        NavigationView {
+            Form {
+                Section("时长") {
+                    Stepper(value: $customSleepMinutes, in: 5...360, step: 5) {
+                        Text("\(customSleepMinutes) 分钟")
+                    }
+                }
+
+                Section {
+                    Text("到时会自动停止当前朗读，你也可以随时手动取消定时。")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .navigationTitle("自定义定时")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") {
+                        showCustomSleepTimerSheet = false
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("确定") {
+                        startSleepTimer(minutes: customSleepMinutes)
+                        showCustomSleepTimerSheet = false
+                    }
+                }
+            }
+        }
+    }
+
     private var onlineEnginePicker: some View {
         VStack(alignment: .leading, spacing: 6) {
             if onlineController.engines.isEmpty {
@@ -555,6 +675,47 @@ struct TTSControlsView: View {
             onParagraphComplete: {},
             onTextComplete: {}
         )
+    }
+
+    private var hasActiveSleepTimer: Bool {
+        sleepTimerEndDate != nil && sleepTimerRemainingSeconds > 0
+    }
+
+    private func startSleepTimer(minutes: Int) {
+        let safeMinutes = max(1, minutes)
+        sleepTimerEndDate = Date().addingTimeInterval(TimeInterval(safeMinutes * 60))
+        refreshSleepTimerCountdown(referenceDate: Date())
+    }
+
+    private func cancelSleepTimer() {
+        sleepTimerEndDate = nil
+        sleepTimerRemainingSeconds = 0
+    }
+
+    private func refreshSleepTimerCountdown(referenceDate: Date) {
+        guard let endDate = sleepTimerEndDate else { return }
+
+        let remaining = Int(endDate.timeIntervalSince(referenceDate))
+        if remaining <= 0 {
+            cancelSleepTimer()
+            stopPlayback()
+            return
+        }
+
+        sleepTimerRemainingSeconds = remaining
+    }
+
+    private func formatRemainingTime(_ seconds: Int) -> String {
+        let clamped = max(0, seconds)
+        let hours = clamped / 3600
+        let minutes = (clamped % 3600) / 60
+        let second = clamped % 60
+
+        if hours > 0 {
+            return String(format: "%02d:%02d:%02d", hours, minutes, second)
+        }
+
+        return String(format: "%02d:%02d", minutes, second)
     }
 
     private func formatDuration(_ value: TimeInterval) -> String {

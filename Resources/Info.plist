@@ -94,6 +94,12 @@
     </array>
     
     <!-- 后台模式 -->
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>com.chrn11.legado.rssrefresh</string>
+        <string>com.chrn11.legado.cachebook</string>
+    </array>
+
     <key>UIBackgroundModes</key>
     <array>
         <string>audio</string>

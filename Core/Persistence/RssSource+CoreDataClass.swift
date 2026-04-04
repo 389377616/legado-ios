@@ -48,6 +48,8 @@ public class RssSource: NSManagedObject, Identifiable {
     // MARK: - 排序与时间
     @NSManaged public var customOrder: Int32
     @NSManaged public var lastUpdateTime: Int64
+    @NSManaged public var lastRefreshTime: Int64
+    @NSManaged public var refreshFailureCount: Int32
     @NSManaged public var variable: String?
     @NSManaged public var variableComment: String?
     @NSManaged public var customTag: String?
@@ -82,6 +84,8 @@ extension RssSource {
         source.enableJs = false
         source.customOrder = 0
         source.lastUpdateTime = Int64(Date().timeIntervalSince1970 * 1000)
+        source.lastRefreshTime = 0
+        source.refreshFailureCount = 0
         return source
     }
 }
@@ -118,6 +122,8 @@ extension RssSource {
         var enableJs: Bool
         var customOrder: Int32
         var lastUpdateTime: Int64
+        var lastRefreshTime: Int64
+        var refreshFailureCount: Int32
         var variable: String?
         var variableComment: String?
         var customTag: String?
@@ -137,7 +143,8 @@ extension RssSource {
             ruleDescription: ruleDescription, ruleImage: ruleImage,
             ruleLink: ruleLink, ruleContent: ruleContent, style: style,
             injectJs: injectJs, enableJs: enableJs, customOrder: customOrder,
-            lastUpdateTime: lastUpdateTime, variable: variable,
+            lastUpdateTime: lastUpdateTime, lastRefreshTime: lastRefreshTime,
+            refreshFailureCount: refreshFailureCount, variable: variable,
             variableComment: variableComment, customTag: customTag,
             coverDecodeJs: coverDecodeJs
         )
@@ -173,6 +180,8 @@ extension RssSource {
         self.enableJs = form.enableJs
         self.customOrder = form.customOrder
         self.lastUpdateTime = form.lastUpdateTime
+        self.lastRefreshTime = form.lastRefreshTime
+        self.refreshFailureCount = form.refreshFailureCount
         self.variable = form.variable
         self.variableComment = form.variableComment
         self.customTag = form.customTag

@@ -67,6 +67,18 @@ final class WebServerCoordinator: ObservableObject {
     }
 
     private func registerRoutes() {
+        router.register(method: "GET", path: "/") { [weak self] request in
+            guard let self else {
+                return HTTPResponse.text(statusCode: 500, text: "服务未就绪")
+            }
+
+            guard self.isAuthorized(request) else {
+                return HTTPResponse.json(statusCode: 401, payload: ["error": "未授权"])
+            }
+
+            return self.serveStaticFile(for: request)
+        }
+
         router.register(method: "GET", path: "/health") { _ in
             HTTPResponse.text(statusCode: 200, text: "OK")
         }
@@ -176,8 +188,8 @@ final class WebServerCoordinator: ObservableObject {
 
         relativePath = relativePath.removingPercentEncoding ?? relativePath
 
-        guard !relativePath.isEmpty else {
-            return HTTPResponse.text(statusCode: 400, text: "Bad Request")
+        if relativePath.isEmpty || relativePath == "/" {
+            relativePath = "index.html"
         }
 
         guard !relativePath.contains("..") else {

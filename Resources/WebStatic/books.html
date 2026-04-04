@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legado 书架</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Legado Web</h2>
+        <nav>
+            <a href="/static/index.html">主页</a>
+            <a href="/static/books.html" class="active">书架</a>
+            <a href="/static/sources.html">书源</a>
+        </nav>
+    </div>
+    <div class="main-content">
+        <header>
+            <h1>我的书架</h1>
+            <div class="actions">
+                <input type="text" id="searchInput" placeholder="搜索书名或作者..." onkeyup="filterBooks()">
+                <select id="sortSelect" onchange="sortBooks()">
+                    <option value="name_asc">书名 (A-Z)</option>
+                    <option value="name_desc">书名 (Z-A)</option>
+                    <option value="progress_desc">进度 (高-低)</option>
+                    <option value="progress_asc">进度 (低-高)</option>
+                </select>
+            </div>
+        </header>
+        <main>
+            <div id="loading" class="loading">加载中...</div>
+            <div id="bookList" class="grid-list"></div>
+        </main>
+    </div>
+    <script src="/static/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', loadBooks);
+    </script>
+</body>
+</html>

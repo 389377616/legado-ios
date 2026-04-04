@@ -54,6 +54,9 @@
 		1A000000000000E3 /* LocalBookScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000E3 /* LocalBookScanner.swift */; };
 		1A00000000000038 /* BackupRestoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000038 /* BackupRestoreView.swift */; };
 		1A000000000000E4 /* GroupManageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000E4 /* GroupManageView.swift */; };
+		1A000000000000F5 /* RuleBasedRSSParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F5 /* RuleBasedRSSParser.swift */; };
+		1A000000000000F6 /* RSSRefreshManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F6 /* RSSRefreshManager.swift */; };
+		1A000000000000F7 /* RSSViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F7 /* RSSViewModel.swift */; };
 		1A00000000000039 /* ReaderSettingsFullView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000039 /* ReaderSettingsFullView.swift */; };
 		1A0000000000003A /* ReplaceRuleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000003A /* ReplaceRuleView.swift */; };
 		1A0000000000003B /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 1AC0000000000001 /* SwiftSoup */; };
@@ -141,6 +144,9 @@
 		1A000000000000F0 /* WebServerCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F0 /* WebServerCoordinator.swift */; };
 		1A000000000000F1 /* HTTPRequestHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F1 /* HTTPRequestHandler.swift */; };
 		1A000000000000F2 /* WebServerDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F2 /* WebServerDataProvider.swift */; };
+		1A000000000000F3 /* RuleBasedRSSParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F3 /* RuleBasedRSSParser.swift */; };
+		1A000000000000F4 /* RSSRefreshManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F4 /* RSSRefreshManager.swift */; };
+		1A000000000000F5 /* RSSViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F5 /* RSSViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -194,6 +200,9 @@
 		1A100000000000E3 /* LocalBookScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Local/LocalBookScanner.swift"; sourceTree = "<group>"; };
 		1A10000000000038 /* BackupRestoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupRestoreView.swift; sourceTree = "<group>"; };
 		1A100000000000E4 /* GroupManageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Source/GroupManageView.swift"; sourceTree = "<group>"; };
+		1A100000000000F5 /* RuleBasedRSSParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/RSS/RuleBasedRSSParser.swift"; sourceTree = "<group>"; };
+		1A100000000000F6 /* RSSRefreshManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/RSS/RSSRefreshManager.swift"; sourceTree = "<group>"; };
+		1A100000000000F7 /* RSSViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/RSS/RSSViewModel.swift"; sourceTree = "<group>"; };
 		1A10000000000039 /* ReaderSettingsFullView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsFullView.swift; sourceTree = "<group>"; };
 		1A1000000000003A /* ReplaceRuleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplaceRuleView.swift; sourceTree = "<group>"; };
 		1A10000000000040 /* AnalyzeUrl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyzeUrl.swift; sourceTree = "<group>"; };
@@ -277,6 +286,9 @@
 		1A100000000000F0 /* WebServerCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebServerCoordinator.swift; sourceTree = "<group>"; };
 		1A100000000000F1 /* HTTPRequestHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPRequestHandler.swift; sourceTree = "<group>"; };
 		1A100000000000F2 /* WebServerDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebServerDataProvider.swift; sourceTree = "<group>"; };
+		1A100000000000F3 /* RuleBasedRSSParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleBasedRSSParser.swift; sourceTree = "<group>"; };
+		1A100000000000F4 /* RSSRefreshManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSRefreshManager.swift; sourceTree = "<group>"; };
+		1A100000000000F5 /* RSSViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSViewModel.swift; sourceTree = "<group>"; };
 		1A1000000000006D /* EPUBReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/EPUBReaderView.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -566,6 +578,9 @@
 			isa = PBXGroup;
 			children = (
 				1A10000000000042 /* RSSSubscriptionView.swift */,
+				1A100000000000F5 /* RSSViewModel.swift */,
+				1A100000000000F4 /* RSSRefreshManager.swift */,
+				1A100000000000F3 /* RuleBasedRSSParser.swift */,
 			);
 			path = RSS;
 			sourceTree = "<group>";
@@ -778,7 +793,10 @@
 				1A00000000000029 /* BookDetailView.swift in Sources */,
 				1A00000000000040 /* AnalyzeUrl.swift in Sources */,
 				1A00000000000041 /* WebBook.swift in Sources */,
-				1A00000000000042 /* RSSSubscriptionView.swift in Sources */,
+1A00000000000042 /* RSSSubscriptionView.swift in Sources */,
+				1A000000000000F5 /* RuleBasedRSSParser.swift in Sources */,
+				1A000000000000F6 /* RSSRefreshManager.swift in Sources */,
+				1A000000000000F7 /* RSSViewModel.swift in Sources */,
 				1A00000000000043 /* QRCodeScanView.swift in Sources */,
 				1A00000000000044 /* DictRuleView.swift in Sources */,
 				1A00000000000045 /* ReplaceRule+CoreDataClass.swift in Sources */,

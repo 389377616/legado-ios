@@ -94,6 +94,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             let port = storedPort == 0 ? 1122 : storedPort
             WebServerCoordinator.shared.start(port: port)
         }
+
+        RSSRefreshManager.shared.configureOnLaunch()
         
         DebugLogger.shared.dumpCoreDataState()
         

@@ -2,13 +2,12 @@ import SwiftUI
 import CoreData
 
 struct RSSSubscriptionView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @StateObject private var viewModel = RSSViewModel()
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(key: "sortOrder", ascending: true)],
+        sortDescriptors: [NSSortDescriptor(key: "customOrder", ascending: true)],
         animation: .default
     ) private var sources: FetchedResults<RssSource>
     
-    @State private var searchText = ""
     @State private var showingAddSource = false
     @State private var selectedSource: RssSource?
     
@@ -22,6 +21,7 @@ struct RSSSubscriptionView: View {
     var body: some View {
         VStack(spacing: 0) {
             searchBar
+            refreshControls
             
             if filteredSources.isEmpty {
                 emptyView
@@ -37,6 +37,31 @@ struct RSSSubscriptionView: View {
         .sheet(isPresented: $showingAddSource) {
             AddRSSSourceView()
         }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    Task { await viewModel.refreshAllNow() }
+                } label: {
+                    if viewModel.isRefreshing {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+                .disabled(viewModel.isRefreshing)
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showingAddSource = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .onAppear {
+            viewModel.onAppear()
+        }
     }
     
     private var searchBar: some View {
@@ -44,11 +69,11 @@ struct RSSSubscriptionView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
             
-            TextField("搜索订阅源", text: $searchText)
+            TextField("搜索订阅源", text: $viewModel.searchText)
                 .textFieldStyle(.plain)
             
-            if !searchText.isEmpty {
-                Button(action: { searchText = "" }) {
+            if !viewModel.searchText.isEmpty {
+                Button(action: { viewModel.searchText = "" }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
                 }
@@ -59,6 +84,51 @@ struct RSSSubscriptionView: View {
         .cornerRadius(10)
         .padding(.horizontal)
         .padding(.vertical, 8)
+    }
+
+    private var refreshControls: some View {
+        VStack(spacing: 8) {
+            Toggle(
+                "自动刷新",
+                isOn: Binding(
+                    get: { viewModel.autoRefreshEnabled },
+                    set: { viewModel.setAutoRefreshEnabled($0) }
+                )
+            )
+
+            if viewModel.autoRefreshEnabled {
+                HStack {
+                    Text("刷新间隔")
+                    Spacer()
+                    Picker(
+                        "刷新间隔",
+                        selection: Binding(
+                            get: { viewModel.refreshInterval },
+                            set: { viewModel.setRefreshInterval($0) }
+                        )
+                    ) {
+                        ForEach(viewModel.refreshIntervalOptions) { option in
+                            Text(option.title).tag(option.seconds)
+                        }
+                    }
+                    .labelsHidden()
+                }
+
+                Text("后台刷新为 iOS 最佳努力调度，可能延迟执行")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let message = viewModel.lastRefreshMessage, !message.isEmpty {
+                Text(message)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 8)
     }
     
     private var emptyView: some View {
@@ -82,8 +152,13 @@ struct RSSSubscriptionView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(filteredSources, id: \.sourceId) { source in
-                    RSSSourceItem(source: source) {
+                    RSSSourceItem(source: source, statusText: viewModel.statusText(for: source)) {
                         selectedSource = source
+                    }
+                    .contextMenu {
+                        Button("立即刷新") {
+                            Task { await viewModel.refresh(source: source) }
+                        }
                     }
                 }
             }
@@ -92,18 +167,19 @@ struct RSSSubscriptionView: View {
     }
     
     private var filteredSources: [RssSource] {
-        if searchText.isEmpty {
+        if viewModel.searchText.isEmpty {
             return Array(sources)
         }
         return sources.filter {
-            $0.sourceName.localizedCaseInsensitiveContains(searchText) ||
-            $0.sourceUrl.localizedCaseInsensitiveContains(searchText)
+            $0.sourceName.localizedCaseInsensitiveContains(viewModel.searchText) ||
+            $0.sourceUrl.localizedCaseInsensitiveContains(viewModel.searchText)
         }
     }
 }
 
 struct RSSSourceItem: View {
     let source: RssSource
+    let statusText: String
     let onTap: () -> Void
     
     var body: some View {
@@ -128,6 +204,12 @@ struct RSSSourceItem: View {
                 
                 Text(source.sourceName)
                     .font(.caption)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
+
+                Text(statusText)
+                    .font(.caption2)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
@@ -196,7 +278,14 @@ struct RSSArticlesView: View {
         let url = source.sourceUrl
         
         do {
-            let (_, items) = try await RSSParser.fetchAndParse(url: url)
+            let items: [RSSArticle]
+            if RuleBasedRSSParser.shouldUseRuleParsing(source: source) {
+                let (_, parsedItems) = try await RSSParser.fetchAndParse(url: url, source: source)
+                items = parsedItems
+            } else {
+                let (_, parsedItems) = try await RSSParser.fetchAndParse(url: url)
+                items = parsedItems
+            }
             articles = items
         } catch {
             print("RSS load error: \(error)")
@@ -258,13 +347,17 @@ struct RSSArticle: Identifiable {
 }
 
 class RSSParser {
-    static func parse(xmlData: Data, sourceUrl: String) -> [RSSArticle] {
-        let parser = XMLFeedParser(data: xmlData, sourceUrl: sourceUrl)
+    static func parse(xmlData: Data, sourceUrl _: String) -> [RSSArticle] {
+        let parser = XMLFeedParser(data: xmlData)
         parser.parse()
         return parser.articles
     }
     
     static func fetchAndParse(url: String) async throws -> (String, [RSSArticle]) {
+        try await fetchAndParse(url: url, source: nil)
+    }
+
+    static func fetchAndParse(url: String, source: RssSource?) async throws -> (String, [RSSArticle]) {
         guard let feedUrl = URL(string: url) else {
             throw URLError(.badURL)
         }
@@ -274,7 +367,15 @@ class RSSParser {
         request.timeoutInterval = 15
         
         let (data, _) = try await URLSession.shared.data(for: request)
-        let parser = XMLFeedParser(data: data, sourceUrl: url)
+
+        if let source, RuleBasedRSSParser.shouldUseRuleParsing(source: source) {
+            let parser = RuleBasedRSSParser()
+            let articles = try parser.parse(data: data, source: source, sourceUrl: url)
+            let title = source.sourceName.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (title.isEmpty ? "未知订阅" : title, articles)
+        }
+
+        let parser = XMLFeedParser(data: data)
         parser.parse()
         
         return (parser.feedTitle ?? "未知订阅", parser.articles)
@@ -282,68 +383,178 @@ class RSSParser {
 }
 
 private class XMLFeedParser: NSObject, XMLParserDelegate {
-    private let sourceUrl: String
+    private let data: Data
     var feedTitle: String?
     var articles: [RSSArticle] = []
     
-    private var currentElement = ""
+    private var currentText = ""
     private var currentTitle = ""
     private var currentLink = ""
     private var currentDescription = ""
     private var currentPubDate = ""
+    private var currentAuthor = ""
     private var isInItem = false
+    private var isInAuthor = false
     
-    init(data: Data, sourceUrl: String) {
-        self.sourceUrl = sourceUrl
+    init(data: Data) {
+        self.data = data
     }
     
     func parse() {
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: sourceUrl)) else { return }
         let parser = XMLParser(data: data)
         parser.delegate = self
         parser.parse()
     }
     
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String: String] = [:]) {
-        currentElement = elementName
-        if elementName == "item" || elementName == "entry" {
+        let name = elementName.lowercased()
+        currentText = ""
+
+        if name == "item" || name == "entry" {
             isInItem = true
+            resetCurrentArticle()
+            return
+        }
+
+        if isInItem && name == "author" {
+            isInAuthor = true
+            return
+        }
+
+        if isInItem && name == "link", let href = attributeDict["href"], !href.isEmpty {
+            currentLink = href
         }
     }
     
     func parser(_ parser: XMLParser, foundCharacters string: String) {
-        switch currentElement {
-        case "title": currentTitle += string
-        case "link": currentLink += string
-        case "description", "summary": currentDescription += string
-        case "pubDate", "published": currentPubDate += string
-        default: break
+        currentText += string
+    }
+
+    func parser(_ parser: XMLParser, foundCDATA CDATABlock: Data) {
+        if let text = String(data: CDATABlock, encoding: .utf8) {
+            currentText += text
         }
     }
-    
+
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
-        if elementName == "item" || elementName == "entry" {
-            let article = RSSArticle(
-                title: currentTitle.trimmingCharacters(in: .whitespacesAndNewlines),
-                link: currentLink.trimmingCharacters(in: .whitespacesAndNewlines),
-                description: currentDescription.trimmingCharacters(in: .whitespacesAndNewlines),
-                pubDate: parseDate(currentPubDate),
-                author: nil
-            )
-            articles.append(article)
-            
-            currentTitle = ""
-            currentLink = ""
-            currentDescription = ""
-            currentPubDate = ""
-            isInItem = false
+        let name = elementName.lowercased()
+        let text = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if isInItem {
+            switch name {
+            case "title":
+                if currentTitle.isEmpty { currentTitle = text }
+            case "link", "id":
+                if currentLink.isEmpty { currentLink = text }
+            case "description", "summary", "content", "content:encoded":
+                if currentDescription.isEmpty {
+                    currentDescription = text
+                } else if !text.isEmpty {
+                    currentDescription += "\n" + text
+                }
+            case "pubdate", "published", "updated", "dc:date":
+                if currentPubDate.isEmpty { currentPubDate = text }
+            case "author":
+                if currentAuthor.isEmpty { currentAuthor = text }
+                isInAuthor = false
+            case "name":
+                if isInAuthor && currentAuthor.isEmpty {
+                    currentAuthor = text
+                }
+            case "item", "entry":
+                appendCurrentArticle()
+                resetCurrentArticle()
+                isInItem = false
+                isInAuthor = false
+            default:
+                break
+            }
+        } else if name == "title", feedTitle == nil, !text.isEmpty {
+            feedTitle = text
         }
+
+        currentText = ""
     }
-    
+
+    private func appendCurrentArticle() {
+        let trimmedTitle = currentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedLink = currentLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = currentDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAuthor = currentAuthor.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedTitle.isEmpty || !trimmedLink.isEmpty || !trimmedDescription.isEmpty else {
+            return
+        }
+
+        let article = RSSArticle(
+            title: trimmedTitle.isEmpty ? "无标题" : trimmedTitle,
+            link: trimmedLink,
+            description: trimmedDescription.isEmpty ? nil : trimmedDescription,
+            pubDate: parseDate(currentPubDate),
+            author: trimmedAuthor.isEmpty ? nil : trimmedAuthor
+        )
+        articles.append(article)
+    }
+
+    private func resetCurrentArticle() {
+        currentText = ""
+        currentTitle = ""
+        currentLink = ""
+        currentDescription = ""
+        currentPubDate = ""
+        currentAuthor = ""
+    }
+
     private func parseDate(_ string: String) -> Date? {
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let timestamp = Double(trimmed) {
+            if timestamp > 1_000_000_000_000 {
+                return Date(timeIntervalSince1970: timestamp / 1000)
+            }
+            if timestamp > 1_000_000_000 {
+                return Date(timeIntervalSince1970: timestamp)
+            }
+        }
+
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = isoFormatter.date(from: trimmed) {
+            return date
+        }
+
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let date = isoFormatter.date(from: trimmed) {
+            return date
+        }
+
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss z"
-        return formatter.date(from: string)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+
+        let formats = [
+            "EEE, dd MMM yyyy HH:mm:ss z",
+            "EEE, dd MMM yyyy HH:mm z",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXXXX",
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy/MM/dd HH:mm:ss",
+            "yyyy-MM-dd HH:mm",
+            "yyyy/MM/dd HH:mm",
+            "yyyy-MM-dd",
+            "yyyy/MM/dd",
+            "yyyy年MM月dd日 HH:mm:ss",
+            "yyyy年MM月dd日"
+        ]
+
+        for format in formats {
+            formatter.dateFormat = format
+            if let date = formatter.date(from: trimmed) {
+                return date
+            }
+        }
+
+        return nil
     }
 }
 

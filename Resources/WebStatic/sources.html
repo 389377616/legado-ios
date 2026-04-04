@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legado 书源</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Legado Web</h2>
+        <nav>
+            <a href="/static/index.html">主页</a>
+            <a href="/static/books.html">书架</a>
+            <a href="/static/sources.html" class="active">书源</a>
+        </nav>
+    </div>
+    <div class="main-content">
+        <header>
+            <h1>书源管理</h1>
+            <div class="actions">
+                <input type="text" id="searchInput" placeholder="搜索书源名..." onkeyup="filterSources()">
+            </div>
+        </header>
+        <main>
+            <div id="loading" class="loading">加载中...</div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>书源名称</th>
+                            <th>网址</th>
+                            <th>分组</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sourceList"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+    <script src="/static/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', loadSources);
+    </script>
+</body>
+</html>
