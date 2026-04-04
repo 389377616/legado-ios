@@ -63,10 +63,11 @@ final class HttpTTSPlaybackController: ObservableObject {
         }
     }
 
-    func restoreSelection(from storedEngineID: Int64) {
-        if storedEngineID > 0,
-           engines.contains(where: { $0.id == storedEngineID }) {
-            selectedEngineID = storedEngineID
+    func restoreSelection(from storedEngineID: Int) {
+        let engineID = Int64(storedEngineID)
+        if engineID > 0,
+           engines.contains(where: { $0.id == engineID }) {
+            selectedEngineID = engineID
         } else if selectedEngineID == nil {
             selectedEngineID = engines.first?.id
         }
@@ -125,7 +126,7 @@ struct TTSControlsView: View {
     @State private var showVoicePicker = false
 
     @AppStorage("tts.engine.mode") private var engineModeRaw: String = TTSEngineMode.local.rawValue
-    @AppStorage("tts.online.engineId") private var storedOnlineEngineID: Int64 = 0
+    @AppStorage("tts.online.engineId") private var storedOnlineEngineID: Int = 0
 
     private var engineMode: TTSEngineMode {
         get { TTSEngineMode(rawValue: engineModeRaw) ?? .local }
@@ -186,7 +187,7 @@ struct TTSControlsView: View {
             onlineController.stop()
         }
         .onChange(of: onlineController.selectedEngineID) { newValue in
-            storedOnlineEngineID = newValue ?? 0
+            storedOnlineEngineID = newValue.map { Int($0) } ?? 0
         }
         .onChange(of: engineModeRaw) { newValue in
             if newValue == TTSEngineMode.online.rawValue {

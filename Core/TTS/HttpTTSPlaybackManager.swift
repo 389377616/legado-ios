@@ -116,6 +116,16 @@ actor HttpTTSPlaybackManager {
             }
         }
     }
+    
+    func setCallbacks(
+        onStateChange: StateChangeHandler?,
+        onProgressChange: ProgressChangeHandler?
+    ) {
+        self.stateHandler = onStateChange
+        self.progressHandler = onProgressChange
+        notifyStateChanged()
+        notifyProgressChanged()
+    }
 
     func setRetryCount(_ retryCount: Int) {
         maxRetryCount = max(0, retryCount)

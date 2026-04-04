@@ -326,14 +326,8 @@ class SourceViewModel: ObservableObject {
             }
 
             do {
-                let data = try await Task.detached(priority: .userInitiated) {
-                    try Data(contentsOf: url)
-                }.value
-
-                let parsed = try await Task.detached(priority: .userInitiated) {
-                    try Self.parseSourceFile(data: data, fileExtension: url.pathExtension.lowercased())
-                }.value
-
+                let data = try Data(contentsOf: url)
+                let parsed = try Self.parseSourceFile(data: data, fileExtension: url.pathExtension.lowercased())
                 let fileSummary = importParsedSources(parsed)
                 summary.merge(fileSummary)
             } catch {
