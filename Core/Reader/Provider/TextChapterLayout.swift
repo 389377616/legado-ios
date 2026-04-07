@@ -81,24 +81,121 @@ class TextChapterLayout {
         let paddingTop = provider.paddingTop
         let visibleWidth = provider.visibleWidth
         let visibleHeight = provider.visibleHeight
+        let viewWidth = provider.viewWidth
+        let doublePage = provider.doublePage
         
         absStartX = paddingLeft
         
         let titlePaintTextHeight = provider.titlePaintTextHeight
-        let titlePaintFontMetrics = provider.titleFont
+        let titlePaint = provider.titleFont
         
         let contentPaintTextHeight = provider.contentPaintTextHeight
-        let contentPaintFontMetrics = provider.contentFont
+        let contentPaint = provider.contentFont
         
         let titleBottomSpacing = provider.titleBottomSpacing
         let lineSpacingExtra = provider.lineSpacingExtra
         let paragraphSpacing = provider.paragraphSpacing
+        let indentCharWidth = provider.indentCharWidth
         
-        // TODO: 实现完整的排版逻辑
-        // 1. 处理标题
+        // 获取配置
+        let paragraphIndent = ReadBookConfig.paragraphIndent
+        let textFullJustify = ReadBookConfig.textFullJustify
+        
+        guard let textChapter = textChapter else { return }
+        let displayTitle = textChapter.title
+        
+        // 1. 处理标题（非隐藏模式）
+        let titleMode = ReadBookConfig.titleMode
+        if titleMode != 2 {
+            for titleLine in displayTitle.splitNotBlank("\n") {
+                await setTypeText(
+                    text: titleLine,
+                    font: titlePaint,
+                    textHeight: titlePaintTextHeight,
+                    imageStyle: nil,
+                    isTitle: true,
+                    emptyContent: contents.isEmpty,
+                    isVolumeTitle: false
+                )
+                if let lastLine = pendingTextPage.lines.last {
+                    lastLine.isParagraphEnd = true
+                }
+                stringBuilder.append("\n")
+            }
+            durY += titleBottomSpacing
+        }
+        
         // 2. 处理正文内容
-        // 3. 处理图片
+        for content in contents {
+            // 检查任务取消
+            try Task.checkCancellation()
+            
+            // 处理图片标签
+            if content.contains("<img") {
+                var start = 0
+                let imgPattern = try NSRegularExpression(pattern: "<img[^>]+src=\"([^\"]+)\"[^>]*>", options: .caseInsensitive)
+                let matches = imgPattern.matches(in: content, range: NSRange(content.startIndex..., in: content))
+                
+                for match in matches {
+                    try Task.checkCancellation()
+                    
+                    // 处理图片前的文本
+                    if match.range.location > start {
+                        let textRange = NSRange(location: start, length: match.range.location - start)
+                        if let text = (content as NSString).substring(with: textRange),
+                           !text.trimmingCharacters(in: .whitespaces).isEmpty {
+                            await setTypeText(
+                                text: text,
+                                font: contentPaint,
+                                textHeight: contentPaintTextHeight,
+                                imageStyle: nil,
+                                isTitle: false,
+                                isFirstLine: start == 0
+                            )
+                        }
+                    }
+                    
+                    // 处理图片
+                    if let srcRange = Range(match.range(at: 1), in: content) {
+                        let src = String(content[srcRange])
+                        await setTypeImage(
+                            src: src,
+                            textHeight: contentPaintTextHeight,
+                            imageStyle: nil
+                        )
+                    }
+                    
+                    start = match.range.location + match.range.length
+                }
+                
+                // 处理剩余文本
+                if start < content.count {
+                    let text = (content as NSString).substring(from: start)
+                    if !text.trimmingCharacters(in: .whitespaces).isEmpty {
+                        await setTypeText(
+                            text: text,
+                            font: contentPaint,
+                            textHeight: contentPaintTextHeight,
+                            imageStyle: nil,
+                            isTitle: false,
+                            isFirstLine: start == 0
+                        )
+                    }
+                }
+            } else {
+                // 纯文本内容
+                await setTypeText(
+                    text: content,
+                    font: contentPaint,
+                    textHeight: contentPaintTextHeight,
+                    imageStyle: nil,
+                    isTitle: false,
+                    isFirstLine: true
+                )
+            }
+        }
         
+        // 3. 完成最后一页
         let textPage = pendingTextPage
         let endPadding: CGFloat = 20
         let durYPadding = durY + endPadding
@@ -113,6 +210,356 @@ class TextChapterLayout {
         
         onPageCompleted()
         onCompleted()
+    }
+    
+    // MARK: - 换页逻辑
+    /// 当内容超出页面高度时，创建新页面
+    /// 一比一移植自 Android Legado prepareNextPageIfNeed
+    private func prepareNextPageIfNeed(requestHeight: CGFloat = -1) {
+        let provider = ChapterProvider.shared
+        let visibleHeight = provider.visibleHeight
+        let viewWidth = provider.viewWidth
+        let paddingLeft = provider.paddingLeft
+        let doublePage = provider.doublePage
+        
+        if requestHeight > visibleHeight || requestHeight == -1 {
+            let textPage = pendingTextPage
+            
+            // 更新页面高度
+            if Float(textPage.height) < Float(durY) {
+                textPage.height = Float(durY)
+            }
+            
+            if doublePage && absStartX < viewWidth / 2 {
+                // 双页模式：当前左列结束，切换到右列
+                textPage.leftLineSize = textPage.lineSize
+                absStartX = viewWidth / 2 + paddingLeft
+            } else {
+                // 当前页面结束
+                if textPage.leftLineSize == 0 {
+                    textPage.leftLineSize = textPage.lineSize
+                }
+                textPage.text = stringBuilder.toString()
+                onPageCompleted()
+                
+                // 新建页面
+                pendingTextPage = TextPage()
+                stringBuilder.clear()
+                absStartX = paddingLeft
+            }
+            
+            durY = 0
+        }
+    }
+    
+    // MARK: - 图片排版
+    /// 一比一移植自 Android Legado setTypeImage (第329-402行)
+    private func setTypeImage(
+        src: String,
+        textHeight: CGFloat,
+        imageStyle: String?
+    ) async {
+        let provider = ChapterProvider.shared
+        let visibleWidth = provider.visibleWidth
+        let visibleHeight = provider.visibleHeight
+        let paddingTop = provider.paddingTop
+        let paddingLeft = provider.paddingLeft
+        
+        // TODO: 从 ImageProvider 获取图片尺寸
+        // 暂时使用默认尺寸
+        var width: CGFloat = visibleWidth
+        var height: CGFloat = visibleHeight * 0.5
+        
+        prepareNextPageIfNeed(durY)
+        
+        // 根据图片样式调整尺寸
+        let style = imageStyle?.uppercased() ?? ""
+        
+        // 简化处理：图片居中显示
+        if height > visibleHeight - durY {
+            if height > visibleHeight {
+                width = width * visibleHeight / height
+                height = visibleHeight
+            }
+            prepareNextPageIfNeed(durY + height)
+        }
+        
+        // 创建图片行
+        let textLine = TextLine()
+        textLine.isImage = true
+        textLine.text = " "
+        textLine.lineTop = Float(durY + paddingTop)
+        
+        durY += height
+        textLine.lineBottom = Float(durY + paddingTop)
+        
+        // 计算水平居中位置
+        let (start, end): (Float, Float)
+        if visibleWidth > width {
+            let adjustWidth = (visibleWidth - width) / 2
+            start = Float(absStartX + adjustWidth)
+            end = Float(absStartX + adjustWidth + width)
+        } else {
+            start = Float(absStartX)
+            end = Float(absStartX + width)
+        }
+        
+        textLine.addColumn(ImageColumn(start: start, end: end, src: src))
+        
+        calcTextLinePosition(textLine, sbLength: stringBuilder.length)
+        stringBuilder.append(" ")
+        pendingTextPage.addLine(textLine)
+        
+        durY += textHeight * Float(provider.paragraphSpacing) / 10.0
+    }
+    
+    // MARK: - 文字排版核心
+    /// 一比一移植自 Android Legado setTypeText (第408-536行)
+    private func setTypeText(
+        text: String,
+        font: UIFont,
+        textHeight: CGFloat,
+        imageStyle: String?,
+        isTitle: Bool = false,
+        isFirstLine: Bool = true,
+        emptyContent: Bool = false,
+        isVolumeTitle: Bool = false
+    ) async {
+        let provider = ChapterProvider.shared
+        let visibleWidth = provider.visibleWidth
+        let visibleHeight = provider.visibleHeight
+        let paddingTop = provider.paddingTop
+        let paddingLeft = provider.paddingLeft
+        let lineSpacingExtra = provider.lineSpacingExtra
+        let paragraphSpacing = provider.paragraphSpacing
+        let titleTopSpacing = provider.titleTopSpacing
+        
+        // 测量文本宽度
+        let widthsArray = measureTextWidths(text, font: font)
+        let (words, widths) = measureTextSplit(text, widthsArray: widthsArray)
+        let desiredWidth = widths.reduce(0, +)
+        
+        // 使用 iOS TextKit 进行布局
+        let lines = createTextLayout(text: text, font: font, width: visibleWidth)
+        
+        // 标题 Y 轴居中处理
+        let isSingleImageStyle = imageStyle?.uppercased() == "SINGLE"
+        if isTitle && textPages.isEmpty && pendingTextPage.lines.isEmpty {
+            if emptyContent || isSingleImageStyle {
+                let ty = (visibleHeight - CGFloat(lines.count) * textHeight) / 2
+                durY = max(ty, titleTopSpacing)
+            } else {
+                durY += titleTopSpacing
+            }
+        }
+        
+        // 逐行处理
+        for (lineIndex, layoutLine) in lines.enumerated() {
+            let textLine = TextLine()
+            textLine.isTitle = isTitle
+            
+            // 检查是否需要换页
+            prepareNextPageIfNeed(durY + textHeight)
+            
+            let lineText = layoutLine.text
+            textLine.text = lineText
+            
+            // 计算该行的字符宽度
+            let lineWords = measureText(lineText, font: font)
+            let lineWidths = measureTextWidths(lineText, font: font)
+            let lineDesiredWidth = lineWidths.reduce(0, +)
+            
+            // 根据行位置选择排版方式
+            let startX: CGFloat
+            if isTitle && (emptyContent || isVolumeTitle || isSingleImageStyle) {
+                // 标题居中
+                startX = (visibleWidth - lineDesiredWidth) / 2
+            } else {
+                startX = 0
+            }
+            
+            // 添加字符到行
+            await addCharsToLine(
+                words: lineWords,
+                widths: lineWidths,
+                textLine: textLine,
+                startX: startX,
+                isTitle: isTitle
+            )
+            
+            // 计算行位置
+            calcTextLinePosition(textLine, sbLength: stringBuilder.length)
+            stringBuilder.append(lineText)
+            
+            // 设置行垂直位置
+            textLine.lineTop = Float(durY + paddingTop)
+            textLine.lineBottom = Float(durY + textHeight + paddingTop)
+            
+            pendingTextPage.addLine(textLine)
+            durY += textHeight * lineSpacingExtra
+            
+            if Float(pendingTextPage.height) < Float(durY) {
+                pendingTextPage.height = Float(durY)
+            }
+        }
+        
+        durY += textHeight * Float(paragraphSpacing) / 10.0
+    }
+    
+    // MARK: - 添加字符到行
+    private func addCharsToLine(
+        words: [String],
+        widths: [CGFloat],
+        textLine: TextLine,
+        startX: CGFloat,
+        isTitle: Bool
+    ) async {
+        let provider = ChapterProvider.shared
+        let absStartX = provider.paddingLeft
+        let indentCharWidth = provider.indentCharWidth
+        let paragraphIndent = ReadBookConfig.paragraphIndent
+        let textFullJustify = ReadBookConfig.textFullJustify
+        
+        var x = startX
+        textLine.startX = Float(absStartX + startX)
+        
+        // 处理首行缩进（非标题）
+        if !isTitle && startX == 0 && paragraphIndent.length > 0 {
+            for _ in 0..<paragraphIndent.length {
+                let x1 = x + indentCharWidth
+                textLine.addColumn(
+                    TextColumn(
+                        start: Float(absStartX + x),
+                        end: Float(absStartX + x1),
+                        charData: ChapterProvider.indentChar
+                    )
+                )
+                x = x1
+                textLine.indentWidth = Float(x)
+            }
+            textLine.indentSize = paragraphIndent.length
+            
+            // 处理剩余字符
+            if words.count > paragraphIndent.length {
+                let remainingWords = Array(words[paragraphIndent.length...])
+                let remainingWidths = Array(widths[paragraphIndent.length...])
+                await addCharsToLineNatural(
+                    words: remainingWords,
+                    widths: remainingWidths,
+                    textLine: textLine,
+                    startX: x
+                )
+            }
+        } else {
+            // 自然排版
+            await addCharsToLineNatural(
+                words: words,
+                widths: widths,
+                textLine: textLine,
+                startX: x
+            )
+        }
+    }
+    
+    // MARK: - 自然排版
+    private func addCharsToLineNatural(
+        words: [String],
+        widths: [CGFloat],
+        textLine: TextLine,
+        startX: CGFloat
+    ) async {
+        let absStartX = ChapterProvider.shared.paddingLeft
+        var x = startX
+        
+        for (index, char) in words.enumerated() {
+            let cw = widths[index]
+            let x1 = x + cw
+            
+            textLine.addColumn(
+                TextColumn(
+                    start: Float(absStartX + x),
+                    end: Float(absStartX + x1),
+                    charData: char
+                )
+            )
+            x = x1
+        }
+    }
+    
+    // MARK: - 计算行位置
+    /// 一比一移植自 Android Legado calcTextLinePosition (第538-556行)
+    private func calcTextLinePosition(_ textLine: TextLine, sbLength: Int) {
+        // 计算段落编号
+        let lastLine = pendingTextPage.lines.last { $0.paragraphNum > 0 }
+            ?? textPages.last?.lines.last { $0.paragraphNum > 0 }
+        
+        let paragraphNum: Int
+        if lastLine == nil {
+            paragraphNum = 1
+        } else if lastLine!.isParagraphEnd {
+            paragraphNum = lastLine!.paragraphNum + 1
+        } else {
+            paragraphNum = lastLine!.paragraphNum
+        }
+        
+        textLine.paragraphNum = paragraphNum
+        
+        // 计算章节位置
+        let lastChapterPos = textPages.last?.lines.last?.run {
+            chapterPosition + charSize + (isParagraphEnd ? 1 : 0)
+        } ?? 0
+        
+        textLine.chapterPosition = lastChapterPos + sbLength
+        textLine.pagePosition = sbLength
+    }
+    
+    // MARK: - 文本测量工具
+    private func measureTextWidths(_ text: String, font: UIFont) -> [CGFloat] {
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        return text.map { char in
+            String(char).size(withAttributes: attributes).width
+        }
+    }
+    
+    private func measureTextSplit(_ text: String, widthsArray: [CGFloat], start: Int = 0) -> ([String], [CGFloat]) {
+        var words: [String] = []
+        var widths: [CGFloat] = []
+        
+        var i = 0
+        let length = text.count
+        while i < length {
+            let startIndex = text.index(text.startIndex, offsetBy: i)
+            let char = text[startIndex]
+            
+            widths.append(widthsArray[start + i])
+            
+            // 处理零宽字符
+            var clusterEnd = i + 1
+            while clusterEnd < length {
+                let endIndex = text.index(text.startIndex, offsetBy: clusterEnd)
+                let nextChar = text[endIndex]
+                if widthsArray[start + clusterEnd] == 0 && !isZeroWidthChar(nextChar) {
+                    clusterEnd += 1
+                } else {
+                    break
+                }
+            }
+            
+            let clusterRange = text.index(text.startIndex, offsetBy: i)..<text.index(text.startIndex, offsetBy: clusterEnd)
+            words.append(String(text[clusterRange]))
+            i = clusterEnd
+        }
+        
+        return (words, widths)
+    }
+    
+    private func isZeroWidthChar(_ char: Character) -> Bool {
+        let code = char.asciiValue ?? 0
+        return code == 8203 || code == 8204 || code == 8205 || code == 8288
+    }
+    
+    private func createTextLayout(text: String, font: UIFont, width: CGFloat) -> [TextLayoutLine] {
+        ChapterProvider.shared.createTextLayout(text: text, font: font, width: width)
     }
     
     // MARK: - 页面完成回调
@@ -157,4 +604,12 @@ struct BookContent {
     var textList: [String] = []
     var sameTitleRemoved: Bool = false
     var effectiveReplaceRules: [ReplaceRule]? = nil
+}
+
+extension String {
+    func splitNotBlank(_ separator: String) -> [String] {
+        return self.split(separator: separator)
+            .map { String($0) }
+            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+    }
 }

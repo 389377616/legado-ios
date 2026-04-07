@@ -384,8 +384,14 @@ class RuleAnalyzer {
 class StringBuilder {
     private var string: String = ""
     
+    var length: Int { string.count }
+    
     func append(_ str: String) {
         string += str
+    }
+    
+    func clear() {
+        string = ""
     }
     
     func toString() -> String {
