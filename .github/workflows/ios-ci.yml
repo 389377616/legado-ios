@@ -1,4 +1,4 @@
-﻿name: iOS CI
+name: iOS CI
 
 on:
   push:
@@ -41,65 +41,61 @@ jobs:
 
     - name: Prepare Build Paths
       run: |
-        echo \ DERIVED_DATA=$RUNNER_TEMP/LegadoDerivedData\ >> \$GITHUB_ENV\
-        echo \RESULT_BUNDLE=$RUNNER_TEMP/LegadoResults.xcresult\ >> \$GITHUB_ENV\
+        echo "DERIVED_DATA=$RUNNER_TEMP/LegadoDerivedData" >> "$GITHUB_ENV"
+        echo "RESULT_BUNDLE=$RUNNER_TEMP/LegadoResults.xcresult" >> "$GITHUB_ENV"
     
     - name: Resolve SPM Dependencies
-      run: >
-        xcodebuild -resolvePackageDependencies
-        -project Legado.xcodeproj
-        -scheme Legado
+      run: |
+        xcodebuild -resolvePackageDependencies -project Legado.xcodeproj -scheme Legado
     
     - name: Build
-      run: >
-        xcodebuild build
-        -project Legado.xcodeproj
-        -scheme Legado
-        -sdk iphoneos
-        -configuration Release
-        -destination 'generic/platform=iOS'
-        -derivedDataPath \$DERIVED_DATA\
-        -resultBundlePath \$RESULT_BUNDLE\
-        CODE_SIGNING_ALLOWED=NO
-        CODE_SIGN_IDENTITY=\\
-        CODE_SIGNING_REQUIRED=NO
-        IPHONEOS_DEPLOYMENT_TARGET=16.0
+      run: |
+        xcodebuild build \
+          -project Legado.xcodeproj \
+          -scheme Legado \
+          -sdk iphoneos \
+          -configuration Release \
+          -destination 'generic/platform=iOS' \
+          -derivedDataPath "$DERIVED_DATA" \
+          -resultBundlePath "$RESULT_BUNDLE" \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          IPHONEOS_DEPLOYMENT_TARGET=16.0
 
     - name: Check Unit Test Target
       id: test_target
       run: |
-        if grep -q \com.apple.product-type.bundle.unit-test\ Legado.xcodeproj/project.pbxproj; then
-          echo \has_tests=true\ >> \$GITHUB_OUTPUT\
+        if grep -q "com.apple.product-type.bundle.unit-test" Legado.xcodeproj/project.pbxproj; then
+          echo "has_tests=true" >> "$GITHUB_OUTPUT"
         else
-          echo \has_tests=false\ >> \$GITHUB_OUTPUT\
+          echo "has_tests=false" >> "$GITHUB_OUTPUT"
         fi
     
     - name: Run Unit Tests
       if: ${{ success() && steps.test_target.outputs.has_tests == 'true' }}
-      run: >
-        xcodebuild test
-        -project Legado.xcodeproj
-        -scheme Legado
-        -sdk iphonesimulator
-        -configuration Debug
-        -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5'
-        -derivedDataPath \$DERIVED_DATA\
-        -resultBundlePath \$RESULT_BUNDLE\
-        ONLY_ACTIVE_ARCH=YES
-        IPHONEOS_DEPLOYMENT_TARGET=16.0
+      run: |
+        xcodebuild test \
+          -project Legado.xcodeproj \
+          -scheme Legado \
+          -sdk iphonesimulator \
+          -configuration Debug \
+          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+          -derivedDataPath "$DERIVED_DATA" \
+          -resultBundlePath "$RESULT_BUNDLE" \
+          ONLY_ACTIVE_ARCH=YES \
+          IPHONEOS_DEPLOYMENT_TARGET=16.0
 
     - name: Package Unsigned IPA
       if: success()
       run: |
-        IPA_DIR=\$RUNNER_TEMP/ipa\
-        rm -rf \$IPA_DIR\
-        mkdir -p \$IPA_DIR/Payload\
-        cp -R \$DERIVED_DATA/Build/Products/Release-iphoneos/Legado.app\ \$IPA_DIR/Payload/\
-        (
-          cd \$IPA_DIR\
-          /usr/bin/zip -qry \Legado-unsigned.ipa\ Payload
-        )
-        echo \IPA_PATH=$IPA_DIR/Legado-unsigned.ipa\ >> \$GITHUB_ENV\
+        IPA_DIR="$RUNNER_TEMP/ipa"
+        rm -rf "$IPA_DIR"
+        mkdir -p "$IPA_DIR/Payload"
+        cp -R "$DERIVED_DATA/Build/Products/Release-iphoneos/Legado.app" "$IPA_DIR/Payload/"
+        cd "$IPA_DIR"
+        /usr/bin/zip -qry "Legado-unsigned.ipa" Payload
+        echo "IPA_PATH=$IPA_DIR/Legado-unsigned.ipa" >> "$GITHUB_ENV"
 
     - name: Upload Xcode Result Bundle
       if: always()
