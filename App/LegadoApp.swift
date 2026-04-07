@@ -15,6 +15,7 @@ struct LegadoApp: App {
         WindowGroup {
             if hasCompletedWelcome {
                 MainTabView()
+                    .withRouter()
             } else {
                 WelcomeView()
             }
