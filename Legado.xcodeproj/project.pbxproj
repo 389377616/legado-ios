@@ -412,7 +412,7 @@
 			path = App;
 			sourceTree = "<group>";
 		};
-		1A30000000000068 /* Navigation */ = {
+		1A30000000000070 /* Navigation */ = {
 			isa = PBXGroup;
 			children = (
 				1A100000000000A2 /* Router.swift */,
@@ -436,7 +436,7 @@
 			1A30000000000064 /* TTS */,
 			1A30000000000066 /* Statistics */,
 			1A30000000000067 /* Reader */,
-			1A30000000000068 /* Navigation */,
+			1A30000000000070 /* Navigation */,
 		);
 		path = Core;
 		sourceTree = "<group>";
