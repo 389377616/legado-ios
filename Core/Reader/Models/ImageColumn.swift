@@ -5,11 +5,13 @@ class ImageColumn: BaseColumn {
     var end: Float
     var src: String
     var textLine: TextLine = TextLine.empty
+    var book: Book?
     
-    init(start: Float, end: Float, src: String) {
+    init(start: Float, end: Float, src: String, book: Book? = nil) {
         self.start = start
         self.end = end
         self.src = src
+        self.book = book
     }
     
     func draw(in view: ContentTextView, context: CGContext) {
@@ -17,8 +19,11 @@ class ImageColumn: BaseColumn {
         let width = CGFloat(end - start)
         
         var image: UIImage?
-        if let cachedImage = ImageCache.shared.getImage(for: src) {
-            image = cachedImage
+        
+        if let book = book {
+            image = ImageProvider.getImage(book: book, src: src, width: Int(width), height: Int(height))
+        } else {
+            image = ImageProvider.get(src)
         }
         
         guard let img = image else {
@@ -50,26 +55,5 @@ class ImageColumn: BaseColumn {
         let path = UIBezierPath(ovalIn: iconRect)
         context.addPath(path.cgPath)
         context.fillPath()
-    }
-}
-
-class ImageCache {
-    static let shared = ImageCache()
-    private var cache = NSCache<NSString, UIImage>()
-    
-    private init() {
-        cache.countLimit = 100
-    }
-    
-    func getImage(for src: String) -> UIImage? {
-        return cache.object(forKey: src as NSString)
-    }
-    
-    func setImage(_ image: UIImage, for src: String) {
-        cache.setObject(image, forKey: src as NSString)
-    }
-    
-    func clear() {
-        cache.removeAllObjects()
     }
 }

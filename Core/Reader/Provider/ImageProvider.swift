@@ -1,0 +1,467 @@
+//
+//  ImageProvider.swift
+//  Legado-iOS
+//
+//  基于 Android Legado 原版 ImageProvider.kt 严格一比一移植
+//  原版路径: app/src/main/java/io/legado/app/model/ImageProvider.kt
+//  原版行数: 212 行
+//
+
+import UIKit
+import Foundation
+
+/// 图片提供者
+/// 一比一移植自 Android Legado ImageProvider
+/// 负责图片缓存、获取、尺寸测量等功能
+enum ImageProvider {
+    
+    // MARK: - 常量 (对照原版 line 41-48)
+    private static let M = 1024 * 1024
+    
+    /// 缓存大小 (对照原版 cacheSize)
+    /// Android 原版使用 AppConfig.bitmapCacheSize，默认 50MB
+    static var cacheSize: Int {
+        // iOS 版本使用 AppConstants 配置，默认 100MB
+        // 原版: if (AppConfig.bitmapCacheSize !in 1..1024) { AppConfig.bitmapCacheSize = 50 }
+        //       return AppConfig.bitmapCacheSize * M
+        let configuredSize = AppConstants.imageCacheMemoryLimit / M
+        if configuredSize < 1 || configuredSize > 1024 {
+            return 50 * M  // 默认 50MB，对照原版
+        }
+        return configuredSize * M
+    }
+    
+    // MARK: - 错误图片 (对照原版 line 33-35)
+    /// 错误占位图，防止一直重复获取图片
+    /// Android 原版: private val errorBitmap: Bitmap by lazy { BitmapFactory.decodeResource(...) }
+    private static let errorImage: UIImage = {
+        // 创建一个简单的灰色占位图
+        let size = CGSize(width: 100, height: 100)
+        UIGraphicsBeginImageContextWithOptions(size, false, 0)
+        UIColor.systemGray4.setFill()
+        UIRectFill(CGRect(origin: .zero, size: size))
+        
+        // 绘制图标
+        UIColor.systemGray2.setFill()
+        let iconRect = CGRect(x: size.width/2 - 20, y: size.height/2 - 20, width: 40, height: 40)
+        let path = UIBezierPath(ovalIn: iconRect)
+        path.fill()
+        
+        let image = UIGraphicsGetImageFromCurrentImageContext() ?? UIImage()
+        UIGraphicsEndImageContext()
+        return image
+    }()
+    
+    // MARK: - LruCache (对照原版 line 50-81)
+    /// 图片 LruCache 缓存
+    /// Android 原版使用 androidx.collection.LruCache<String, Bitmap>
+    /// iOS 使用 NSCache 实现类似功能
+    static let bitmapLruCache = BitmapLruCache()
+    
+    /// Bitmap LruCache 类
+    /// 对照 Android 原版 BitmapLruCache inner class (line 52-81)
+    final class BitmapLruCache {
+        
+        private let cache = NSCache<NSString, UIImage>()
+        private var removeCount: Int = 0
+        private var currentSize: Int = 0
+        private let lock = NSLock()
+        
+        /// 当前缓存数量 (对照原版 count)
+        var count: Int {
+            // 原版: putCount() + createCount() - evictionCount() - removeCount
+            // NSCache 不提供这些统计，使用简化版本
+            lock.lock()
+            let c = removeCount
+            lock.unlock()
+            return c
+        }
+        
+        init() {
+            cache.totalCostLimit = ImageProvider.cacheSize
+            cache.countLimit = 100
+        }
+        
+        /// 计算 UIImage 内存大小 (对照原版 sizeOf)
+        /// Android 原版: override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+        private func imageCost(_ image: UIImage) -> Int {
+            // iOS: height * width * scale * 4 (RGBA)
+            return Int(image.size.height * image.size.width * image.scale * 4)
+        }
+        
+        /// 当条目被移除时的处理 (对照原版 entryRemoved)
+        /// Android 原版在 entryRemoved 中检查是否为 errorBitmap，如果是则不释放
+        func onEntryRemoved(key: String, oldValue: UIImage, evicted: Bool) {
+            if !evicted {
+                lock.lock()
+                removeCount += 1
+                lock.unlock()
+            }
+            // 错误图片不能释放，占位用，防止一直重复获取图片
+            // 原版: if (oldValue != errorBitmap) { oldValue.recycle() }
+            // iOS UIImage 不需要手动 recycle，由 ARC 管理
+        }
+        
+        // MARK: - 缓存操作
+        
+        func get(_ key: String) -> UIImage? {
+            return cache.object(forKey: key as NSString)
+        }
+        
+        func put(_ key: String, image: UIImage) {
+            ensureLruCacheSize(image)
+            let cost = imageCost(image)
+            cache.setObject(image, forKey: key as NSString, cost: cost)
+            
+            lock.lock()
+            currentSize += cost
+            lock.unlock()
+        }
+        
+        func remove(_ key: String) -> UIImage? {
+            let image = cache.object(forKey: key as NSString)
+            if image != nil {
+                cache.removeObject(forKey: key as NSString)
+            }
+            return image
+        }
+        
+        func evictAll() {
+            cache.removeAllObjects()
+            lock.lock()
+            currentSize = 0
+            removeCount = 0
+            lock.unlock()
+        }
+        
+        func resize(_ newSize: Int) {
+            cache.totalCostLimit = newSize
+        }
+        
+        func maxSize() -> Int {
+            return cache.totalCostLimit
+        }
+        
+        func size() -> Int {
+            lock.lock()
+            let s = currentSize
+            lock.unlock()
+            return s
+        }
+        
+        // MARK: - 确保缓存大小 (对照原版 line 105-119)
+        private func ensureLruCacheSize(_ image: UIImage) {
+            let lruMaxSize = maxSize()
+            let lruSize = size()
+            let byteCount = imageCost(image)
+            
+            let newSize: Int
+            if byteCount > lruMaxSize {
+                // 原版: min(256 * M, (byteCount * 1.3).toInt())
+                newSize = min(256 * ImageProvider.M, Int(Double(byteCount) * 1.3))
+            } else if lruSize + byteCount > lruMaxSize && count < 5 {
+                // 原版: min(256 * M, (lruSize + byteCount * 1.3).toInt())
+                newSize = min(256 * ImageProvider.M, Int(Double(lruSize + byteCount) * 1.3))
+            } else {
+                newSize = lruMaxSize
+            }
+            
+            if newSize > lruMaxSize {
+                resize(newSize)
+            }
+        }
+    }
+    
+    // MARK: - 缓存操作 (对照原版 line 83-103)
+    
+    /// 添加图片到缓存 (对照原版 put)
+    static func put(_ key: String, image: UIImage) {
+        bitmapLruCache.put(key, image: image)
+    }
+    
+    /// 从缓存获取图片 (对照原版 get)
+    static func get(_ key: String) -> UIImage? {
+        return bitmapLruCache.get(key)
+    }
+    
+    /// 从缓存移除图片 (对照原版 remove)
+    static func remove(_ key: String) -> UIImage? {
+        return bitmapLruCache.remove(key)
+    }
+    
+    /// 获取未回收的图片 (对照原版 getNotRecycled)
+    /// Android Bitmap 有 isRecycled 概念，iOS UIImage 由 ARC 管理，无需此检查
+    static func getNotRecycled(_ key: String) -> UIImage? {
+        return bitmapLruCache.get(key)
+    }
+    
+    // MARK: - 缓存图片 (对照原版 line 124-150)
+    
+    /// 缓存网络图片和本地书籍图片
+    /// 对照 Android 原版 suspend fun cacheImage(book: Book, src: String, bookSource: BookSource?): File
+    static func cacheImage(
+        book: Book,
+        src: String,
+        bookSource: BookSource?
+    ) async -> URL {
+        // 原版使用 withContext(IO)
+        return await withCheckedContinuation { continuation in
+            Task.detached(priority: .userInitiated) {
+                let vFileURL = BookHelp.getImage(book, src)
+                
+                if !BookHelp.isImageExist(book, src) {
+                    // 原版根据书籍类型处理: epub/pdf/mobi/网络
+                    var inputStream: Data? = nil
+                    
+                    if book.isEpub {
+                        inputStream = EpubFile.getImage(book, src)
+                    } else if book.isPdf {
+                        inputStream = PdfFile.getImage(book, src)
+                    } else if book.isMobi {
+                        inputStream = MobiFile.getImage(book, src)
+                    } else {
+                        // 网络图片: BookHelp.saveImage(bookSource, book, src)
+                        BookHelp.saveImage(bookSource: bookSource, book: book, src: src)
+                    }
+                    
+                    // 保存输入流到文件 (原版 line 141-146)
+                    if let data = inputStream {
+                        try? data.write(to: vFileURL)
+                    }
+                }
+                
+                continuation.resume(returning: vFileURL)
+            }
+        }
+    }
+    
+    // MARK: - 获取图片尺寸 (对照原版 line 155-174)
+    
+    /// 获取图片宽度高度信息
+    /// 对照 Android 原版 suspend fun getImageSize(book: Book, src: String, bookSource: BookSource?): Size
+    static func getImageSize(
+        book: Book,
+        src: String,
+        bookSource: BookSource?
+    ) async -> CGSize {
+        let fileURL = await cacheImage(book: book, src: src, bookSource: bookSource)
+        
+        // 原版使用 BitmapFactory.Options().inJustDecodeBounds = true
+        if let imageSource = CGImageSourceCreateWithURL(fileURL as CFURL, nil) {
+            let options: [CFString: Any] = [kCGImageSourceShouldCache: false]
+            if let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, options as CFDictionary) as? [CFString: Any] {
+                let width = (properties[kCGImagePropertyPixelWidth] as? Int) ?? 0
+                let height = (properties[kCGImagePropertyPixelHeight] as? Int) ?? 0
+                
+                if width > 0 && height > 0 {
+                    return CGSize(width: width, height: height)
+                }
+            }
+        }
+        
+        // SVG 支持 (原版 line 167-168)
+        // iOS 暂不支持 SVG 尺寸获取，使用错误图片尺寸
+        // 原版: val size = SvgUtils.getSize(file.absolutePath)
+        //       if (size != null) return size
+        
+        // 原版 line 169-171: 不支持的图片类型，返回错误图片尺寸
+        print("[ImageProvider] \(src) Unsupported image type")
+        return errorImage.size
+    }
+    
+    // MARK: - 获取图片 (对照原版 line 179-206)
+    
+    /// 获取图片，使用 LruCache 缓存
+    /// 对照 Android 原版 fun getImage(book: Book, src: String, width: Int, height: Int?): Bitmap
+    static func getImage(
+        book: Book,
+        src: String,
+        width: Int,
+        height: Int? = nil
+    ) -> UIImage {
+        // 原版 line 186-189: src 为空白时的处理
+        if book.getUseReplaceRule() && src.isEmpty {
+            book.setUseReplaceRule(false)
+            // 原版使用 toastOnUi，iOS 简化处理
+            print("[ImageProvider] error_image_url_empty")
+        }
+        
+        let vFileURL = BookHelp.getImage(book, src)
+        
+        // 原版 line 191: if (!vFile.exists()) return errorBitmap
+        if !FileManager.default.fileExists(atPath: vFileURL.path) {
+            return errorImage
+        }
+        
+        // 原版 line 194-195: 使用缓存文件路径作为 key
+        let cacheKey = vFileURL.path
+        if let cacheImage = getNotRecycled(cacheKey) {
+            return cacheImage
+        }
+        
+        // 原版 line 196-205: 解码图片
+        do {
+            let image = decodeImage(fileURL: vFileURL, width: width, height: height)
+            if image != nil && image != errorImage {
+                put(cacheKey, image: image!)
+                return image!
+            }
+        } catch {
+            print("[ImageProvider] decode error: \(error)")
+        }
+        
+        // 原版 line 204: 错误图片占位，防止重复获取
+        put(cacheKey, image: errorImage)
+        return errorImage
+    }
+    
+    // MARK: - 解码图片 (辅助方法)
+    
+    /// 解码图片文件
+    /// 对照 Android 原版 BitmapUtils.decodeBitmap + SvgUtils.createBitmap
+    private static func decodeImage(fileURL: URL, width: Int, height: Int?) -> UIImage? {
+        guard let data = try? Data(contentsOf: fileURL) else {
+            return nil
+        }
+        
+        // 使用 CGImageSource 进行高效解码（类似 Android BitmapFactory）
+        if let imageSource = CGImageSourceCreateWithURL(fileURL as CFURL, nil) {
+            let options: [CFString: Any] = [
+                kCGImageSourceShouldCache: true,
+                kCGImageSourceThumbnailMaxPixelSize: max(width, height ?? width)
+            ]
+            
+            if let cgImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary) {
+                return UIImage(cgImage: cgImage)
+            }
+        }
+        
+        // 直接解码
+        return UIImage(data: data)
+    }
+    
+    // MARK: - 清空缓存 (对照原版 line 208-210)
+    
+    /// 清空所有缓存
+    static func clear() {
+        bitmapLruCache.evictAll()
+    }
+}
+
+// MARK: - Book 扩展方法
+
+/// Book 类型判断扩展
+/// 对照 Android 原版 BookHelp.isEpub/isPdf/isMobi 等
+extension Book {
+    var isEpub: Bool {
+        let path = bookUrl.lowercased()
+        return path.hasSuffix(".epub")
+    }
+    
+    var isPdf: Bool {
+        let path = bookUrl.lowercased()
+        return path.hasSuffix(".pdf")
+    }
+    
+    var isMobi: Bool {
+        let path = bookUrl.lowercased()
+        return path.hasSuffix(".mobi")
+    }
+    
+    func getUseReplaceRule() -> Bool {
+        return readConfigObj.useReplaceRule
+    }
+    
+    func setUseReplaceRule(_ value: Bool) {
+        var config = readConfigObj
+        config.useReplaceRule = value
+        readConfigObj = config
+    }
+}
+
+// MARK: - 占位类（待后续实现）
+
+/// 本地书籍文件解析器占位类
+/// 对照 Android 原版 localBook 包下的各类
+/// TODO: 后续阶段实现完整功能
+enum EpubFile {
+    static func getImage(_ book: Book, _ src: String) -> Data? {
+        // TODO: 实现 EPUB 图片提取
+        // 对照 Android 原版 EpubFile.kt
+        return nil
+    }
+}
+
+enum PdfFile {
+    static func getImage(_ book: Book, _ src: String) -> Data? {
+        // TODO: 实现 PDF 图片提取
+        return nil
+    }
+}
+
+enum MobiFile {
+    static func getImage(_ book: Book, _ src: String) -> Data? {
+        // TODO: 实现 MOBI 图片提取
+        return nil
+    }
+}
+
+// MARK: - BookHelp 占位声明
+
+/// 书籍帮助类
+/// 对照 Android 原版 BookHelp.kt
+/// 详细实现见 BookHelp.swift
+enum BookHelp {
+    /// 获取图片缓存路径 (对照原版 line 264-271)
+    static func getImage(_ book: Book, _ src: String) -> URL {
+        // 原版使用 MD5Utils.md5Encode16(src) + suffix
+        // 简化实现，使用缓存目录
+        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        let imageDir = cacheDir.appendingPathComponent("book_cache/images", isDirectory: true)
+        
+        // 创建目录
+        try? FileManager.default.createDirectory(at: imageDir, withIntermediateDirectories: true)
+        
+        // 生成文件名 (原版使用 MD5)
+        let fileName = src.md5() + "." + getImageSuffix(src)
+        return imageDir.appendingPathComponent(fileName)
+    }
+    
+    /// 检查图片是否存在 (对照原版 line 278-281)
+    static func isImageExist(_ book: Book, _ src: String) -> Bool {
+        let fileURL = getImage(book, src)
+        return FileManager.default.fileExists(atPath: fileURL.path)
+    }
+    
+    /// 保存图片 (对照原版 line 219-262)
+    static func saveImage(bookSource: BookSource?, book: Book, src: String) {
+        // TODO: 实现异步网络图片下载
+        // 原版使用 AnalyzeUrl.getByteArrayAwait() + ImageUtils.decode
+        // 简化版本，使用 ImageCacheManager
+        Task.detached {
+            let image = await ImageCacheManager.shared.loadImage(from: src)
+            if let image = image {
+                let fileURL = getImage(book, src)
+                if let data = image.jpegData(compressionQuality: 0.8) {
+                    try? data.write(to: fileURL)
+                }
+            }
+        }
+    }
+    
+    /// 获取图片后缀 (对照原版 line 283-285)
+    static func getImageSuffix(_ src: String) -> String {
+        // 原版: UrlUtil.getSuffix(src, "jpg")
+        let url = URL(string: src)
+        if let pathExtension = url?.pathExtension, !pathExtension.isEmpty {
+            return pathExtension.lowercased()
+        }
+        return "jpg"
+    }
+    
+    /// 写入图片数据 (对照原版 line 274-276)
+    static func writeImage(_ book: Book, _ src: String, _ bytes: Data) {
+        let fileURL = getImage(book, src)
+        try? bytes.write(to: fileURL)
+    }
+}
