@@ -333,7 +333,7 @@
 			path = App;
 			sourceTree = "<group>";
 		};
-1A30000000000010 /* Core */ = {
+		1A30000000000010 /* Core */ = {
 			isa = PBXGroup;
 			children = (
 				1A30000000000011 /* Persistence */,
@@ -405,7 +405,7 @@
 			path = Config;
 			sourceTree = "<group>";
 		};
-1A30000000000012 /* Network */ = {
+		1A30000000000012 /* Network */ = {
 			isa = PBXGroup;
 			children = (
 				1A10000000000016 /* HTTPClient.swift */,
