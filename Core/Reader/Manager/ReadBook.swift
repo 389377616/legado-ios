@@ -7,26 +7,21 @@
 //
 
 import Foundation
+import CoreData
 
-/// 回调协议
 protocol ReadBookCallBack: AnyObject {
     func upContent()
     func upMenuView()
     func upPageAnim()
 }
 
-/// 阅读管理单例
-/// 一比一移植自 Android Legado ReadBook
-/// 管理阅读状态、章节加载、进度同步
 class ReadBook: ObservableObject {
     static let shared = ReadBook()
     
-    // MARK: - 书籍状态
     @Published var book: Book?
     weak var callBack: ReadBookCallBack?
     var inBookshelf = false
     
-    // MARK: - 章节状态
     var chapterSize: Int = 0
     var simulatedChapterSize: Int = 0
     @Published var durChapterIndex: Int = 0
@@ -34,26 +29,21 @@ class ReadBook: ObservableObject {
     var isLocalBook = true
     var chapterChanged = false
     
-    // MARK: - TextChapter 缓存
     var prevTextChapter: TextChapter?
     var curTextChapter: TextChapter?
     var nextTextChapter: TextChapter?
     
-    // MARK: - 书源
     var bookSource: BookSource?
     
-    // MARK: - 消息
     var msg: String?
     
-    // MARK: - 加载状态
     private var loadingChapters: Set<Int> = []
+    private var chapterLoadingTasks: [Int: Task<Void, Never>] = [:]
     
-    // MARK: - 阅读时间
     var readStartTime: Date = Date()
     
     private init() {}
     
-    // MARK: - 重置数据
     func resetData(_ book: Book) {
         releaseAndCancel()
         self.book = book
@@ -70,7 +60,6 @@ class ReadBook: ObservableObject {
         loadingChapters.removeAll()
     }
     
-    // MARK: - 更新数据
     func upData(_ book: Book) {
         releaseAndCancel()
         self.book = book
@@ -98,35 +87,171 @@ class ReadBook: ObservableObject {
         loadingChapters.removeAll()
     }
     
-    // MARK: - 更新书源
     private func upBookSource(_ book: Book) {
         if book.isLocal {
             bookSource = nil
         } else {
-            // TODO: 从数据库获取书源
             bookSource = nil
         }
     }
     
-    // MARK: - 清理 TextChapter
     func clearTextChapter() {
         prevTextChapter = nil
         curTextChapter = nil
         nextTextChapter = nil
     }
     
-    // MARK: - 释放资源
     func releaseAndCancel() {
-        // TODO: 取消所有加载任务
+        for (_, task) in chapterLoadingTasks {
+            task.cancel()
+        }
+        chapterLoadingTasks.removeAll()
+        loadingChapters.removeAll()
     }
     
-    // MARK: - 加载内容
     func loadContent(resetPageOffset: Bool = true) {
-        // TODO: 实现章节加载逻辑
-        callBack?.upContent()
+        guard let book = book else { return }
+        
+        if resetPageOffset {
+            durChapterPos = 0
+        }
+        
+        Task { @MainActor in
+            await loadCurrentChapter()
+            await loadPrevChapter()
+            await loadNextChapter()
+            callBack?.upContent()
+        }
     }
     
-    // MARK: - 页面导航
+    private func loadCurrentChapter() async {
+        guard let book = book, durChapterIndex >= 0 && durChapterIndex < chapterSize else { return }
+        
+        if loadingChapters.contains(durChapterIndex) { return }
+        loadingChapters.insert(durChapterIndex)
+        
+        let task = Task {
+            do {
+                let textChapter = try await loadChapter(index: durChapterIndex, book: book)
+                await MainActor.run {
+                    self.curTextChapter = textChapter
+                    self.loadingChapters.remove(durChapterIndex)
+                }
+            } catch {
+                await MainActor.run {
+                    self.msg = "加载失败: \(error.localizedDescription)"
+                    self.loadingChapters.remove(durChapterIndex)
+                }
+            }
+        }
+        
+        chapterLoadingTasks[durChapterIndex] = task
+    }
+    
+    private func loadPrevChapter() async {
+        guard let book = book, durChapterIndex > 0 else { return }
+        let prevIndex = durChapterIndex - 1
+        
+        if loadingChapters.contains(prevIndex) { return }
+        loadingChapters.insert(prevIndex)
+        
+        let task = Task {
+            do {
+                let textChapter = try await loadChapter(index: prevIndex, book: book)
+                await MainActor.run {
+                    self.prevTextChapter = textChapter
+                    self.loadingChapters.remove(prevIndex)
+                }
+            } catch {
+                await MainActor.run {
+                    self.loadingChapters.remove(prevIndex)
+                }
+            }
+        }
+        
+        chapterLoadingTasks[prevIndex] = task
+    }
+    
+    private func loadNextChapter() async {
+        guard let book = book, durChapterIndex < chapterSize - 1 else { return }
+        let nextIndex = durChapterIndex + 1
+        
+        if loadingChapters.contains(nextIndex) { return }
+        loadingChapters.insert(nextIndex)
+        
+        let task = Task {
+            do {
+                let textChapter = try await loadChapter(index: nextIndex, book: book)
+                await MainActor.run {
+                    self.nextTextChapter = textChapter
+                    self.loadingChapters.remove(nextIndex)
+                }
+            } catch {
+                await MainActor.run {
+                    self.loadingChapters.remove(nextIndex)
+                }
+            }
+        }
+        
+        chapterLoadingTasks[nextIndex] = task
+    }
+    
+    private func loadChapter(index: Int, book: Book) async throws -> TextChapter {
+        let context = CoreDataStack.shared.backgroundContext
+        
+        let chapter: BookChapter = try await context.perform {
+            let request: NSFetchRequest<BookChapter> = BookChapter.fetchRequest()
+            request.predicate = NSPredicate(format: "bookUrl == %@ AND index == %d", book.bookUrl, index)
+            request.fetchLimit = 1
+            
+            guard let chapter = try context.fetch(request).first else {
+                throw NSError(domain: "ReadBook", code: 404, userInfo: [NSLocalizedDescriptionKey: "章节不存在"])
+            }
+            return chapter
+        }
+        
+        let title = chapter.name
+        let content = try await getChapterContent(chapter: chapter, book: book)
+        
+        let textChapter = TextChapter(
+            chapter: chapter,
+            position: index,
+            title: title,
+            chaptersSize: chapterSize,
+            sameTitleRemoved: false,
+            isVip: false,
+            isPay: false,
+            effectiveReplaceRules: nil
+        )
+        
+        let bookContent = BookContent(textList: content)
+        
+        let layout = TextChapterLayout(
+            textChapter: textChapter,
+            textPages: [],
+            book: book,
+            bookContent: bookContent
+        )
+        
+        await layout.startLayout()
+        
+        return textChapter
+    }
+    
+    private func getChapterContent(chapter: BookChapter, book: Book) async throws -> [String] {
+        if book.isLocal {
+            if let content = chapter.content, !content.isEmpty {
+                return [content]
+            }
+            return ["章节内容加载中..."]
+        } else {
+            if let content = chapter.content, !content.isEmpty {
+                return [content]
+            }
+            return ["正在加载章节内容..."]
+        }
+    }
+    
     func setPageIndex(_ index: Int) {
         durChapterPos = index
         callBack?.upContent()
@@ -137,10 +262,16 @@ class ReadBook: ObservableObject {
         durChapterIndex += 1
         durChapterPos = 0
         chapterChanged = true
-        clearTextChapter()
+        
+        prevTextChapter = curTextChapter
+        curTextChapter = nextTextChapter
+        nextTextChapter = nil
+        
         if upContent {
             loadContent(resetPageOffset: !upContentInPlace)
         }
+        
+        saveReadProgress()
     }
     
     func moveToPrevChapter(_ upContent: Bool, upContentInPlace: Bool) {
@@ -148,24 +279,39 @@ class ReadBook: ObservableObject {
         durChapterIndex -= 1
         durChapterPos = 0
         chapterChanged = true
-        clearTextChapter()
+        
+        nextTextChapter = curTextChapter
+        curTextChapter = prevTextChapter
+        prevTextChapter = nil
+        
         if upContent {
             loadContent(resetPageOffset: !upContentInPlace)
         }
+        
+        saveReadProgress()
     }
     
-    // MARK: - 获取页面动画类型
     func pageAnim() -> Int {
         return book?.pageAnim ?? 0
     }
     
-    // MARK: - 保存进度
     func saveReadProgress() {
         guard let book = book else { return }
-        // TODO: 保存阅读进度到数据库
+        
+        let context = CoreDataStack.shared.viewContext
+        context.perform {
+            book.durChapterIndex = Int32(self.durChapterIndex)
+            book.durChapterPos = Int32(self.durChapterPos)
+            book.lastReadTime = Date()
+            
+            do {
+                try context.save()
+            } catch {
+                print("保存进度失败: \(error)")
+            }
+        }
     }
     
-    // MARK: - 当前章节
     var currentChapter: TextChapter? {
         return curTextChapter
     }
@@ -178,7 +324,6 @@ class ReadBook: ObservableObject {
         return nextTextChapter
     }
     
-    // MARK: - 检查章节
     func hasPrevChapter() -> Bool {
         return durChapterIndex > 0
     }
