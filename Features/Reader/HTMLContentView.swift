@@ -60,10 +60,10 @@ struct HTMLContentView: UIViewRepresentable {
         switch imageStyle {
         case .full:
             imgStyle = "width: 100% !important; height: auto !important; object-fit: contain;"
-        case .single:
+        case .original:
             imgStyle = "max-width: 100%; max-height: 100vh; object-fit: contain; margin: auto;"
-        default:
-            imgStyle = "max-width: 100%; height: auto;"
+        case .none:
+            imgStyle = "display: none;"
         }
         
         return """
