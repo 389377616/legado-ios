@@ -179,6 +179,8 @@
 		1A000000000000F3 /* RuleBasedRSSParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F3 /* RuleBasedRSSParser.swift */; };
 		1A000000000000F4 /* RSSRefreshManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F4 /* RSSRefreshManager.swift */; };
 		1A000000000000F5 /* RSSViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F5 /* RSSViewModel.swift */; };
+		1A000000000000F6 /* ImageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F6 /* ImageProvider.swift */; };
+		1A000000000000F7 /* BookHelp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F7 /* BookHelp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -239,6 +241,8 @@
 		1A10000000000095 /* RuleAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleAnalyzer.swift; sourceTree = "<group>"; };
 1A10000000000096 /* HTMLContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLContentView.swift; sourceTree = "<group>"; };
 		1A10000000000098 /* CoverPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverPageView.swift; sourceTree = "<group>"; };
+		1A100000000000F6 /* ImageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageProvider.swift; sourceTree = "<group>"; };
+		1A100000000000F7 /* BookHelp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookHelp.swift; sourceTree = "<group>"; };
 		
 		// Features
 		1A10000000000020 /* BookshelfView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshelfView.swift; sourceTree = "<group>"; };
