@@ -1,11 +1,17 @@
 import SwiftUI
 import CoreData
+import UIKit
 
 struct BookDetailView: View {
     @StateObject private var viewModel: BookDetailViewModel
     @State private var showingChapterList = false
     @State private var showingSourceSelection = false
     @State private var navigatingToReader = false
+    @State private var showingEditSheet = false
+    @State private var showingSourceVariableSheet = false
+    @State private var showingBookVariableSheet = false
+    @State private var showingLogSheet = false
+    @State private var showingGroupSelection = false
     @Environment(\.dismiss) var dismiss
     
     let book: Book
@@ -35,21 +41,70 @@ struct BookDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button(action: { viewModel.cacheAllChapters() }) {
-                        Label("缓存全本", systemImage: "arrow.down.circle")
+                HStack(spacing: 16) {
+                    Button(action: { showingEditSheet = true }) {
+                        Image(systemName: "pencil")
+                            .foregroundColor(.white)
                     }
-                    Button(action: { Task { await viewModel.refreshBookInfo() } }) {
-                        Label("刷新书籍信息", systemImage: "arrow.clockwise")
+                    
+                    Button(action: { viewModel.shareBook() }) {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(.white)
                     }
-                    Divider()
-                    Button("从书架移除", role: .destructive) {
-                        viewModel.deleteBook(book)
-                        dismiss()
+                    
+                    Menu {
+                        Button(action: { viewModel.cacheAllChapters() }) {
+                            Label("缓存全本", systemImage: "arrow.down.circle")
+                        }
+                        
+                        Button(action: { Task { await viewModel.refreshBookInfo() } }) {
+                            Label("刷新书籍信息", systemImage: "arrow.clockwise")
+                        }
+                        
+                        Divider()
+                        
+                        Button(action: { viewModel.toggleTop() }) {
+                            Label(book.topOrder ? "取消置顶" : "置顶", systemImage: book.topOrder ? "pin.slash" : "pin")
+                        }
+                        
+                        Button(action: { showingSourceVariableSheet = true }) {
+                            Label("设置源变量", systemImage: "gearshape.2")
+                        }
+                        
+                        Button(action: { showingBookVariableSheet = true }) {
+                            Label("设置书籍变量", systemImage: "book.circle")
+                        }
+                        
+                        Divider()
+                        
+                        Button(action: { viewModel.copyBookUrl() }) {
+                            Label("复制书籍链接", systemImage: "link")
+                        }
+                        
+                        Button(action: { viewModel.copyTocUrl() }) {
+                            Label("复制目录链接", systemImage: "list.bullet.rectangle")
+                        }
+                        
+                        Divider()
+                        
+                        Button(action: { viewModel.clearCache() }) {
+                            Label("清理缓存", systemImage: "trash")
+                        }
+                        
+                        Button(action: { showingLogSheet = true }) {
+                            Label("日志", systemImage: "doc.text")
+                        }
+                        
+                        Divider()
+                        
+                        Button("从书架移除", role: .destructive) {
+                            viewModel.deleteBook(book)
+                            dismiss()
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .foregroundColor(.white)
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundColor(.white)
                 }
             }
         }
@@ -58,6 +113,25 @@ struct BookDetailView: View {
         }
         .sheet(isPresented: $showingSourceSelection) {
             SourceSelectionSheet(book: book, selectedSource: $viewModel.currentSource)
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            BookEditSheet(book: book)
+        }
+        .sheet(isPresented: $showingSourceVariableSheet) {
+            VariableEditSheet(title: "设置源变量", value: $viewModel.sourceVariable) { newValue in
+                viewModel.saveSourceVariable(newValue)
+            }
+        }
+        .sheet(isPresented: $showingBookVariableSheet) {
+            VariableEditSheet(title: "设置书籍变量", value: $viewModel.bookVariable) { newValue in
+                viewModel.saveBookVariable(newValue)
+            }
+        }
+        .sheet(isPresented: $showingLogSheet) {
+            LogSheet()
+        }
+        .sheet(isPresented: $showingGroupSelection) {
+            GroupSelectionSheet(book: book, selectedGroupId: $viewModel.selectedGroupId)
         }
         .navigationDestination(isPresented: $navigatingToReader) {
             ReaderView(bookId: book.bookId)
@@ -148,8 +222,16 @@ struct BookDetailView: View {
                 EmptyView()
             }
             
-            infoRow(icon: "folder.fill", text: "分组 \(book.group)") {
-                EmptyView()
+            infoRow(icon: "folder.fill", text: viewModel.groupName) {
+                Button("换分组") {
+                    showingGroupSelection = true
+                }
+                .font(.system(size: 13))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(4)
             }
             
             infoRow(icon: "list.bullet", text: "共 \(book.totalChapterNum) 章") {
@@ -245,6 +327,10 @@ class BookDetailViewModel: ObservableObject {
     @Published var isIntroExpanded = false
     @Published var currentSource: BookSource?
     @Published var previewChapters: [ChapterPreview] = []
+    @Published var sourceVariable: String = ""
+    @Published var bookVariable: String = ""
+    @Published var selectedGroupId: Int64 = 0
+    @Published var groupName: String = "默认"
     
     let book: Book
     private let context = CoreDataStack.shared.viewContext
@@ -252,6 +338,17 @@ class BookDetailViewModel: ObservableObject {
     init(book: Book) {
         self.book = book
         self.currentSource = book.source
+        self.selectedGroupId = book.group
+        loadGroupInfo()
+    }
+    
+    private func loadGroupInfo() {
+        let request: NSFetchRequest<BookGroup> = BookGroup.fetchRequest()
+        request.predicate = NSPredicate(format: "groupId == %lld", book.group)
+        request.fetchLimit = 1
+        if let group = try? context.fetch(request).first {
+            groupName = group.groupName
+        }
     }
     
     func loadChapters() async {
@@ -384,6 +481,54 @@ class BookDetailViewModel: ObservableObject {
         context.delete(book)
         try? CoreDataStack.shared.save()
     }
+    
+    func toggleTop() {
+        book.topOrder = !book.topOrder
+        try? CoreDataStack.shared.save()
+    }
+    
+    func saveSourceVariable(_ value: String) {
+        sourceVariable = value
+        try? CoreDataStack.shared.save()
+    }
+    
+    func saveBookVariable(_ value: String) {
+        bookVariable = value
+        try? CoreDataStack.shared.save()
+    }
+    
+    func copyBookUrl() {
+        if let url = book.bookUrl, !url.isEmpty {
+            UIPasteboard.general.string = url
+        }
+    }
+    
+    func copyTocUrl() {
+        if let url = book.tocUrl, !url.isEmpty {
+            UIPasteboard.general.string = url
+        }
+    }
+    
+    func clearCache() {
+        Task {
+            let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("chapters", isDirectory: true)
+            let request = BookChapter.fetchRequest(byBookId: book.bookId)
+            if let chapters = try? context.fetch(request) {
+                for chapter in chapters {
+                    if let cachePath = chapter.cachePath, !cachePath.isEmpty {
+                        try? FileManager.default.removeItem(at: dir.appendingPathComponent(cachePath))
+                    }
+                    chapter.isCached = false
+                    chapter.cachePath = nil
+                }
+            }
+            try? CoreDataStack.shared.save()
+            await loadChapters()
+        }
+    }
+    
+    func shareBook() {
+    }
 }
 
 struct ChapterPreview: Identifiable {
@@ -439,6 +584,172 @@ struct SourceSelectionSheet: View {
         request.predicate = NSPredicate(format: "enabled == YES")
         do {
             sources = try CoreDataStack.shared.viewContext.fetch(request)
+        } catch { }
+    }
+}
+
+struct BookEditSheet: View {
+    let book: Book
+    @Environment(\.dismiss) var dismiss
+    @State private var name = ""
+    @State private var author = ""
+    @State private var intro = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("基本信息") {
+                    TextField("书名", text: $name)
+                    TextField("作者", text: $author)
+                }
+                
+                Section("简介") {
+                    TextEditor(text: $intro)
+                        .frame(minHeight: 100)
+                }
+            }
+            .navigationTitle("编辑书籍")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        book.name = name
+                        book.author = author
+                        book.intro = intro
+                        try? CoreDataStack.shared.save()
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                name = book.name
+                author = book.author
+                intro = book.intro ?? ""
+            }
+        }
+    }
+}
+
+struct VariableEditSheet: View {
+    let title: String
+    @Binding var value: String
+    let onSave: (String) -> Void
+    @Environment(\.dismiss) var dismiss
+    @State private var editingValue = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section {
+                    TextEditor(text: $editingValue)
+                        .frame(minHeight: 150)
+                        .font(.system(.body, design: .monospaced))
+                } header: {
+                    Text("变量值")
+                } footer: {
+                    Text("可在书源规则中通过 JS 获取此变量")
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        onSave(editingValue)
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear { editingValue = value }
+        }
+    }
+}
+
+struct LogSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @State private var logs: String = ""
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                Text(logs)
+                    .font(.system(.caption, design: .monospaced))
+                    .padding()
+            }
+            .navigationTitle("日志")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("关闭") { dismiss() }
+                }
+            }
+            .task { logs = await loadLogs() }
+        }
+    }
+    
+    private func loadLogs() async -> String {
+        guard let logPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("legado.log") else {
+            return "日志文件不存在"
+        }
+        do {
+            return try String(contentsOf: logPath, encoding: .utf8)
+        } catch {
+            return "读取日志失败: \(error.localizedDescription)"
+        }
+    }
+}
+
+struct GroupSelectionSheet: View {
+    let book: Book
+    @Binding var selectedGroupId: Int64
+    @Environment(\.dismiss) var dismiss
+    @State private var groups: [BookGroup] = []
+    
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(groups, id: \.groupId) { group in
+                    Button(action: {
+                        book.group = group.groupId
+                        selectedGroupId = group.groupId
+                        try? CoreDataStack.shared.save()
+                        dismiss()
+                    }) {
+                        HStack {
+                            Text(group.groupName)
+                            Spacer()
+                            if group.groupId == selectedGroupId {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .navigationTitle("选择分组")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") { dismiss() }
+                }
+            }
+            .task { await loadGroups() }
+        }
+    }
+    
+    private func loadGroups() async {
+        let request: NSFetchRequest<BookGroup> = BookGroup.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "order", ascending: true)]
+        do {
+            groups = try CoreDataStack.shared.viewContext.fetch(request)
         } catch { }
     }
 }
