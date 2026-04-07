@@ -13,12 +13,15 @@ def generate_uuid():
 
 # 新文件列表（相对路径）
 NEW_FILES = [
-    ("OtherSettingsView.swift", "Features/Config/"),
-    ("AllBookmarksView.swift", "Features/Config/"),
-    ("BookshelfManageView.swift", "Features/Bookshelf/"),
-    ("GroupManageView.swift", "Features/Bookshelf/"),
-    ("DownloadManageView.swift", "Features/Download/"),
-    ("ChapterListDrawer.swift", "Features/Reader/"),
+    ("PageDirection.swift", "Core/Reader/Models/"),
+    ("TextPos.swift", "Core/Reader/Models/"),
+    ("BaseColumn.swift", "Core/Reader/Models/"),
+    ("TextColumn.swift", "Core/Reader/Models/"),
+    ("ImageColumn.swift", "Core/Reader/Models/"),
+    ("TextLine.swift", "Core/Reader/Models/"),
+    ("TextPage.swift", "Core/Reader/Models/"),
+    ("TextChapter.swift", "Core/Reader/Models/"),
+    ("ContentTextView.swift", "Core/Reader/Views/"),
 ]
 
 def add_files_to_pbxproj(filepath):
