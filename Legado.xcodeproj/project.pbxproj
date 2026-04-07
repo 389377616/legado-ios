@@ -180,9 +180,8 @@
 		1A10000000000091 /* TocParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TocParser.swift; sourceTree = "<group>"; };
 1A10000000000094 /* SourceRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceRule.swift; sourceTree = "<group>"; };
 		1A10000000000095 /* RuleAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleAnalyzer.swift; sourceTree = "<group>"; };
-		1A10000000000096 /* HTMLContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/HTMLContentView.swift"; sourceTree = "<group>"; };
-		1A10000000000098 /* CoverPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageViews/CoverPageView.swift"; sourceTree = "<group>"; };
-		1A1000000000005B /* SlidePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageViews/SlidePageView.swift"; sourceTree = "<group>"; };
+1A10000000000096 /* HTMLContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLContentView.swift; sourceTree = "<group>"; };
+		1A10000000000098 /* CoverPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverPageView.swift; sourceTree = "<group>"; };
 		
 		// Features
 		1A10000000000020 /* BookshelfView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshelfView.swift; sourceTree = "<group>"; };
@@ -237,23 +236,23 @@
 		1A10000000000055 /* WebDAVClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebDAVClient.swift; sourceTree = "<group>"; };
 		1A10000000000056 /* WebDAVSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebDAVSyncManager.swift; sourceTree = "<group>"; };
 		1A10000000000057 /* WebDAVConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebDAVConfigView.swift; sourceTree = "<group>"; };
-		1A10000000000058 /* PagedReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PagedReaderView.swift"; sourceTree = "<group>"; };
-1A10000000000059 /* PageSplitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageSplitter.swift"; sourceTree = "<group>"; };
-		1A10000000000068 /* FullTextFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/Network/FullTextFetcher.swift"; sourceTree = "<group>"; };
-		1A1000000000005B /* SlidePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageViews/SlidePageView.swift"; sourceTree = "<group>"; };
-		1A1000000000005C /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Discovery/DiscoveryView.swift"; sourceTree = "<group>"; };
-		1A1000000000005D /* ReadingStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Statistics/ReadingStatisticsView.swift"; sourceTree = "<group>"; };
-		1A1000000000005E /* ReadingStatisticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Statistics/ReadingStatisticsManager.swift"; sourceTree = "<group>"; };
+1A10000000000058 /* PagedReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PagedReaderView.swift; sourceTree = "<group>"; };
+		1A10000000000059 /* PageSplitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageSplitter.swift; sourceTree = "<group>"; };
+		1A10000000000068 /* FullTextFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullTextFetcher.swift; sourceTree = "<group>"; };
+		1A1000000000005B /* SlidePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlidePageView.swift; sourceTree = "<group>"; };
+		1A1000000000005C /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
+		1A1000000000005D /* ReadingStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStatisticsView.swift; sourceTree = "<group>"; };
+		1A1000000000005E /* ReadingStatisticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStatisticsManager.swift; sourceTree = "<group>"; };
 		1A1000000000005F /* SourceDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceDebugView.swift; sourceTree = "<group>"; };
 		1A10000000000060 /* SourceDebugViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceDebugViewModel.swift; sourceTree = "<group>"; };
 		1A10000000000061 /* RuleDebugger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleDebugger.swift; sourceTree = "<group>"; };
-		1A10000000000062 /* TTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/TTS/TTSManager.swift"; sourceTree = "<group>"; };
-		1A10000000000063 /* TTSControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/TTSControlsView.swift"; sourceTree = "<group>"; };
-		1A10000000000093 /* HttpTTSPlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/TTS/HttpTTSPlaybackManager.swift"; sourceTree = "<group>"; };
-		1A10000000000064 /* CurlPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageViews/CurlPageView.swift"; sourceTree = "<group>"; };
-		1A10000000000065 /* AutoPageTurnManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/AutoPageTurnManager.swift"; sourceTree = "<group>"; };
-		1A10000000000066 /* AutoPageTurnControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/AutoPageTurnControlsView.swift"; sourceTree = "<group>"; };
-		1A10000000000067 /* ReadingEnhancementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/ReadingEnhancementManager.swift"; sourceTree = "<group>"; };
+		1A10000000000062 /* TTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSManager.swift; sourceTree = "<group>"; };
+		1A10000000000063 /* TTSControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSControlsView.swift; sourceTree = "<group>"; };
+		1A10000000000093 /* HttpTTSPlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HttpTTSPlaybackManager.swift; sourceTree = "<group>"; };
+		1A10000000000064 /* CurlPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurlPageView.swift; sourceTree = "<group>"; };
+		1A10000000000065 /* AutoPageTurnManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoPageTurnManager.swift; sourceTree = "<group>"; };
+		1A10000000000066 /* AutoPageTurnControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoPageTurnControlsView.swift; sourceTree = "<group>"; };
+		1A10000000000067 /* ReadingEnhancementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingEnhancementManager.swift; sourceTree = "<group>"; };
 		1A10000000000069 /* SourceSubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/Source/SourceSubscriptionManager.swift"; sourceTree = "<group>"; };
 		1A1000000000006A /* DataMigrationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/Migration/DataMigrationManager.swift"; sourceTree = "<group>"; };
 		1A1000000000006B /* SearchOptimizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/Search/SearchOptimizer.swift"; sourceTree = "<group>"; };
@@ -296,7 +295,7 @@
 		1A100000000000F3 /* RuleBasedRSSParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleBasedRSSParser.swift; sourceTree = "<group>"; };
 		1A100000000000F4 /* RSSRefreshManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSRefreshManager.swift; sourceTree = "<group>"; };
 		1A100000000000F5 /* RSSViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSViewModel.swift; sourceTree = "<group>"; };
-		1A1000000000006D /* EPUBReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/EPUBReaderView.swift"; sourceTree = "<group>"; };
+		1A1000000000006D /* EPUBReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBReaderView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
