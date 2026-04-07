@@ -242,13 +242,13 @@
 		1A1000000000005B /* SlidePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlidePageView.swift; sourceTree = "<group>"; };
 		1A1000000000005C /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Discovery/DiscoveryView.swift"; sourceTree = "<group>"; };
 		1A1000000000005D /* ReadingStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Statistics/ReadingStatisticsView.swift"; sourceTree = "<group>"; };
-		1A1000000000005E /* ReadingStatisticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStatisticsManager.swift; sourceTree = "<group>"; };
+		1A1000000000005E /* ReadingStatisticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/Statistics/ReadingStatisticsManager.swift"; sourceTree = SOURCE_ROOT; };
 		1A1000000000005F /* SourceDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceDebugView.swift; sourceTree = "<group>"; };
 		1A10000000000060 /* SourceDebugViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceDebugViewModel.swift; sourceTree = "<group>"; };
 		1A10000000000061 /* RuleDebugger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleDebugger.swift; sourceTree = "<group>"; };
-		1A10000000000062 /* TTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSManager.swift; sourceTree = "<group>"; };
+		1A10000000000062 /* TTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/TTS/TTSManager.swift"; sourceTree = SOURCE_ROOT; };
 		1A10000000000063 /* TTSControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSControlsView.swift; sourceTree = "<group>"; };
-		1A10000000000093 /* HttpTTSPlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HttpTTSPlaybackManager.swift; sourceTree = "<group>"; };
+		1A10000000000093 /* HttpTTSPlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/TTS/HttpTTSPlaybackManager.swift"; sourceTree = SOURCE_ROOT; };
 		1A10000000000064 /* CurlPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurlPageView.swift; sourceTree = "<group>"; };
 		1A10000000000065 /* AutoPageTurnManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoPageTurnManager.swift; sourceTree = "<group>"; };
 		1A10000000000066 /* AutoPageTurnControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoPageTurnControlsView.swift; sourceTree = "<group>"; };
