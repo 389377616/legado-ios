@@ -68,20 +68,11 @@ struct BookDetailView: View {
     private var backgroundView: some View {
         Group {
             if let coverUrl = book.displayCoverUrl, !coverUrl.isEmpty {
-                AsyncImage(url: URL(string: coverUrl)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .blur(radius: 30)
-                            .overlay(Color.black.opacity(0.5))
-                            .ignoresSafeArea()
-                    default:
-                        Color.primary.colorInvert()
-                            .ignoresSafeArea()
-                    }
-                }
+                BookCoverView(url: coverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
+                    .aspectRatio(contentMode: .fill)
+                    .blur(radius: 30)
+                    .overlay(Color.black.opacity(0.5))
+                    .ignoresSafeArea()
             } else {
                 Color.primary.colorInvert()
                     .ignoresSafeArea()
@@ -93,7 +84,7 @@ struct BookDetailView: View {
         VStack(spacing: 0) {
             Spacer().frame(height: 16)
             
-            BookCoverView(url: book.displayCoverUrl)
+            BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
                 .frame(width: 110, height: 160)
                 .cornerRadius(5)
                 .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)

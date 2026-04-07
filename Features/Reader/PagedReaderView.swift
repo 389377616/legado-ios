@@ -116,22 +116,33 @@ struct PagedReaderView: View {
         }
     }
     
-    // MARK: - 滚动视图（保留原有滚动模式）
+    // MARK: - 滚动视图（支持图片渲染）
     
     private var scrollView: some View {
-        ScrollView {
-            if let content = viewModel.chapterContent {
-                Text(content)
-                    .font(.system(size: viewModel.fontSize))
-                    .foregroundColor(viewModel.textColor)
-                    .lineSpacing(viewModel.lineSpacing)
-                    .padding(viewModel.pagePadding)
-                    .textSelection(.enabled)
+        Group {
+            if let htmlContent = viewModel.chapterContentHTML, htmlContent.contains("<img") {
+                HTMLContentView(
+                    htmlContent: htmlContent,
+                    fontSize: viewModel.fontSize,
+                    textColor: viewModel.textColor,
+                    backgroundColor: viewModel.backgroundColor,
+                    imageStyle: viewModel.imageStyle,
+                    onTap: onTap
+                )
+            } else if let content = viewModel.chapterContent {
+                ScrollView {
+                    Text(content)
+                        .font(.system(size: viewModel.fontSize))
+                        .foregroundColor(viewModel.textColor)
+                        .lineSpacing(viewModel.lineSpacing)
+                        .padding(viewModel.pagePadding)
+                        .textSelection(.enabled)
+                }
+                .background(viewModel.backgroundColor)
+                .contentShape(Rectangle())
+                .onTapGesture { onTap() }
             }
         }
-        .background(viewModel.backgroundColor)
-        .contentShape(Rectangle())
-        .onTapGesture { onTap() }
     }
     
     // MARK: - 页码指示器

@@ -8,6 +8,7 @@
 import SwiftUI
 import CoreData
 import PhotosUI
+import UIKit
 
 struct BookInfoEditView: View {
     @Environment(\.dismiss) private var dismiss
@@ -35,16 +36,19 @@ struct BookInfoEditView: View {
                 
                 Section("封面") {
                     HStack {
-                        AsyncImage(url: URL(string: viewModel.coverUrl)) { phase in
-                            if let image = phase.image {
-                                image.resizable().aspectRatio(contentMode: .fill)
+                        Group {
+                            if let previewImage = viewModel.previewImage {
+                                Image(uiImage: previewImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
                             } else {
-                                Color.gray.opacity(0.3)
+                                BookCoverView(url: viewModel.currentCoverURL, sourceId: viewModel.customCoverUrl.isEmpty ? viewModel.sourceId : nil)
                             }
                         }
                         .frame(width: 60, height: 80)
+                        .clipped()
                         .cornerRadius(4)
-                        
+
                         TextField("封面URL", text: $viewModel.customCoverUrl)
                     }
                     
@@ -55,12 +59,21 @@ struct BookInfoEditView: View {
             }
             .navigationTitle("编辑书籍")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: viewModel.selectedImage) { _ in
+                Task { await viewModel.loadSelectedImage() }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("保存") { viewModel.save(); onSave(); dismiss() }
+                    Button("保存") {
+                        Task {
+                            await viewModel.save()
+                            onSave()
+                            dismiss()
+                        }
+                    }
                 }
             }
         }
@@ -75,12 +88,19 @@ class BookInfoEditViewModel: ObservableObject {
     @Published var coverUrl: String = ""
     @Published var customCoverUrl: String = ""
     @Published var selectedImage: PhotosPickerItem?
+    @Published var previewImage: UIImage?
     
     private let book: Book
     private let context = CoreDataStack.shared.viewContext
+    let sourceId: UUID?
+
+    var currentCoverURL: String {
+        customCoverUrl.isEmpty ? coverUrl : customCoverUrl
+    }
     
     init(book: Book) {
         self.book = book
+        self.sourceId = book.source?.sourceId
         name = book.name
         author = book.author
         kind = book.kind ?? ""
@@ -89,7 +109,21 @@ class BookInfoEditViewModel: ObservableObject {
         customCoverUrl = book.customCoverUrl ?? ""
     }
     
-    func save() {
+    func loadSelectedImage() async {
+        guard let selectedImage,
+              let data = try? await selectedImage.loadTransferable(type: Data.self),
+              let image = UIImage(data: data) else {
+            return
+        }
+
+        previewImage = image
+        let url = await saveSelectedCoverImage(data)
+        if let url {
+            customCoverUrl = url.absoluteString
+        }
+    }
+
+    func save() async {
         book.name = name
         book.author = author
         book.kind = kind.isEmpty ? nil : kind
@@ -97,5 +131,23 @@ class BookInfoEditViewModel: ObservableObject {
         book.customCoverUrl = customCoverUrl.isEmpty ? nil : customCoverUrl
         book.updatedAt = Date()
         try? context.save()
+    }
+
+    private func saveSelectedCoverImage(_ data: Data) async -> URL? {
+        let fileManager = FileManager.default
+        let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let coverDir = documentsPath.appendingPathComponent("covers", isDirectory: true)
+
+        if !fileManager.fileExists(atPath: coverDir.path) {
+            try? fileManager.createDirectory(at: coverDir, withIntermediateDirectories: true)
+        }
+
+        let coverURL = coverDir.appendingPathComponent("\(book.bookId.uuidString).jpg")
+        do {
+            try data.write(to: coverURL, options: .atomic)
+            return coverURL
+        } catch {
+            return nil
+        }
     }
 }

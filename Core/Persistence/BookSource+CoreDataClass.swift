@@ -99,9 +99,79 @@ extension BookSource {
         var name: String?
         var author: String?
         var intro: String?
+        var kind: String?
+        var updateTime: String?
         var bookUrl: String?
         var coverUrl: String?
         var lastChapter: String?
+        var wordCount: String?
+
+        enum CodingKeys: String, CodingKey {
+            case exploreList
+            case bookList
+            case name
+            case author
+            case intro
+            case kind
+            case updateTime
+            case bookUrl
+            case coverUrl
+            case lastChapter
+            case wordCount
+        }
+
+        init(
+            exploreList: String? = nil,
+            name: String? = nil,
+            author: String? = nil,
+            intro: String? = nil,
+            kind: String? = nil,
+            updateTime: String? = nil,
+            bookUrl: String? = nil,
+            coverUrl: String? = nil,
+            lastChapter: String? = nil,
+            wordCount: String? = nil
+        ) {
+            self.exploreList = exploreList
+            self.name = name
+            self.author = author
+            self.intro = intro
+            self.kind = kind
+            self.updateTime = updateTime
+            self.bookUrl = bookUrl
+            self.coverUrl = coverUrl
+            self.lastChapter = lastChapter
+            self.wordCount = wordCount
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.exploreList = try container.decodeIfPresent(String.self, forKey: .exploreList)
+                ?? container.decodeIfPresent(String.self, forKey: .bookList)
+            self.name = try container.decodeIfPresent(String.self, forKey: .name)
+            self.author = try container.decodeIfPresent(String.self, forKey: .author)
+            self.intro = try container.decodeIfPresent(String.self, forKey: .intro)
+            self.kind = try container.decodeIfPresent(String.self, forKey: .kind)
+            self.updateTime = try container.decodeIfPresent(String.self, forKey: .updateTime)
+            self.bookUrl = try container.decodeIfPresent(String.self, forKey: .bookUrl)
+            self.coverUrl = try container.decodeIfPresent(String.self, forKey: .coverUrl)
+            self.lastChapter = try container.decodeIfPresent(String.self, forKey: .lastChapter)
+            self.wordCount = try container.decodeIfPresent(String.self, forKey: .wordCount)
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(exploreList, forKey: .bookList)
+            try container.encodeIfPresent(name, forKey: .name)
+            try container.encodeIfPresent(author, forKey: .author)
+            try container.encodeIfPresent(intro, forKey: .intro)
+            try container.encodeIfPresent(kind, forKey: .kind)
+            try container.encodeIfPresent(updateTime, forKey: .updateTime)
+            try container.encodeIfPresent(bookUrl, forKey: .bookUrl)
+            try container.encodeIfPresent(coverUrl, forKey: .coverUrl)
+            try container.encodeIfPresent(lastChapter, forKey: .lastChapter)
+            try container.encodeIfPresent(wordCount, forKey: .wordCount)
+        }
     }
     
     /// 搜索规则
@@ -124,15 +194,18 @@ extension BookSource {
         var name: String?
         var author: String?
         var intro: String?
+        var kind: String?
         var coverUrl: String?
         var tocUrl: String?
         var lastChapter: String?
+        var updateTime: String?
         var wordCount: String?
+        var canReName: String?
         var downloadUrls: String?
         
         enum CodingKeys: String, CodingKey {
             case initRule = "init"
-            case name, author, intro, coverUrl, tocUrl, lastChapter, wordCount, downloadUrls
+            case name, author, intro, kind, coverUrl, tocUrl, lastChapter, updateTime, wordCount, canReName, downloadUrls
         }
     }
     

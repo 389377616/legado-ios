@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import JavaScriptCore
 import WebKit
 
 /// URL 解析结果
@@ -17,6 +18,8 @@ struct AnalyzedUrl {
     var headers: [String: String] = [:]
     var charset: String?
     var webView: Bool = false
+    var webJs: String?
+    var sourceRegex: String?
     
     enum HTTPMethod: String {
         case get = "GET"
@@ -44,15 +47,19 @@ class AnalyzeUrl {
     ) -> AnalyzedUrl {
         var result = AnalyzedUrl(url: "")
         let templateContext = buildTemplateContext(key: key, page: page, source: source)
+        if let baseUrl {
+            templateContext.baseURL = URL(string: baseUrl)
+        }
+        let preprocessedRuleUrl = preprocessRuleUrl(ruleUrl, context: templateContext)
         
         // 1. 分离 URL 和配置 JSON
-        var urlPart = ruleUrl
+        var urlPart = preprocessedRuleUrl
         var configJson: [String: Any]?
         
         // 检查是否有 JSON 配置（以 , + { 分隔）
-        if let jsonStart = findJsonConfig(in: ruleUrl) {
-            urlPart = String(ruleUrl[..<jsonStart.lowerBound])
-            let jsonStr = String(ruleUrl[jsonStart.lowerBound...])
+        if let jsonConfig = findJsonConfig(in: preprocessedRuleUrl) {
+            urlPart = String(preprocessedRuleUrl[..<jsonConfig.separator])
+            let jsonStr = String(preprocessedRuleUrl[jsonConfig.jsonStart...])
             if let data = jsonStr.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 configJson = json
@@ -86,6 +93,18 @@ class AnalyzeUrl {
         if let webView = configJson?["webView"] as? Bool {
             result.webView = webView
         }
+
+        if let webJs = configJson?["webJs"] as? String,
+           !webJs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            result.webJs = webJs
+        }
+
+        if let sourceRegex = configJson?["sourceRegex"] as? String,
+           !sourceRegex.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            result.sourceRegex = sourceRegex
+        }
+
+        let optionJs = configJson?["js"] as? String
         
         // 8. 处理 URL 中的 POST 参数（用 , 分隔的旧格式）
         if result.method == .get && urlPart.contains(",{") == false {
@@ -100,16 +119,19 @@ class AnalyzeUrl {
         
         // 9. 处理相对 URL
         if !urlPart.hasPrefix("http"), let base = baseUrl {
-            if urlPart.hasPrefix("/") {
-                // 取 baseUrl 的 scheme + host
-                if let baseURL = URL(string: base),
-                   let scheme = baseURL.scheme,
-                   let host = baseURL.host {
-                    let port = baseURL.port.map { ":\($0)" } ?? ""
-                    urlPart = "\(scheme)://\(host)\(port)\(urlPart)"
-                }
-            } else {
-                urlPart = base.hasSuffix("/") ? base + urlPart : base + "/" + urlPart
+            if let resolved = URL(string: urlPart, relativeTo: URL(string: base))?.absoluteURL.absoluteString {
+                urlPart = resolved
+            }
+        }
+
+        if let optionJs,
+           !optionJs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let evaluatedURL = evaluateURLJavaScript(optionJs, context: templateContext, currentResult: urlPart),
+           !evaluatedURL.isEmpty {
+            urlPart = evaluatedURL
+            if !urlPart.hasPrefix("http"), let base = baseUrl,
+               let resolved = URL(string: urlPart, relativeTo: URL(string: base))?.absoluteURL.absoluteString {
+                urlPart = resolved
             }
         }
         
@@ -140,6 +162,10 @@ class AnalyzeUrl {
 
     private static func buildTemplateContext(key: String?, page: Int, source: BookSource?) -> ExecutionContext {
         let context = ExecutionContext()
+        context.source = source
+        if let source {
+            context.baseURL = URL(string: source.bookSourceUrl)
+        }
 
         if let key {
             let encodedKey = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? key
@@ -166,29 +192,167 @@ class AnalyzeUrl {
 
         return context
     }
+
+    private static func preprocessRuleUrl(_ ruleUrl: String, context: ExecutionContext) -> String {
+        var working = ruleUrl
+
+        if working.contains("<js>") && working.contains("</js>") {
+            let analyzer = RuleAnalyzer(data: working, code: true)
+            let replaced = analyzer.innerRule(startStr: "<js>", endStr: "</js>") { jsCode in
+                evaluateURLJavaScript(jsCode, context: context, currentResult: working) ?? ""
+            }
+            if !replaced.isEmpty {
+                working = replaced
+            }
+        }
+
+        let trimmed = working.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.lowercased().hasPrefix("@js:") {
+            let jsCode = String(trimmed.dropFirst(4))
+            if let evaluated = evaluateURLJavaScript(jsCode, context: context, currentResult: working), !evaluated.isEmpty {
+                working = evaluated
+            }
+        }
+
+        if working.contains("{{") && working.contains("}}") {
+            let resolved = RuleAnalyzer.resolveInnerRules(working) { token in
+                if shouldKeepAsTemplateToken(token) {
+                    return "{{\(token)}}"
+                }
+                let normalizedToken = normalizeInlineJSToken(token)
+                return evaluateURLJavaScript(normalizedToken, context: context, currentResult: working) ?? ""
+            }
+            working = resolved
+        }
+
+        return replaceVariables(working, context: context)
+    }
+
+    private static func shouldKeepAsTemplateToken(_ token: String) -> Bool {
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        let lowercased = trimmed.lowercased()
+        if lowercased.hasPrefix("js ") || lowercased.hasPrefix("js:") {
+            return false
+        }
+
+        let jsIndicators = ["(", ")", "+", "-", "*", "/", "%", "?", ":", "=", "!", "&", "|", ";", "'", "\"", "java.", "cookie.", "source."]
+        return !jsIndicators.contains(where: { trimmed.contains($0) })
+    }
+
+    private static func normalizeInlineJSToken(_ token: String) -> String {
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lowercased = trimmed.lowercased()
+
+        if lowercased.hasPrefix("js ") {
+            return String(trimmed.dropFirst(3)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        if lowercased.hasPrefix("js:") {
+            return String(trimmed.dropFirst(3)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return trimmed
+    }
+
+    private static func evaluateURLJavaScript(_ jsCode: String, context: ExecutionContext, currentResult: String?) -> String? {
+        let trimmed = jsCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return currentResult }
+
+        let jsContext = context.jsContext
+        for (key, value) in context.variables {
+            if let intValue = Int(value) {
+                jsContext.setValue(intValue, forKey: key)
+            } else if let doubleValue = Double(value) {
+                jsContext.setValue(doubleValue, forKey: key)
+            } else if value == "true" || value == "false" {
+                jsContext.setValue(value == "true", forKey: key)
+            } else {
+                jsContext.setValue(value, forKey: key)
+            }
+        }
+
+        jsContext.setValue(currentResult, forKey: "result")
+        jsContext.setValue(currentResult, forKey: "url")
+        jsContext.setValue(context.baseURL?.absoluteString, forKey: "baseUrl")
+
+        guard let value = jsContext.evaluateScript(trimmed) else {
+            return currentResult
+        }
+
+        if let string = value.toString(), !string.isEmpty, string != "undefined", string != "null" {
+            return string
+        }
+
+        return currentResult
+    }
     
     // MARK: - JSON 配置查找
     
     /// 在 URL 字符串中查找 JSON 配置的起始位置
-    private static func findJsonConfig(in url: String) -> Range<String.Index>? {
-        // 查找 ,{ 模式，但要排除 URL 本身包含的 { }
+    private static func findJsonConfig(in url: String) -> (separator: String.Index, jsonStart: String.Index)? {
         var braceDepth = 0
-        var lastCommaIndex: String.Index?
-        
-        for i in url.indices {
-            let char = url[i]
-            if char == "{" {
-                if braceDepth == 0 && lastCommaIndex != nil {
-                    return lastCommaIndex!..<url.endIndex
-                }
-                braceDepth += 1
-            } else if char == "}" {
-                braceDepth -= 1
-            } else if char == "," && braceDepth == 0 {
-                lastCommaIndex = i
+        var bracketDepth = 0
+        var inSingleQuote = false
+        var inDoubleQuote = false
+        var escaping = false
+        var index = url.startIndex
+
+        while index < url.endIndex {
+            let char = url[index]
+
+            if escaping {
+                escaping = false
+                index = url.index(after: index)
+                continue
             }
+
+            if char == "\\" {
+                escaping = true
+                index = url.index(after: index)
+                continue
+            }
+
+            if char == "\"", !inSingleQuote {
+                inDoubleQuote.toggle()
+                index = url.index(after: index)
+                continue
+            }
+
+            if char == "'", !inDoubleQuote {
+                inSingleQuote.toggle()
+                index = url.index(after: index)
+                continue
+            }
+
+            if !inSingleQuote && !inDoubleQuote {
+                switch char {
+                case "{": braceDepth += 1
+                case "}": braceDepth = max(0, braceDepth - 1)
+                case "[": bracketDepth += 1
+                case "]": bracketDepth = max(0, bracketDepth - 1)
+                case ",":
+                    let separatorIndex = index
+                    var nextIndex = url.index(after: index)
+                    while nextIndex < url.endIndex,
+                          url[nextIndex].isWhitespace {
+                        nextIndex = url.index(after: nextIndex)
+                    }
+                    if braceDepth == 0,
+                       bracketDepth == 0,
+                       nextIndex < url.endIndex,
+                       url[nextIndex] == "{" {
+                        return (separator: separatorIndex, jsonStart: nextIndex)
+                    }
+                default:
+                    break
+                }
+            }
+
+            index = url.index(after: index)
         }
-        
+
         return nil
     }
     
@@ -197,7 +361,10 @@ class AnalyzeUrl {
     /// 使用解析后的 URL 发起网络请求并返回响应内容
     static func getResponseBody(
         analyzedUrl: AnalyzedUrl,
-        charset: String.Encoding = .utf8
+        charset: String.Encoding = .utf8,
+        javaScript: String? = nil,
+        sourceRegex: String? = nil,
+        forceWebView: Bool = false
     ) async throws -> (body: String, url: String) {
         guard let url = URL(string: analyzedUrl.url) else {
             throw URLError(.badURL)
@@ -220,9 +387,20 @@ class AnalyzeUrl {
             }
         }
 
-        if analyzedUrl.webView {
+        let effectiveJavaScript = analyzedUrl.webJs ?? javaScript
+        let effectiveSourceRegex = analyzedUrl.sourceRegex ?? sourceRegex
+
+        if analyzedUrl.webView ||
+            forceWebView ||
+            !(effectiveJavaScript?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) ||
+            !(effectiveSourceRegex?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) {
             let fetcher = await WebViewHTMLFetcher()
-            let result = try await fetcher.fetchHTML(request: request, timeout: request.timeoutInterval)
+            let result = try await fetcher.fetchHTML(
+                request: request,
+                timeout: request.timeoutInterval,
+                javaScript: effectiveJavaScript,
+                sourceRegex: effectiveSourceRegex
+            )
             return (result.html, result.finalURL)
         }
         
@@ -297,13 +475,22 @@ private final class WebViewHTMLFetcher: NSObject, WKNavigationDelegate {
     private var webView: WKWebView?
     private var timeoutTask: Task<Void, Never>?
     private var requestedURL: URL?
+    private var extractionJavaScript: String?
+    private var sourceRegex: String?
 
-    func fetchHTML(request: URLRequest, timeout: TimeInterval) async throws -> (html: String, finalURL: String) {
+    func fetchHTML(
+        request: URLRequest,
+        timeout: TimeInterval,
+        javaScript: String? = nil,
+        sourceRegex: String? = nil
+    ) async throws -> (html: String, finalURL: String) {
         if continuation != nil {
             throw WebViewFetchError.invalidState
         }
 
         requestedURL = request.url
+        extractionJavaScript = javaScript?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.sourceRegex = sourceRegex?.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return try await withCheckedThrowingContinuation { cont in
             continuation = cont
@@ -333,21 +520,7 @@ private final class WebViewHTMLFetcher: NSObject, WKNavigationDelegate {
             } catch {
             }
 
-            webView.evaluateJavaScript("document.documentElement.outerHTML") { [weak self] result, error in
-                guard let self else { return }
-                Task { @MainActor in
-                    if let error {
-                        self.finish(.failure(error))
-                        return
-                    }
-                    guard let html = result as? String, !html.isEmpty else {
-                        self.finish(.failure(WebViewFetchError.noHTML))
-                        return
-                    }
-                    let finalURL = webView.url?.absoluteString ?? self.requestedURL?.absoluteString ?? ""
-                    self.finish(.success((html: html, finalURL: finalURL)))
-                }
-            }
+            await evaluateCompletedPage(on: webView)
         }
     }
 
@@ -373,6 +546,8 @@ private final class WebViewHTMLFetcher: NSObject, WKNavigationDelegate {
         webView?.navigationDelegate = nil
         webView = nil
         requestedURL = nil
+        extractionJavaScript = nil
+        sourceRegex = nil
 
         switch result {
         case .success(let value):
@@ -381,6 +556,105 @@ private final class WebViewHTMLFetcher: NSObject, WKNavigationDelegate {
             continuation.resume(throwing: error)
         }
     }
+
+    private func evaluateCompletedPage(on webView: WKWebView) async {
+        let finalURL = webView.url?.absoluteString ?? requestedURL?.absoluteString ?? ""
+
+        do {
+            if let sourceRegex, !sourceRegex.isEmpty {
+                if let script = extractionJavaScript, !script.isEmpty {
+                    _ = try await evaluateJavaScript(script, on: webView)
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                }
+
+                let resourcePayload = try await evaluateJavaScript(Self.resourceSnifferScript, on: webView)
+                let resourceURLs = Self.decodeResourceURLs(resourcePayload)
+                if let matched = Self.firstMatchingResource(in: resourceURLs, regex: sourceRegex) {
+                    finish(.success((html: matched, finalURL: finalURL)))
+                    return
+                }
+            }
+
+            let script = (extractionJavaScript?.isEmpty == false) ? extractionJavaScript! : "document.documentElement.outerHTML"
+            let result = try await evaluateJavaScript(script, on: webView)
+            guard let stringResult = Self.stringifyJavaScriptResult(result), !stringResult.isEmpty else {
+                finish(.failure(WebViewFetchError.noHTML))
+                return
+            }
+            finish(.success((html: stringResult, finalURL: finalURL)))
+        } catch {
+            finish(.failure(error))
+        }
+    }
+
+    private func evaluateJavaScript(_ script: String, on webView: WKWebView) async throws -> Any? {
+        return try await withCheckedThrowingContinuation { continuation in
+            webView.evaluateJavaScript(script) { result, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: result)
+                }
+            }
+        }
+    }
+
+    private static func stringifyJavaScriptResult(_ result: Any?) -> String? {
+        if let string = result as? String {
+            return string
+        }
+        if let number = result as? NSNumber {
+            return number.stringValue
+        }
+        if JSONSerialization.isValidJSONObject(result as Any),
+           let data = try? JSONSerialization.data(withJSONObject: result as Any),
+           let string = String(data: data, encoding: .utf8) {
+            return string
+        }
+        return nil
+    }
+
+    private static func decodeResourceURLs(_ result: Any?) -> [String] {
+        if let string = result as? String,
+           let data = string.data(using: .utf8),
+           let array = try? JSONSerialization.jsonObject(with: data) as? [String] {
+            return array
+        }
+        if let array = result as? [String] {
+            return array
+        }
+        return []
+    }
+
+    private static func firstMatchingResource(in urls: [String], regex: String) -> String? {
+        guard let pattern = try? NSRegularExpression(pattern: regex) else {
+            return urls.first { $0.contains(regex) }
+        }
+
+        for url in urls {
+            let range = NSRange(url.startIndex..., in: url)
+            if pattern.firstMatch(in: url, range: range) != nil {
+                return url
+            }
+        }
+        return nil
+    }
+
+    private static let resourceSnifferScript = #"""
+    (() => {
+      const urls = new Set();
+      try {
+        performance.getEntriesByType('resource').forEach(entry => {
+          if (entry && entry.name) urls.add(entry.name);
+        });
+      } catch (e) {}
+      document.querySelectorAll('[src],[href],source,video,audio,img').forEach(el => {
+        const value = el.currentSrc || el.src || el.href || el.getAttribute('src') || el.getAttribute('href');
+        if (value) urls.add(value);
+      });
+      return JSON.stringify(Array.from(urls));
+    })();
+    """#
 }
 
 private enum WebViewFetchError: LocalizedError {

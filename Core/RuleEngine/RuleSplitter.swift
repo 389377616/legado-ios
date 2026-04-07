@@ -3,7 +3,7 @@ import Foundation
 struct SplitRule {
     let type: RuleKind
     let rule: String
-    let replace: (pattern: String, replacement: String, group: Int?)?
+    let replace: (pattern: String, replacement: String, firstOnly: Bool)?
 }
 
 enum RuleOperator {
@@ -30,6 +30,10 @@ class RuleSplitter {
         }
 
         return segments.compactMap { parseSegment($0) }
+    }
+
+    static func splitTopLevel(_ input: String, token: String) -> [String]? {
+        balancedSplit(input, token: token)
     }
 
     static func parseOperators(_ ruleString: String) -> [(operator: RuleOperator, segments: [String])] {
@@ -99,41 +103,119 @@ class RuleSplitter {
 
     private static func parseReplace(_ rule: String) -> (
         rule: String,
-        replace: (pattern: String, replacement: String, group: Int?)?
+        replace: (pattern: String, replacement: String, firstOnly: Bool)?
     ) {
-        let parts = rule.components(separatedBy: "##")
+        let parts = balancedSplit(rule, token: "##") ?? [rule]
         guard parts.count >= 3 else {
             return (rule, nil)
         }
 
         let targetRule = parts[0].trimmingCharacters(in: .whitespacesAndNewlines)
         let pattern = parts[1]
-        let payload = Array(parts.dropFirst(2))
-
-        if payload.count == 1 {
-            let token = payload[0]
-            if let group = Int(token) {
-                return (targetRule, (pattern: pattern, replacement: "$\(group)", group: group))
-            }
-            return (targetRule, (pattern: pattern, replacement: token, group: nil))
-        }
-
-        if let last = payload.last, let group = Int(last) {
-            let replacementParts = payload.dropLast()
-            let replacement = replacementParts.joined(separator: "##")
-            let resolvedReplacement = replacement.isEmpty ? "$\(group)" : replacement
-            return (targetRule, (pattern: pattern, replacement: resolvedReplacement, group: group))
-        }
-
-        return (targetRule, (pattern: pattern, replacement: payload.joined(separator: "##"), group: nil))
+        let replacement = parts[2]
+        let firstOnly = parts.count > 3
+        return (targetRule, (pattern: pattern, replacement: replacement, firstOnly: firstOnly))
     }
 
     private static func splitIfContains(_ input: String, token: String) -> [String]? {
-        guard input.contains(token) else { return nil }
-        let segments = input
-            .components(separatedBy: token)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        return segments.isEmpty ? nil : segments
+        balancedSplit(input, token: token)
+    }
+
+    private static func balancedSplit(_ input: String, token: String) -> [String]? {
+        guard !token.isEmpty, input.contains(token) else { return nil }
+
+        var parts: [String] = []
+        var buffer = ""
+        var index = input.startIndex
+        var braceDepth = 0
+        var bracketDepth = 0
+        var parenthesisDepth = 0
+        var inSingleQuote = false
+        var inDoubleQuote = false
+        var escaping = false
+        var jsTagDepth = 0
+
+        while index < input.endIndex {
+            if !inSingleQuote && !inDoubleQuote {
+                if input[index...].hasPrefix("<js>") {
+                    jsTagDepth += 1
+                    buffer.append("<js>")
+                    index = input.index(index, offsetBy: 4)
+                    continue
+                }
+
+                if input[index...].hasPrefix("</js>") {
+                    jsTagDepth = max(0, jsTagDepth - 1)
+                    buffer.append("</js>")
+                    index = input.index(index, offsetBy: 5)
+                    continue
+                }
+            }
+
+            let char = input[index]
+
+            if escaping {
+                buffer.append(char)
+                escaping = false
+                index = input.index(after: index)
+                continue
+            }
+
+            if char == "\\" {
+                buffer.append(char)
+                escaping = true
+                index = input.index(after: index)
+                continue
+            }
+
+            if char == "\"", !inSingleQuote {
+                inDoubleQuote.toggle()
+                buffer.append(char)
+                index = input.index(after: index)
+                continue
+            }
+
+            if char == "'", !inDoubleQuote {
+                inSingleQuote.toggle()
+                buffer.append(char)
+                index = input.index(after: index)
+                continue
+            }
+
+            if !inSingleQuote && !inDoubleQuote && jsTagDepth == 0 {
+                if input[index...].hasPrefix(token),
+                   braceDepth == 0,
+                   bracketDepth == 0,
+                   parenthesisDepth == 0 {
+                    let part = buffer.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !part.isEmpty {
+                        parts.append(part)
+                    }
+                    buffer.removeAll(keepingCapacity: true)
+                    index = input.index(index, offsetBy: token.count)
+                    continue
+                }
+
+                switch char {
+                case "{": braceDepth += 1
+                case "}": braceDepth = max(0, braceDepth - 1)
+                case "[": bracketDepth += 1
+                case "]": bracketDepth = max(0, bracketDepth - 1)
+                case "(": parenthesisDepth += 1
+                case ")": parenthesisDepth = max(0, parenthesisDepth - 1)
+                default: break
+                }
+            }
+
+            buffer.append(char)
+            index = input.index(after: index)
+        }
+
+        let tail = buffer.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !tail.isEmpty {
+            parts.append(tail)
+        }
+
+        return parts.count > 1 ? parts : nil
     }
 }

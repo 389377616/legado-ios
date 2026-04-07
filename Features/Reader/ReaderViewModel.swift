@@ -13,6 +13,7 @@ import CoreData
 class ReaderViewModel: ObservableObject {
     // MARK: - Published 属性
     @Published var chapterContent: String?
+    @Published var chapterContentHTML: String?
     @Published var currentChapter: BookChapter?
     @Published var currentChapterIndex: Int = 0
     @Published var totalChapters: Int = 0
@@ -55,6 +56,7 @@ class ReaderViewModel: ObservableObject {
     }
     @Published var backgroundColor: Color = .white
     @Published var textColor: Color = .black
+    @Published var imageStyle: ImageStyle = .original
     
     // MARK: - 新增阅读设置
     @Published var paragraphSpacing: CGFloat = 12
@@ -284,6 +286,7 @@ class ReaderViewModel: ObservableObject {
                     let htmlContent = try String(contentsOf: htmlURL, encoding: .utf8)
                     let textContent = HTMLToTextConverter.convert(html: htmlContent, baseURL: epubDir)
                     chapterContent = applyReplaceRulesIfNeeded(textContent, chapter: chapters[index])
+                    chapterContentHTML = htmlContent
                     chapterHTMLURL = htmlURL
                     epubBaseURL = epubDir
                     isLoading = false
@@ -295,6 +298,7 @@ class ReaderViewModel: ObservableObject {
             if let cachedContent = try? await loadCachedChapter(chapters[index]) {
                 DebugLogger.shared.log("loadChapter: 从缓存加载成功，长度=\(cachedContent.count)")
                 chapterContent = applyReplaceRulesIfNeeded(cachedContent, chapter: chapters[index])
+                chapterContentHTML = nil
                 isLoading = false
                 return
             }
@@ -302,10 +306,11 @@ class ReaderViewModel: ObservableObject {
             DebugLogger.shared.log("loadChapter: 缓存未命中，尝试 fetchChapterContent")
             // 从网络加载
             let content = try await fetchChapterContent(chapters[index])
-            chapterContent = applyReplaceRulesIfNeeded(content, chapter: chapters[index])
+            chapterContentHTML = content
+            let textContent = HTMLToTextConverter.convert(html: content, baseURL: nil)
+            chapterContent = applyReplaceRulesIfNeeded(textContent, chapter: chapters[index])
             
-            // 缓存章节
-            try await cacheChapter(chapters[index], content: content)
+            try await cacheChapter(chapters[index], content: textContent)
             
             isLoading = false
             
@@ -373,7 +378,25 @@ class ReaderViewModel: ObservableObject {
     
     // MARK: - 阅读配置
     func applyReadConfig(_ book: Book) {
-        let config = book.readConfigObj
+        var config = book.readConfigObj
+
+        if config.imageStyle == nil || config.imageStyle?.isEmpty == true {
+            if let sourceId = UUID(uuidString: book.origin) {
+                let request: NSFetchRequest<BookSource> = BookSource.fetchRequest()
+                request.fetchLimit = 1
+                request.predicate = NSPredicate(format: "sourceId == %@", sourceId as CVarArg)
+                if let source = try? CoreDataStack.shared.viewContext.fetch(request).first {
+                    var resolvedStyle = source.getContentRule()?.imageStyle
+                    if (resolvedStyle == nil || resolvedStyle?.isEmpty == true), book.type == 2 {
+                        resolvedStyle = ImageStyle.full.rawValue
+                    }
+                    if let resolvedStyle, !resolvedStyle.isEmpty {
+                        config.imageStyle = resolvedStyle
+                        book.readConfigObj = config
+                    }
+                }
+            }
+        }
 
         seedGlobalPageAnimationIfNeeded(from: config)
 
@@ -381,6 +404,7 @@ class ReaderViewModel: ObservableObject {
         applyTheme(themeFromStorage(UserDefaults.standard.string(forKey: "reader.theme") ?? "亮色"))
 
         useReplaceRule = config.useReplaceRule
+        imageStyle = ImageStyle(rawValue: config.imageStyle ?? "") ?? .original
     }
 
     private func seedGlobalPageAnimationIfNeeded(from config: ReadConfig) {
@@ -469,6 +493,13 @@ class ReaderViewModel: ObservableObject {
     func setFontSize(_ size: CGFloat) async {
         let clamped = min(max(size, 8), 32)
         fontSize = clamped
+    }
+
+    func setImageStyle(_ style: ImageStyle) async {
+        imageStyle = style
+        guard let book = currentBook else { return }
+        book.imageDisplayStyle = style.rawValue
+        try? CoreDataStack.shared.save()
     }
     
     // MARK: - 缓存管理
@@ -679,6 +710,19 @@ struct ReaderSettingsView: View {
                 
                 Section(header: Text("间距")) {
                     Stepper("行距：\(Int(viewModel.lineSpacing))", value: $viewModel.lineSpacing, in: 4...20, step: 1)
+                }
+
+                Section(header: Text("图片")) {
+                    Picker("图片样式", selection: Binding(
+                        get: { viewModel.imageStyle },
+                        set: { newValue in
+                            Task { await viewModel.setImageStyle(newValue) }
+                        }
+                    )) {
+                        ForEach(ImageStyle.allCases, id: \.self) { style in
+                            Text(style.displayName).tag(style)
+                        }
+                    }
                 }
                 
                 Section(header: Text("主题")) {

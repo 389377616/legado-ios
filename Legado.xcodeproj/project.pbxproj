@@ -30,6 +30,8 @@
 		1A00000000000019 /* RuleSplitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000019 /* RuleSplitter.swift */; };
 		1A00000000000090 /* TocRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000090 /* TocRule.swift */; };
 		1A00000000000091 /* TocParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000091 /* TocParser.swift */; };
+		1A00000000000094 /* SourceRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000094 /* SourceRule.swift */; };
+		1A00000000000095 /* RuleAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000095 /* RuleAnalyzer.swift */; };
 		
 		// Features
 		1A00000000000020 /* BookshelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000020 /* BookshelfView.swift */; };
@@ -175,6 +177,8 @@
 		1A10000000000019 /* RuleSplitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleSplitter.swift; sourceTree = "<group>"; };
 		1A10000000000090 /* TocRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TocRule.swift; sourceTree = "<group>"; };
 		1A10000000000091 /* TocParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TocParser.swift; sourceTree = "<group>"; };
+		1A10000000000094 /* SourceRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceRule.swift; sourceTree = "<group>"; };
+		1A10000000000095 /* RuleAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleAnalyzer.swift; sourceTree = "<group>"; };
 		
 		// Features
 		1A10000000000020 /* BookshelfView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshelfView.swift; sourceTree = "<group>"; };
@@ -472,6 +476,8 @@
 				1A10000000000019 /* RuleSplitter.swift */,
 				1A10000000000090 /* TocRule.swift */,
 				1A10000000000091 /* TocParser.swift */,
+				1A10000000000094 /* SourceRule.swift */,
+				1A10000000000095 /* RuleAnalyzer.swift */,
 				1A10000000000047 /* TemplateEngine.swift */,
 				1A10000000000048 /* JSBridge.swift */,
 				1A10000000000061 /* RuleDebugger.swift */,
@@ -739,6 +745,8 @@
 				1A00000000000019 /* RuleSplitter.swift in Sources */,
 				1A00000000000090 /* TocRule.swift in Sources */,
 				1A00000000000091 /* TocParser.swift in Sources */,
+				1A00000000000094 /* SourceRule.swift in Sources */,
+				1A00000000000095 /* RuleAnalyzer.swift in Sources */,
 				1A00000000000047 /* TemplateEngine.swift in Sources */,
 				1A00000000000048 /* JSBridge.swift in Sources */,
 				1A0000000000006B /* SearchOptimizer.swift in Sources */,

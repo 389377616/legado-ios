@@ -1,4 +1,5 @@
 import Foundation
+import JavaScriptCore
 
 final class TocParser {
     private let ruleEngine: RuleEngine
@@ -41,9 +42,28 @@ final class TocParser {
                 chapter.isVip = parseBool(vipValue)
             }
 
+            if let payRule = rule.isPay {
+                let payValue = ruleEngine.getString(ruleStr: payRule, elementContext: elementContext)
+                chapter.isPay = parseBool(payValue)
+            }
+
+            if let volumeRule = rule.isVolume {
+                let volumeValue = ruleEngine.getString(ruleStr: volumeRule, elementContext: elementContext)
+                chapter.isVolume = parseBool(volumeValue)
+            }
+
             if let updateRule = rule.updateTime {
                 let updateValue = ruleEngine.getString(ruleStr: updateRule, elementContext: elementContext)
                 chapter.updateTime = parseUpdateTime(updateValue)
+            }
+
+            if let formatJs = rule.formatJs?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !formatJs.isEmpty {
+                chapter.title = applyFormatJS(
+                    formatJs,
+                    chapter: chapter,
+                    displayIndex: startIndex + offset + 1
+                ) ?? chapter.title
             }
 
             if !chapter.title.isEmpty {
@@ -54,17 +74,48 @@ final class TocParser {
         return chapters
     }
 
-    func parseNextPageUrl(body: String, baseUrl: String, rule: TocRule) -> String? {
+    func parseNextPageUrls(body: String, baseUrl: String, rule: TocRule) -> [String] {
         guard let nextRule = rule.nextTocUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !nextRule.isEmpty else {
-            return nil
+               !nextRule.isEmpty else {
+            return []
         }
 
-        let rootContext = ElementContext(element: body, baseUrl: baseUrl)
-        let nextUrl = ruleEngine.getString(ruleStr: nextRule, elementContext: rootContext, baseUrl: baseUrl)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            let urls = try ruleEngine.getStringList(ruleStr: nextRule, body: body, baseUrl: baseUrl, isUrl: true)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty && $0 != baseUrl }
+            var unique: [String] = []
+            for url in urls where !unique.contains(url) {
+                unique.append(url)
+            }
+            return unique
+        } catch {
+            let rootContext = ElementContext(element: body, baseUrl: baseUrl)
+            let nextUrl = ruleEngine.getString(ruleStr: nextRule, elementContext: rootContext, baseUrl: baseUrl)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return nextUrl.isEmpty ? [] : [nextUrl]
+        }
+    }
 
-        return nextUrl.isEmpty ? nil : nextUrl
+    private func applyFormatJS(_ js: String, chapter: WebChapter, displayIndex: Int) -> String? {
+        let context = JSContext()
+        context?.setValue(displayIndex, forKey: "index")
+        context?.setValue(chapter.title, forKey: "title")
+        context?.setValue(0, forKey: "gInt")
+        context?.setValue([
+            "title": chapter.title,
+            "url": chapter.url,
+            "index": chapter.index,
+            "isVip": chapter.isVip,
+            "isPay": chapter.isPay,
+            "isVolume": chapter.isVolume,
+            "updateTime": chapter.updateTime as Any
+        ], forKey: "chapter")
+
+        if let value = context?.evaluateScript(js)?.toString(), !value.isEmpty {
+            return value
+        }
+        return nil
     }
 
     private func parseBool(_ value: String) -> Bool {

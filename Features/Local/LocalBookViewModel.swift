@@ -497,6 +497,16 @@ class LocalBookViewModel: ObservableObject {
         if book.origin == "local" {
             try? FileManager.default.removeItem(atPath: book.bookUrl)
         }
+
+        if let coverUrl = book.coverUrl, !coverUrl.isEmpty, coverUrl.contains("covers") {
+            let path = coverUrl.hasPrefix("file://") ? String(coverUrl.dropFirst(7)) : coverUrl
+            try? FileManager.default.removeItem(atPath: path)
+        }
+
+        if let customCoverUrl = book.customCoverUrl, !customCoverUrl.isEmpty {
+            let path = customCoverUrl.hasPrefix("file://") ? String(customCoverUrl.dropFirst(7)) : customCoverUrl
+            try? FileManager.default.removeItem(atPath: path)
+        }
         
         CoreDataStack.shared.viewContext.delete(book)
         try? CoreDataStack.shared.save()
@@ -551,7 +561,7 @@ struct LocalBookView: View {
                 List {
                     ForEach(viewModel.localBooks, id: \.bookId) { book in
                         HStack {
-                            BookCoverView(url: book.coverUrl)
+            BookCoverView(url: book.displayCoverUrl, sourceId: nil)
                                 .frame(width: 50, height: 70)
                                 .background(Color.gray.opacity(0.1))
                                 .cornerRadius(4)
@@ -565,7 +575,7 @@ struct LocalBookView: View {
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 
-                                Text(book.originName ?? "")
+                                Text(book.originName)
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }

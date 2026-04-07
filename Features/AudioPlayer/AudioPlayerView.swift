@@ -47,13 +47,7 @@ struct AudioPlayerView: View {
                 Spacer()
                 
                 // 封面图
-                AsyncImage(url: URL(string: book.displayCoverUrl ?? "")) { phase in
-                    switch phase {
-                    case .success(let image): image.resizable().aspectRatio(contentMode: .fill)
-                    case .failure: Image(systemName: "book.fill").font(.system(size: 60)).foregroundColor(.gray)
-                    default: ProgressView()
-                    }
-                }
+                BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
                 .frame(width: 200, height: 280)
                 .cornerRadius(12)
                 .shadow(radius: 10)

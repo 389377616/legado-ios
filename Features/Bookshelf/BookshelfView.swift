@@ -286,7 +286,7 @@ struct BookGridCell: View {
             // 封面容器
             ZStack(alignment: .topTrailing) {
                 // 封面
-                BookCoverView(url: book.coverUrl)
+                BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
                     .frame(maxWidth: .infinity)
                     .aspectRatio(3/4, contentMode: .fill)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
@@ -337,7 +337,7 @@ struct BookListCell: View {
     var body: some View {
         HStack(spacing: 10) {
             // 封面
-            BookCoverView(url: book.coverUrl)
+            BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
                 .frame(width: 66, height: 90)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             
@@ -519,7 +519,13 @@ extension Book {
 
 struct BookCoverView: View {
     let url: String?
+    let sourceId: UUID?
     @State private var image: UIImage?
+    @State private var requestIdentity: String = ""
+
+    private var loadIdentity: String {
+        "\(url ?? "")|\(sourceId?.uuidString ?? "")"
+    }
     
     var body: some View {
         Group {
@@ -535,9 +541,14 @@ struct BookCoverView: View {
                 }
             }
         }
-        .task(id: url) {
-            guard image == nil, let urlString = url, !urlString.isEmpty else { return }
-            image = await ImageCacheManager.shared.loadImage(from: urlString)
+        .task(id: loadIdentity) {
+            let identity = loadIdentity
+            requestIdentity = identity
+            image = nil
+            guard let urlString = url, !urlString.isEmpty else { return }
+            let loadedImage = await ImageCacheManager.shared.loadImage(from: urlString, sourceId: sourceId)
+            guard !Task.isCancelled, requestIdentity == identity else { return }
+            image = loadedImage
         }
     }
 }

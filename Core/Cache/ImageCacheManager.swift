@@ -7,6 +7,8 @@
 
 import UIKit
 import SwiftUI
+import CoreData
+import JavaScriptCore
 
 
 /// 图片缓存管理器
@@ -19,6 +21,8 @@ class ImageCacheManager: ObservableObject {
     // 磁盘缓存
     private let fileManager = FileManager.default
     private let cacheDirectory: URL
+    private let inFlightQueue = DispatchQueue(label: "legado.imagecache.inflight")
+    private var inFlightRequests: [String: [(UIImage?) -> Void]] = [:]
     
     // 配置
     var maxMemoryCost = 100 * 1024 * 1024  // 100MB
@@ -39,7 +43,7 @@ class ImageCacheManager: ObservableObject {
     // MARK: - 加载图片
     
     func loadImage(from url: String, completion: @escaping (UIImage?) -> Void) {
-        let cacheKey = url.md5() as NSString
+        let cacheKey = cacheKey(for: url) as NSString
         
         // 1. 检查内存缓存
         if let cachedImage = memoryCache.object(forKey: cacheKey) {
@@ -48,51 +52,139 @@ class ImageCacheManager: ObservableObject {
         }
         
         // 2. 检查磁盘缓存
-        if let diskImage = loadFromDisk(url: url) {
+        if let diskImage = loadFromDisk(cacheKey: cacheKey as String) {
             memoryCache.setObject(diskImage, forKey: cacheKey, cost: imageCost(diskImage))
             completion(diskImage)
             return
         }
-        
+
+        if enqueueInFlight(for: cacheKey as String, completion: completion) {
+            return
+        }
+
         // 3. 网络加载
         downloadImage(from: url) { [weak self] image in
             guard let self = self, let image = image else {
-                completion(nil)
+                self?.completeInFlight(for: cacheKey as String, image: nil)
                 return
             }
             
             self.memoryCache.setObject(image, forKey: cacheKey, cost: self.imageCost(image))
-            self.saveToDisk(image: image, url: url)
-            
-            completion(image)
+            self.saveToDisk(image: image, cacheKey: cacheKey as String)
+            self.completeInFlight(for: cacheKey as String, image: image)
         }
     }
     
     // 异步加载（SwiftUI 友好）
-@MainActor
-    func loadImage(from url: String) async -> UIImage? {
+    @MainActor
+    func loadImage(from url: String, sourceId: UUID? = nil) async -> UIImage? {
         if url.hasPrefix("/") || url.hasPrefix("file://") {
             let path = url.hasPrefix("file://") ? String(url.dropFirst(7)) : url
             return UIImage(contentsOfFile: path)
         }
+
+        let source = resolveSource(sourceId: sourceId)
+        let resolvedURL = resolveCoverURLIfNeeded(url, source: source) ?? url
+        let headers = buildImageHeaders(source: source, imageURL: resolvedURL)
         
         return await withCheckedContinuation { continuation in
-            loadImage(from: url) { image in
+            loadImage(from: resolvedURL, headers: headers) { image in
                 continuation.resume(returning: image)
             }
         }
     }
+
+    func loadImage(from url: String, headers: [String: String], completion: @escaping (UIImage?) -> Void) {
+        let cacheKey = cacheKey(for: url, headers: headers) as NSString
+
+        if let cachedImage = memoryCache.object(forKey: cacheKey) {
+            completion(cachedImage)
+            return
+        }
+
+        if let diskImage = loadFromDisk(cacheKey: cacheKey as String) {
+            memoryCache.setObject(diskImage, forKey: cacheKey, cost: imageCost(diskImage))
+            completion(diskImage)
+            return
+        }
+
+        if enqueueInFlight(for: cacheKey as String, completion: completion) {
+            return
+        }
+
+        downloadImage(from: url, headers: headers) { [weak self] image in
+            guard let self = self, let image = image else {
+                self?.completeInFlight(for: cacheKey as String, image: nil)
+                return
+            }
+
+            self.memoryCache.setObject(image, forKey: cacheKey, cost: self.imageCost(image))
+            self.saveToDisk(image: image, cacheKey: cacheKey as String)
+            self.completeInFlight(for: cacheKey as String, image: image)
+        }
+    }
+
+    @MainActor
+    private func resolveSource(sourceId: UUID?) -> BookSource? {
+        guard let sourceId else { return nil }
+        let context = CoreDataStack.shared.viewContext
+        let request: NSFetchRequest<BookSource> = BookSource.fetchRequest()
+        request.fetchLimit = 1
+        request.predicate = NSPredicate(format: "sourceId == %@", sourceId as CVarArg)
+
+        return try? context.fetch(request).first
+    }
+
+    @MainActor
+    private func resolveCoverURLIfNeeded(_ url: String, source: BookSource?) -> String? {
+        
+        guard let source,
+              let decodeJS = source.coverDecodeJs?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !decodeJS.isEmpty else {
+            return nil
+        }
+
+        let executionContext = ExecutionContext()
+        executionContext.source = source
+        executionContext.baseURL = URL(string: source.bookSourceUrl)
+        executionContext.jsContext.setValue(url, forKey: "src")
+        executionContext.jsContext.setValue(url, forKey: "result")
+
+        let directValue = executionContext.jsContext.evaluateScript(decodeJS)?.toString()
+        let resultValue = executionContext.jsContext.objectForKeyedSubscript("result")?.toString()
+        let value = [directValue, resultValue]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty && $0 != "undefined" && $0 != "null" }
+
+        guard let value else {
+            return nil
+        }
+
+        if let resolved = URL(string: value, relativeTo: URL(string: source.bookSourceUrl))?.absoluteURL.absoluteString {
+            return resolved
+        }
+
+        return value
+    }
     
     // MARK: - 下载图片
     
-    private func downloadImage(from url: String, completion: @escaping (UIImage?) -> Void) {
+    private func downloadImage(from url: String, headers: [String: String] = [:], completion: @escaping (UIImage?) -> Void) {
         guard let imageURL = URL(string: url) else {
             completion(nil)
             return
         }
+
+        var request = URLRequest(url: imageURL)
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
         
-        URLSession.shared.dataTask(with: imageURL) { data, response, error in
-            guard let data = data, let image = UIImage(data: data) else {
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data,
+                  let httpResponse = response as? HTTPURLResponse,
+                  (200..<300).contains(httpResponse.statusCode),
+                  let image = UIImage(data: data) else {
                 completion(nil)
                 return
             }
@@ -102,24 +194,95 @@ class ImageCacheManager: ObservableObject {
             }
         }.resume()
     }
+
+    @MainActor
+    private func buildImageHeaders(source: BookSource?, imageURL: String) -> [String: String] {
+        var headers: [String: String] = [:]
+
+        if let headerString = source?.header,
+           let data = headerString.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            for (key, value) in json {
+                headers[key] = "\(value)"
+            }
+        }
+
+        if headers["Referer"] == nil {
+            headers["Referer"] = source?.bookSourceUrl
+        }
+
+        if headers["User-Agent"] == nil {
+            headers["User-Agent"] = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1"
+        }
+
+        if let imageURL = URL(string: imageURL),
+           let cookies = HTTPCookieStorage.shared.cookies(for: imageURL),
+           !cookies.isEmpty,
+           headers["Cookie"] == nil {
+            headers["Cookie"] = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+        }
+
+        return headers
+    }
+
+    private func enqueueInFlight(for key: String, completion: @escaping (UIImage?) -> Void) -> Bool {
+        inFlightQueue.sync {
+            if inFlightRequests[key] != nil {
+                inFlightRequests[key]?.append(completion)
+                return true
+            }
+            inFlightRequests[key] = [completion]
+            return false
+        }
+    }
+
+    private func completeInFlight(for key: String, image: UIImage?) {
+        let callbacks = inFlightQueue.sync { () -> [(UIImage?) -> Void] in
+            let callbacks = inFlightRequests[key] ?? []
+            inFlightRequests[key] = nil
+            return callbacks
+        }
+
+        DispatchQueue.main.async {
+            callbacks.forEach { $0(image) }
+        }
+    }
     
     // MARK: - 磁盘缓存
     
-    private func loadFromDisk(url: String) -> UIImage? {
-        let filePath = cachePath(for: url)
+    private func loadFromDisk(cacheKey: String) -> UIImage? {
+        let filePath = cachePath(for: cacheKey)
         return UIImage(contentsOfFile: filePath)
     }
     
-    private func saveToDisk(image: UIImage, url: String) {
-        let filePath = cachePath(for: url)
+    private func saveToDisk(image: UIImage, cacheKey: String) {
+        let filePath = cachePath(for: cacheKey)
         guard let data = image.jpegData(compressionQuality: 0.8) else { return }
         try? data.write(to: URL(fileURLWithPath: filePath))
         checkDiskSize()
     }
     
-    private func cachePath(for url: String) -> String {
-        let fileName = url.md5()
-        return cacheDirectory.appendingPathComponent(fileName).path
+    private func cachePath(for cacheKey: String) -> String {
+        return cacheDirectory.appendingPathComponent(cacheKey).path
+    }
+
+    private func cacheKey(for url: String, headers: [String: String] = [:]) -> String {
+        guard !headers.isEmpty else { return url.md5() }
+
+        let fingerprint = headers
+            .map { key, value in
+                (key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), value.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+            .filter { !$0.0.isEmpty && !$0.1.isEmpty }
+            .sorted { $0.0 < $1.0 }
+            .map { "\($0.0)=\($0.1)" }
+            .joined(separator: "&")
+
+        if fingerprint.isEmpty {
+            return url.md5()
+        }
+
+        return "\(url)|\(fingerprint)".md5()
     }
     
     // MARK: - 缓存清理

@@ -5,9 +5,12 @@ struct TocRuleSection: View {
 
     var body: some View {
         Section(header: Text("目录规则")) {
+            RuleFieldEditor(title: "预处理 JS", text: $viewModel.tocRule.preUpdateJs.orEmpty, isMultiline: true)
             RuleFieldEditor(title: "章节列表", text: $viewModel.tocRule.bookList.orEmpty)
             RuleFieldEditor(title: "章节名", text: $viewModel.tocRule.chapterName.orEmpty)
             RuleFieldEditor(title: "章节链接", text: $viewModel.tocRule.chapterUrl.orEmpty)
+            RuleFieldEditor(title: "标题格式化 JS", text: $viewModel.tocRule.formatJs.orEmpty, isMultiline: true)
+            RuleFieldEditor(title: "卷标记", text: $viewModel.tocRule.isVolume.orEmpty)
             RuleFieldEditor(title: "VIP 标记", text: $viewModel.tocRule.isVip.orEmpty)
             RuleFieldEditor(title: "付费标记", text: $viewModel.tocRule.isPay.orEmpty)
             RuleFieldEditor(title: "更新时间", text: $viewModel.tocRule.updateTime.orEmpty)

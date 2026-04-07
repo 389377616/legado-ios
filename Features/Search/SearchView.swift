@@ -251,7 +251,7 @@ struct SearchItemView: View {
     
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            BookCoverView(url: result.coverUrl)
+            BookCoverView(url: result.coverUrl, sourceId: result.sourceId)
                 .frame(width: 80, height: 110)
                 .cornerRadius(4)
             
@@ -282,7 +282,14 @@ struct SearchItemView: View {
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
-                
+
+                if let wordCount = result.wordCount, !wordCount.isEmpty {
+                    Text(wordCount)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+
                 if let kind = result.kind, !kind.isEmpty {
                     HStack(spacing: 4) {
                         ForEach(kind.split(separator: ",").prefix(3), id: \.self) { tag in

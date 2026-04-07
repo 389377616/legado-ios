@@ -38,6 +38,7 @@ class SearchViewModel: ObservableObject {
         let coverUrl: String?
         let intro: String?
         let kind: String?
+        let wordCount: String? = nil
         let lastChapter: String?
         let sourceName: String
         let sourceId: UUID
@@ -65,25 +66,29 @@ class SearchViewModel: ObservableObject {
         errorMessage = nil
 
         let enabledSources = sources.filter { $0.enabled && $0.searchUrl != nil }
-        var merged: [SearchResult] = []
+        var partialBuckets: [(Int, [SearchResult])] = []
 
-        await withTaskGroup(of: [SearchResult].self) { group in
-            for source in enabledSources {
+        await withTaskGroup(of: (Int, [SearchResult]).self) { group in
+            for (index, source) in enabledSources.enumerated() {
                 group.addTask { [keyword] in
                     do {
-                        return try await self.searchInSource(keyword: keyword, source: source)
+                        return (index, try await self.searchInSource(keyword: keyword, source: source))
                     } catch {
-                        return []
+                        return (index, [])
                     }
                 }
             }
 
             for await partial in group {
-                merged.append(contentsOf: partial)
+                partialBuckets.append(partial)
             }
         }
 
-        searchResults = merged
+        let merged = partialBuckets
+            .sorted { $0.0 < $1.0 }
+            .flatMap { $0.1 }
+
+        searchResults = aggregateResults(merged)
         isSearching = false
     }
     
@@ -96,13 +101,69 @@ class SearchViewModel: ObservableObject {
                 author: searchBook.author,
                 coverUrl: searchBook.coverUrl,
                 intro: searchBook.intro,
-                kind: nil,
+                kind: searchBook.kind,
+                wordCount: searchBook.wordCount,
                 lastChapter: searchBook.lastChapter,
                 sourceName: source.bookSourceName,
                 sourceId: source.sourceId,
                 bookUrl: searchBook.bookUrl
             )
         }
+    }
+
+    private func aggregateResults(_ input: [SearchResult]) -> [SearchResult] {
+        var buckets: [String: SearchResult] = [:]
+        var sourceBuckets: [String: Set<UUID>] = [:]
+        var order: [String] = []
+
+        for item in input {
+            let normalizedName = item.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let normalizedAuthor = item.author.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let key = normalizedAuthor.isEmpty ? normalizedName : "\(normalizedName)|\(normalizedAuthor)"
+
+            if var existing = buckets[key] {
+                var sourceSet = sourceBuckets[key] ?? []
+                sourceSet.insert(item.sourceId)
+                sourceBuckets[key] = sourceSet
+                existing.sourceCount = sourceSet.count
+                if (existing.kind?.isEmpty ?? true), let kind = item.kind, !kind.isEmpty {
+                    existing = SearchResult(
+                        name: existing.name,
+                        author: existing.author,
+                        coverUrl: existing.coverUrl ?? item.coverUrl,
+                        intro: existing.intro ?? item.intro,
+                        kind: kind,
+                        wordCount: existing.wordCount ?? item.wordCount,
+                        lastChapter: existing.lastChapter ?? item.lastChapter,
+                        sourceName: existing.sourceName,
+                        sourceId: existing.sourceId,
+                        bookUrl: existing.bookUrl,
+                        sourceCount: existing.sourceCount
+                    )
+                } else {
+                    existing = SearchResult(
+                        name: existing.name,
+                        author: existing.author,
+                        coverUrl: existing.coverUrl ?? item.coverUrl,
+                        intro: existing.intro ?? item.intro,
+                        kind: existing.kind,
+                        wordCount: existing.wordCount ?? item.wordCount,
+                        lastChapter: existing.lastChapter ?? item.lastChapter,
+                        sourceName: existing.sourceName,
+                        sourceId: existing.sourceId,
+                        bookUrl: existing.bookUrl,
+                        sourceCount: existing.sourceCount
+                    )
+                }
+                buckets[key] = existing
+            } else {
+                buckets[key] = item
+                sourceBuckets[key] = [item.sourceId]
+                order.append(key)
+            }
+        }
+
+        return order.compactMap { buckets[$0] }
     }
     
 func addToBookshelf(result: SearchResult) async throws -> Book {

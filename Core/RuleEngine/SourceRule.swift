@@ -177,7 +177,7 @@ class SourceRule {
     
     /// 拆分 $数字 的正则捕获组
     private func splitRegex(_ ruleStr: String) {
-        let parts = ruleStr.components(separatedBy: "##")
+        let parts = RuleSplitter.splitTopLevel(ruleStr, token: "##") ?? [ruleStr]
         let firstPart = parts.first ?? ""
         
         // 匹配 $1, $2, ... $99
@@ -210,7 +210,9 @@ class SourceRule {
                 if let groupRange = Range(match.range(at: 1), in: firstPart),
                    let groupNum = Int(firstPart[groupRange]) {
                     ruleType.append(groupNum)
-                    ruleParam.append(firstPart[Range(match.range, in: firstPart)!] ?? "")
+                    if let fullRange = Range(match.range, in: firstPart) {
+                        ruleParam.append(String(firstPart[fullRange]))
+                    }
                 }
                 
                 start = match.range.location + match.range.length
@@ -252,7 +254,7 @@ class SourceRule {
             case let groupNum where groupNum > defaultRuleType:
                 // $N 捕获组引用
                 if let list = result as? [String], list.count > groupNum {
-                    infoVal = (list[groupNum] ?? "") + infoVal
+                    infoVal = list[groupNum] + infoVal
                 } else {
                     infoVal = ruleParam[index] + infoVal
                 }
@@ -285,7 +287,7 @@ class SourceRule {
         rule = infoVal
         
         // 分离正则表达式
-        let parts = rule.components(separatedBy: "##")
+        let parts = RuleSplitter.splitTopLevel(rule, token: "##") ?? [rule]
         rule = parts.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if parts.count > 1 {
             replaceRegex = parts[1]

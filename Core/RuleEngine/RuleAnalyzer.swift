@@ -67,6 +67,10 @@ class RuleAnalyzer {
     /// - Parameter seqs: 匹配字符串序列
     /// - Returns: 成功返回true并设置间隔
     private func consumeToAny(_ seqs: String...) -> Bool {
+        consumeToAny(seqs)
+    }
+
+    private func consumeToAny(_ seqs: [String]) -> Bool {
         var currentPos = pos
         
         while currentPos < queue.count {
@@ -177,6 +181,10 @@ class RuleAnalyzer {
     /// - Parameter splits: 分隔符列表
     /// - Returns: 规则列表
     func splitRule(_ splits: String...) -> [String] {
+        splitRule(splits)
+    }
+
+    func splitRule(_ splits: [String]) -> [String] {
         if splits.count == 1 {
             elementsType = splits[0]
             if !consumeTo(elementsType) {

@@ -74,6 +74,46 @@ class ExecutionContext {
     }()
 }
 
+private final class SourceRuleContextAdapter: RuleExecutionContext {
+    private let ruleEngine: RuleEngine
+    private let executionContext: ExecutionContext
+
+    init(ruleEngine: RuleEngine, executionContext: ExecutionContext) {
+        self.ruleEngine = ruleEngine
+        self.executionContext = executionContext
+    }
+
+    func getVariable(_ key: String) -> String {
+        executionContext.variables[key] ?? ""
+    }
+
+    func setVariable(_ key: String, value: String) {
+        executionContext.variables[key] = value
+    }
+
+    func evalJS(_ jsCode: String, result: Any?) -> String? {
+        executionContext.jsContext.setValue(result, forKey: "result")
+        executionContext.jsContext.setValue(executionContext.baseURL?.absoluteString, forKey: "baseUrl")
+        return executionContext.jsContext.evaluateScript(jsCode)?.toString()
+    }
+
+    func resolveRule(_ rule: SourceRule) -> String? {
+        do {
+            let result = try ruleEngine.executeSingle(rule: rule.rule, context: executionContext)
+            switch result {
+            case .string(let value):
+                return value
+            case .list(let values):
+                return values.joined(separator: "\n")
+            case .none:
+                return nil
+            }
+        } catch {
+            return nil
+        }
+    }
+}
+
 // MARK: - 解析器协议
 protocol RuleExecutor {
     var kind: RuleKind { get }
@@ -170,28 +210,107 @@ class RuleEngine {
     }
 
     private func executeSplitRule(_ splitRule: SplitRule, context: ExecutionContext) throws -> RuleResult {
-        let executor = executors.first(where: { $0.kind == splitRule.type })
-            ?? executors.first(where: { $0.canExecute(splitRule.rule) })
+        let sourceRule = SourceRule(
+            ruleStr: splitRule.rule,
+            mode: sourceRuleMode(for: splitRule.type),
+            isJSON: splitRule.type == .jsonPath || context.jsonString != nil || context.jsonValue != nil
+        )
 
-        guard let executor else {
-            throw RuleError.unsupportedRule(splitRule.rule)
+        if !sourceRule.putMap.isEmpty {
+            for (key, rule) in sourceRule.putMap {
+                let resolved = try executeWithSplit(rule, context: context)
+                context.variables[key] = flatten(resolved).joined(separator: "\n")
+                context.lastResult = resolved
+            }
         }
 
-        let result = try executor.execute(splitRule.rule, context: context)
-        return try applyReplace(splitRule.replace, to: result)
+        let adapter = SourceRuleContextAdapter(ruleEngine: self, executionContext: context)
+        sourceRule.makeUpRule(result: sourceRuleInput(from: context), context: adapter)
+
+        let effectiveRule = sourceRule.rule.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !effectiveRule.isEmpty else {
+            return .none
+        }
+
+        let effectiveKind = ruleKind(for: sourceRule.mode, fallback: splitRule.type)
+        let executor = executors.first(where: { $0.kind == effectiveKind })
+            ?? executors.first(where: { $0.canExecute(effectiveRule) })
+
+        guard let executor else {
+            throw RuleError.unsupportedRule(effectiveRule)
+        }
+
+        let result = try executor.execute(effectiveRule, context: context)
+        let replace = sourceRule.replaceRegex.isEmpty
+            ? splitRule.replace
+            : (pattern: sourceRule.replaceRegex, replacement: sourceRule.replacement, firstOnly: sourceRule.replaceFirst)
+        return try applyReplace(replace, to: result)
+    }
+
+    private func sourceRuleInput(from context: ExecutionContext) -> Any? {
+        switch context.lastResult {
+        case .string(let value):
+            return value
+        case .list(let values):
+            return values
+        case .none:
+            return context.jsonValue ?? context.jsonDict ?? context.document ?? context.jsonString
+        }
+    }
+
+    private func sourceRuleMode(for kind: RuleKind) -> RuleMode {
+        switch kind {
+        case .jsonPath:
+            return .json
+        case .xpath:
+            return .xpath
+        case .css:
+            return .css
+        case .regex:
+            return .regex
+        case .js:
+            return .js
+        }
+    }
+
+    private func ruleKind(for mode: RuleMode, fallback: RuleKind) -> RuleKind {
+        switch mode {
+        case .json:
+            return .jsonPath
+        case .xpath:
+            return .xpath
+        case .css:
+            return .css
+        case .default:
+            return fallback
+        case .regex:
+            return .regex
+        case .js:
+            return .js
+        }
     }
 
     private func executeAnd(segments: [String], context: ExecutionContext) throws -> RuleResult {
-        var values: [String] = []
-
-        for segment in segments {
-            let result = try executeWithSplit(segment, context: context)
-            values.append(contentsOf: flatten(result))
-            context.lastResult = result
+        if let input = sourceRuleInput(from: context) {
+            let values = evaluateChainedRule(segments.joined(separator: "&&"), inputs: [input], baseUrl: context.baseURL?.absoluteString)
+            let strings = values.compactMap { stringifyOutput($0) }
+            if strings.count == 1, let first = strings.first {
+                return .string(first)
+            }
+            if !strings.isEmpty {
+                return .list(strings)
+            }
         }
 
-        if values.isEmpty { return .none }
-        return .string(values.joined())
+        var finalResult: RuleResult = .none
+        for segment in segments {
+            finalResult = try executeWithSplit(segment, context: context)
+            context.lastResult = finalResult
+            if isEmpty(finalResult) {
+                break
+            }
+        }
+        return finalResult
     }
 
     private func executeOr(segments: [String], context: ExecutionContext) throws -> RuleResult {
@@ -240,7 +359,7 @@ class RuleEngine {
     }
 
     private func applyReplace(
-        _ replace: (pattern: String, replacement: String, group: Int?)?,
+        _ replace: (pattern: String, replacement: String, firstOnly: Bool)?,
         to result: RuleResult
     ) throws -> RuleResult {
         guard let replace else { return result }
@@ -253,18 +372,36 @@ class RuleEngine {
 
         switch result {
         case .string(let value):
-            let range = NSRange(value.startIndex..., in: value)
-            let replaced = regex.stringByReplacingMatches(in: value, range: range, withTemplate: replacement)
-            return .string(replaced)
+            return .string(applyReplace(in: value, regex: regex, replacement: replacement, firstOnly: replace.firstOnly))
         case .list(let values):
             let replacedValues = values.map { item in
-                let range = NSRange(item.startIndex..., in: item)
-                return regex.stringByReplacingMatches(in: item, range: range, withTemplate: replacement)
+                applyReplace(in: item, regex: regex, replacement: replacement, firstOnly: replace.firstOnly)
             }
             return .list(replacedValues)
         case .none:
             return .none
         }
+    }
+
+    private func applyReplace(
+        in value: String,
+        regex: NSRegularExpression,
+        replacement: String,
+        firstOnly: Bool
+    ) -> String {
+        let range = NSRange(value.startIndex..., in: value)
+
+        if firstOnly {
+            guard let match = regex.firstMatch(in: value, range: range),
+                  let matchRange = Range(match.range, in: value) else {
+                return ""
+            }
+            let first = String(value[matchRange])
+            let firstRange = NSRange(first.startIndex..., in: first)
+            return regex.stringByReplacingMatches(in: first, range: firstRange, withTemplate: replacement)
+        }
+
+        return regex.stringByReplacingMatches(in: value, range: range, withTemplate: replacement)
     }
 
     private func flatten(_ result: RuleResult) -> [String] {
@@ -280,6 +417,51 @@ class RuleEngine {
 
     private func isEmpty(_ result: RuleResult) -> Bool {
         flatten(result).isEmpty
+    }
+
+    private func object(from result: RuleResult) -> Any? {
+        switch result {
+        case .string(let value):
+            return value
+        case .list(let values):
+            return values
+        case .none:
+            return nil
+        }
+    }
+
+    private func buildExecutionContext(
+        for input: Any?,
+        baseUrl: String?,
+        sourceContext: ExecutionContext? = nil
+    ) -> ExecutionContext {
+        let context = ExecutionContext()
+        context.variables = sourceContext?.variables ?? [:]
+        context.source = sourceContext?.source
+        context.baseURL = URL(string: baseUrl ?? sourceContext?.baseURL?.absoluteString ?? "")
+        context.lastResult = sourceContext?.lastResult ?? .none
+
+        guard let input else {
+            return context
+        }
+
+        if let jsonObject = input as? [String: Any] {
+            context.jsonDict = jsonObject
+            context.jsonValue = jsonObject
+        } else if let jsonArray = input as? [Any] {
+            context.jsonValue = jsonArray
+        } else if let string = input as? String {
+            let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("{") || trimmed.hasPrefix("[") {
+                context.jsonString = string
+            } else {
+                context.document = string
+            }
+        } else {
+            context.document = input
+        }
+
+        return context
     }
     
     // MARK: - 从 HTML/JSON 中提取元素列表
@@ -345,14 +527,31 @@ class RuleEngine {
             throw RuleError.noDocument
         }
 
-        let path = normalizeJSONPath(ruleStr)
-        let values = JSONPathParser.evaluate(path: path, root: json)
-
-        if values.count == 1, let array = values.first as? [Any] {
-            return array.map { ElementContext(element: $0) }
+        var rule = ruleStr.trimmingCharacters(in: .whitespacesAndNewlines)
+        var reverse = false
+        if rule.hasPrefix("-") {
+            reverse = true
+            rule = String(rule.dropFirst())
+        }
+        if rule.hasPrefix("+") {
+            rule = String(rule.dropFirst())
         }
 
-        return values.map { ElementContext(element: $0) }
+        let path = normalizeJSONPath(rule)
+        let values = JSONPathParser.evaluate(path: path, root: json)
+
+        let contexts: [ElementContext]
+        if values.count == 1, let array = values.first as? [Any] {
+            contexts = array.map { ElementContext(element: $0) }
+        } else {
+            contexts = values.map { ElementContext(element: $0) }
+        }
+
+        if reverse {
+            return Array(contexts.reversed())
+        }
+
+        return contexts
     }
 
     private func normalizeJSONPath(_ rule: String) -> String {
@@ -367,36 +566,24 @@ class RuleEngine {
     /// 从单个元素中提取字符串（用于从列表项中提取书名、作者等）
     func getString(ruleStr: String?, elementContext: ElementContext, baseUrl: String? = nil) -> String {
         guard let ruleStr = ruleStr, !ruleStr.isEmpty else { return "" }
-        
-        // 支持 && 连接（串联多个规则结果）
-        if ruleStr.contains("&&") {
-            let parts = ruleStr.components(separatedBy: "&&")
-            return parts.compactMap { getString(ruleStr: $0.trimmingCharacters(in: .whitespaces), elementContext: elementContext, baseUrl: baseUrl) }
-                       .filter { !$0.isEmpty }
-                       .joined(separator: "\n")
+
+        let effectiveBaseUrl = baseUrl ?? elementContext.baseUrl
+
+        if RuleSplitter.splitTopLevel(ruleStr, token: "&&") != nil {
+            let values = evaluateChainedRule(ruleStr, inputs: [elementContext.element], baseUrl: effectiveBaseUrl)
+            return values.compactMap { stringifyOutput($0) }.joined(separator: "\n")
         }
-        
-        // 支持 || 连接（取第一个非空结果）
-        if ruleStr.contains("||") {
-            let parts = ruleStr.components(separatedBy: "||")
-            for part in parts {
-                let result = getString(ruleStr: part.trimmingCharacters(in: .whitespaces), elementContext: elementContext, baseUrl: baseUrl)
-                if !result.isEmpty { return result }
-            }
-            return ""
-        }
-        
+
         do {
-            if let element = elementContext.element as? SwiftSoup.Element {
-                return try getStringFromElement(ruleStr: ruleStr, element: element, baseUrl: baseUrl)
-            } else if let dict = elementContext.element as? [String: Any] {
-                return getStringFromJson(ruleStr: ruleStr, json: dict)
-            } else if let html = elementContext.element as? String {
-                let context = ExecutionContext()
-                context.document = try SwiftSoup.parse(html)
-                context.baseURL = baseUrl.flatMap { URL(string: $0) }
-                let result = try executeSingle(rule: ruleStr, context: context)
-                return result.string ?? ""
+            let context = buildExecutionContext(for: elementContext.element, baseUrl: effectiveBaseUrl)
+            let result = try executeSingle(rule: ruleStr, context: context)
+            switch result {
+            case .string(let value):
+                return value
+            case .list(let values):
+                return values.joined(separator: "\n")
+            case .none:
+                return ""
             }
         } catch {
             print("getString 错误 [\(ruleStr)]: \(error)")
@@ -478,12 +665,26 @@ class RuleEngine {
     // MARK: - 获取字符串列表
     
     /// 获取字符串列表（用于目录列表等）
-    func getStringList(ruleStr: String?, body: String, baseUrl: String?) throws -> [String] {
+    func getStringList(ruleStr: String?, body: String, baseUrl: String?, isUrl: Bool = false) throws -> [String] {
         guard let ruleStr = ruleStr, !ruleStr.isEmpty else { return [] }
+
+        let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rootInput: Any
+        if trimmedBody.hasPrefix("{") || trimmedBody.hasPrefix("[") {
+            rootInput = try JSONSerialization.jsonObject(with: body.data(using: .utf8) ?? Data())
+        } else {
+            rootInput = try SwiftSoup.parse(body)
+        }
+
+        if RuleSplitter.splitTopLevel(ruleStr, token: "&&") != nil {
+            let values = evaluateChainedRule(ruleStr, inputs: [rootInput], baseUrl: baseUrl)
+                .compactMap { stringifyOutput($0) }
+            guard isUrl else { return values }
+            return values.map { resolveUrl($0, baseUrl: baseUrl) }
+        }
         
         let context = ExecutionContext()
-        let isJson = body.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{") ||
-                     body.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("[")
+        let isJson = trimmedBody.hasPrefix("{") || trimmedBody.hasPrefix("[")
         
         if isJson {
             context.jsonString = body
@@ -493,7 +694,196 @@ class RuleEngine {
         context.baseURL = baseUrl.flatMap { URL(string: $0) }
         
         let result = try executeSingle(rule: ruleStr, context: context)
-        return result.list ?? (result.string.map { [$0] } ?? [])
+        let values = result.list ?? (result.string.map { [$0] } ?? [])
+        guard isUrl else { return values }
+        return values.map { resolveUrl($0, baseUrl: baseUrl) }
+    }
+
+    private func evaluateChainedRule(_ rule: String, inputs: [Any], baseUrl: String?) -> [Any] {
+        let segments = RuleSplitter.splitTopLevel(rule, token: "&&") ?? [rule]
+        var currentInputs = inputs
+
+        for (index, rawSegment) in segments.enumerated() {
+            let segment = rawSegment.trimmingCharacters(in: .whitespacesAndNewlines)
+            let isTerminal = index == segments.count - 1
+            currentInputs = currentInputs.flatMap { applyChainedSegment(segment, input: $0, baseUrl: baseUrl, terminal: isTerminal) }
+
+            if currentInputs.isEmpty {
+                break
+            }
+        }
+
+        return currentInputs
+    }
+
+    private func applyChainedSegment(_ segment: String, input: Any, baseUrl: String?, terminal: Bool) -> [Any] {
+        if let orSegments = RuleSplitter.splitTopLevel(segment, token: "||") {
+            for item in orSegments {
+                let values = applyChainedSegment(item.trimmingCharacters(in: .whitespacesAndNewlines), input: input, baseUrl: baseUrl, terminal: terminal)
+                if !values.isEmpty {
+                    return values
+                }
+            }
+            return []
+        }
+
+        if terminal {
+            do {
+                let context = buildExecutionContext(for: input, baseUrl: baseUrl)
+                let result = try executeSingle(rule: segment, context: context)
+                switch result {
+                case .string(let value):
+                    return value.isEmpty ? [] : [value]
+                case .list(let values):
+                    return values
+                case .none:
+                    return []
+                }
+            } catch {
+                return []
+            }
+        }
+
+        if looksLikeJSONRule(segment) {
+            return chainedJSONValues(for: segment, input: input)
+        }
+
+        if looksLikeXPathRule(segment) {
+            return chainedXPathValues(for: segment, input: input)
+        }
+
+        return chainedCSSValues(for: segment, input: input, baseUrl: baseUrl)
+    }
+
+    private func looksLikeJSONRule(_ rule: String) -> Bool {
+        let trimmed = rule.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.hasPrefix("@json:") || trimmed.hasPrefix("$")
+    }
+
+    private func looksLikeXPathRule(_ rule: String) -> Bool {
+        let trimmed = rule.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.lowercased().hasPrefix("@xpath:") || trimmed.hasPrefix("/")
+    }
+
+    private func chainedJSONValues(for rule: String, input: Any) -> [Any] {
+        let normalizedRule: String
+        if rule.lowercased().hasPrefix("@json:") {
+            normalizedRule = String(rule.dropFirst(6))
+        } else {
+            normalizedRule = rule
+        }
+
+        let root: Any
+        if let string = input as? String,
+           let data = string.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) {
+            root = json
+        } else {
+            root = input
+        }
+
+        return JSONPathParser.evaluate(path: normalizedRule, root: root)
+    }
+
+    private func chainedXPathValues(for rule: String, input: Any) -> [Any] {
+        let xpathRule = rule.lowercased().hasPrefix("@xpath:") ? String(rule.dropFirst(7)) : rule
+        let html: String
+
+        do {
+            if let string = input as? String {
+                html = string
+            } else if let document = input as? SwiftSoup.Document {
+                html = try document.outerHtml()
+            } else if let element = input as? SwiftSoup.Element {
+                html = try element.outerHtml()
+            } else {
+                return []
+            }
+
+            let doc = try Kanna.HTML(html: html, encoding: .utf8)
+            return doc.xpath(xpathRule).compactMap { node in
+                if let html = node.toHTML {
+                    return html
+                }
+                return node.text
+            }
+        } catch {
+            return []
+        }
+    }
+
+    private func chainedCSSValues(for rule: String, input: Any, baseUrl: String?) -> [Any] {
+        let (selector, attr) = parseChainedCSSSelector(rule)
+
+        do {
+            if let document = input as? SwiftSoup.Document {
+                let elements = selector.isEmpty ? [document] : try document.select(selector).array()
+                return mapCSSElements(elements, attr: attr, baseUrl: baseUrl)
+            }
+
+            if let element = input as? SwiftSoup.Element {
+                let elements = selector.isEmpty ? [element] : try element.select(selector).array()
+                return mapCSSElements(elements, attr: attr, baseUrl: baseUrl)
+            }
+
+            if let string = input as? String {
+                let document = try SwiftSoup.parse(string)
+                let elements = selector.isEmpty ? [document] : try document.select(selector).array()
+                return mapCSSElements(elements, attr: attr, baseUrl: baseUrl)
+            }
+        } catch {
+            return []
+        }
+
+        return []
+    }
+
+    private func parseChainedCSSSelector(_ rule: String) -> (selector: String, attr: String?) {
+        guard let atRange = rule.range(of: "@", options: .backwards) else {
+            return (rule, nil)
+        }
+
+        let candidate = String(rule[atRange.upperBound...])
+        if candidate.contains(" ") || candidate.contains(".") || candidate.contains("/") {
+            return (rule, nil)
+        }
+
+        return (String(rule[..<atRange.lowerBound]), candidate)
+    }
+
+    private func mapCSSElements(_ elements: [SwiftSoup.Element], attr: String?, baseUrl: String?) -> [Any] {
+        guard let attr, !attr.isEmpty else {
+            return elements
+        }
+
+        return elements.compactMap { element in
+            switch attr.lowercased() {
+            case "text":
+                return try? element.text()
+            case "html", "innerhtml":
+                return try? element.html()
+            case "outerhtml":
+                return try? element.outerHtml()
+            case "href":
+                guard let href = try? element.attr("href") else { return nil }
+                return resolveUrl(href, baseUrl: baseUrl)
+            case "src":
+                guard let src = try? element.attr("src") else { return nil }
+                return resolveUrl(src, baseUrl: baseUrl)
+            default:
+                return try? element.attr(attr)
+            }
+        }
+    }
+
+    private func stringifyOutput(_ value: Any) -> String? {
+        if let string = value as? String {
+            return string
+        }
+        if let element = value as? SwiftSoup.Element {
+            return try? element.text()
+        }
+        return JSONPathParser.stringify(value)
     }
 }
 
@@ -506,28 +896,43 @@ class CSSParser: RuleExecutor {
     }
     
     func execute(_ rule: String, context: ExecutionContext) throws -> RuleResult {
-        guard let document = context.document as? SwiftSoup.Document else {
+        let (selector, attr) = parseSelector(rule)
+        let elements: [SwiftSoup.Element]
+        let baseUrl = context.baseURL?.absoluteString
+
+        if let document = context.document as? SwiftSoup.Document {
+            if selector.isEmpty {
+                elements = [document]
+            } else {
+                elements = try document.select(selector).array()
+            }
+        } else if let element = context.document as? SwiftSoup.Element {
+            if selector.isEmpty {
+                elements = [element]
+            } else {
+                elements = try element.select(selector).array()
+            }
+        } else if let html = context.document as? String {
+            let document = try SwiftSoup.parse(html)
+            if selector.isEmpty {
+                elements = [document]
+            } else {
+                elements = try document.select(selector).array()
+            }
+        } else {
             throw RuleError.noDocument
         }
-        
-        let (selector, attr) = parseSelector(rule)
-        let elements = try document.select(selector)
-        
-        if let first = elements.first() {
-            switch attr {
-            case "text":
-                return .string(try first.text())
-            case "html":
-                return .string(try first.html())
-            case "href":
-                return .string(try first.attr("href"))
-            case "src":
-                return .string(try first.attr("src"))
-            default:
-                return .string(try first.text())
-            }
+
+        let values = try elements.map { element in
+            try extractCSSValue(from: element, attr: attr, baseUrl: baseUrl)
         }
-        
+
+        if values.count == 1, let first = values.first {
+            return .string(first)
+        } else if !values.isEmpty {
+            return .list(values)
+        }
+
         return .none
     }
     
@@ -539,8 +944,31 @@ class CSSParser: RuleExecutor {
             selector = String(rule[..<range.lowerBound])
             attr = String(rule[range.upperBound...])
         }
-        
+
         return (selector, attr)
+    }
+
+    private func extractCSSValue(from element: SwiftSoup.Element, attr: String, baseUrl: String?) throws -> String {
+        switch attr.lowercased() {
+        case "text":
+            return try element.text()
+        case "textnodes":
+            return element.textNodes().map { $0.text() }.joined(separator: "\n")
+        case "html", "innerhtml":
+            return try element.html()
+        case "outerhtml":
+            return try element.outerHtml()
+        case "href":
+            return resolveUrl(try element.attr("href"), baseUrl: baseUrl)
+        case "src":
+            return resolveUrl(try element.attr("src"), baseUrl: baseUrl)
+        case "abs:href":
+            return resolveUrl(try element.attr("href"), baseUrl: baseUrl)
+        case "abs:src":
+            return resolveUrl(try element.attr("src"), baseUrl: baseUrl)
+        default:
+            return try element.attr(attr)
+        }
     }
 }
 
@@ -553,10 +981,17 @@ class XPathParser: RuleExecutor {
     }
     
     func execute(_ rule: String, context: ExecutionContext) throws -> RuleResult {
-        guard let html = context.document as? String else {
+        let html: String
+        if let string = context.document as? String {
+            html = string
+        } else if let document = context.document as? SwiftSoup.Document {
+            html = try document.outerHtml()
+        } else if let element = context.document as? SwiftSoup.Element {
+            html = try element.outerHtml()
+        } else {
             throw RuleError.noDocument
         }
-        
+
         let doc = try Kanna.HTML(html: html, encoding: .utf8)
         
         var results: [String] = []
@@ -591,7 +1026,8 @@ class JSONPathParser: RuleExecutor {
     }
 
     static func evaluate(path: String, root: Any) -> [Any] {
-        JSONPathEvaluator.evaluate(path: path, root: root)
+        let resolvedPath = resolveInnerRules(in: path, root: root)
+        return JSONPathEvaluator.evaluate(path: resolvedPath, root: root)
     }
 
     static func stringify(_ value: Any) -> String? {
@@ -619,6 +1055,20 @@ class JSONPathParser: RuleExecutor {
         }
 
         throw RuleError.noDocument
+    }
+
+    private static func resolveInnerRules(in path: String, root: Any, depth: Int = 0) -> String {
+        guard depth < 10 else { return path }
+
+        let analyzer = RuleAnalyzer(data: path, code: true)
+        let resolved = analyzer.innerRule(inner: "{$.") { innerRule in
+            let nestedPath = resolveInnerRules(in: innerRule, root: root, depth: depth + 1)
+            let values = JSONPathEvaluator.evaluate(path: nestedPath, root: root)
+            guard let first = values.first else { return "" }
+            return stringify(first) ?? ""
+        }
+
+        return resolved.isEmpty ? path : resolved
     }
 
     private static func toRuleResult(_ values: [Any]) -> RuleResult {
