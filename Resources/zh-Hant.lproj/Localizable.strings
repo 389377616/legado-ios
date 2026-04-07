@@ -1,0 +1,140 @@
+/*
+  Localizable.strings
+  Legado-iOS
+
+  繁體中文本地化字符串
+*/
+
+// MARK: - 主界面
+"app_name" = "閱讀";
+"bookshelf" = "書架";
+"explore" = "發現";
+"rss" = "訂閱";
+"my" = "我的";
+
+// MARK: - 書架
+"bookshelf_empty" = "書架空空如也";
+"bookshelf_add" = "添加書籍";
+"bookshelf_search" = "搜索";
+"bookshelf_arrange" = "整理";
+"bookshelf_manage" = "管理";
+"bookshelf_list" = "列表模式";
+"bookshelf_grid" = "網格模式";
+"bookshelf_group" = "分組";
+"bookshelf_group_all" = "全部";
+"bookshelf_group_local" = "本地";
+"bookshelf_group_audio" = "音頻";
+
+// MARK: - 閱讀器
+"read_chapter" = "章節";
+"read_page" = "頁面";
+"read_toc" = "目錄";
+"read_bookmark" = "書籤";
+"read_settings" = "設置";
+"read_font" = "字體";
+"read_font_size" = "字號";
+"read_line_spacing" = "行距";
+"read_paragraph_spacing" = "段距";
+"read_margin" = "邊距";
+"read_brightness" = "亮度";
+"read_bg_color" = "背景";
+"read_text_color" = "文字";
+"read_page_mode" = "翻頁";
+"read_page_cover" = "覆蓋";
+"read_page_simulation" = "仿真";
+"read_page_slide" = "滑動";
+"read_page_scroll" = "滾動";
+"read_read_aloud" = "朗讀";
+"read_auto_page" = "自動翻頁";
+"read_change_source" = "換源";
+"read_refresh" = "刷新";
+"read_full_screen" = "全屏";
+
+// MARK: - 書源
+"book_source" = "書源";
+"book_source_manage" = "書源管理";
+"book_source_edit" = "編輯書源";
+"book_source_import" = "導入書源";
+"book_source_export" = "導出書源";
+"book_source_search" = "搜索書源";
+"book_source_debug" = "調試書源";
+"book_source_enable" = "啟用";
+"book_source_disable" = "禁用";
+"book_source_group" = "分組";
+"book_source_login" = "登錄";
+"book_source_url" = "書源地址";
+"book_source_name" = "書源名稱";
+"book_source_group_name" = "分組名";
+
+// MARK: - 搜索
+"search" = "搜索";
+"search_hint" = "輸入書名或作者";
+"search_scope" = "搜索範圍";
+"search_all" = "全部書源";
+"search_history" = "搜索歷史";
+"search_clear_history" = "清空歷史";
+
+// MARK: - RSS
+"rss_source" = "訂閱源";
+"rss_source_manage" = "訂閱源管理";
+"rss_article" = "文章";
+"rss_favorite" = "收藏";
+"rss_read_record" = "閱讀記錄";
+"rss_mark_read" = "標記已讀";
+"rss_mark_all_read" = "全部已讀";
+
+// MARK: - 替換規則
+"replace_rule" = "替換規則";
+"replace_rule_manage" = "替換規則管理";
+"replace_rule_import" = "導入規則";
+"replace_rule_export" = "導出規則";
+"replace_rule_name" = "規則名稱";
+"replace_rule_pattern" = "匹配規則";
+"replace_rule_replacement" = "替換內容";
+"replace_rule_scope" = "作用範圍";
+
+// MARK: - 配置
+"config" = "配置";
+"config_theme" = "主題";
+"config_font" = "字體";
+"config_backup" = "備份";
+"config_restore" = "恢復";
+"config_about" = "關於";
+"config_donate" = "捐贈";
+"config_other" = "其他";
+"config_check_update" = "檢查更新";
+"config_clear_cache" = "清除緩存";
+
+// MARK: - 主題
+"theme_default" = "默認白";
+"theme_dark" = "夜間黑";
+"theme_sepia" = "護眼黃";
+"theme_green" = "護眼綠";
+"theme_custom" = "自定義";
+
+// MARK: - 導入導出
+"import_success" = "導入成功";
+"import_failed" = "導入失敗";
+"export_success" = "導出成功";
+"export_failed" = "導出失敗";
+"import_online" = "在線導入";
+
+// MARK: - 通用
+"ok" = "確定";
+"cancel" = "取消";
+"save" = "保存";
+"delete" = "刪除";
+"edit" = "編輯";
+"copy" = "複製";
+"share" = "分享";
+"select_all" = "全選";
+"select_none" = "取消全選";
+"loading" = "加載中...";
+"error" = "錯誤";
+"success" = "成功";
+"warning" = "警告";
+"confirm" = "確認";
+"tip" = "提示";
+"no_data" = "暫無數據";
+"retry" = "重試";
+"back" = "返回";

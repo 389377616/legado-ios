@@ -1,0 +1,140 @@
+/*
+  Localizable.strings
+  Legado-iOS
+
+  English Localization
+*/
+
+// MARK: - Main
+"app_name" = "Legado";
+"bookshelf" = "Bookshelf";
+"explore" = "Explore";
+"rss" = "RSS";
+"my" = "Me";
+
+// MARK: - Bookshelf
+"bookshelf_empty" = "Empty bookshelf";
+"bookshelf_add" = "Add Book";
+"bookshelf_search" = "Search";
+"bookshelf_arrange" = "Arrange";
+"bookshelf_manage" = "Manage";
+"bookshelf_list" = "List View";
+"bookshelf_grid" = "Grid View";
+"bookshelf_group" = "Group";
+"bookshelf_group_all" = "All";
+"bookshelf_group_local" = "Local";
+"bookshelf_group_audio" = "Audio";
+
+// MARK: - Reader
+"read_chapter" = "Chapter";
+"read_page" = "Page";
+"read_toc" = "Contents";
+"read_bookmark" = "Bookmark";
+"read_settings" = "Settings";
+"read_font" = "Font";
+"read_font_size" = "Font Size";
+"read_line_spacing" = "Line Spacing";
+"read_paragraph_spacing" = "Paragraph Spacing";
+"read_margin" = "Margin";
+"read_brightness" = "Brightness";
+"read_bg_color" = "Background";
+"read_text_color" = "Text";
+"read_page_mode" = "Page Mode";
+"read_page_cover" = "Cover";
+"read_page_simulation" = "Simulation";
+"read_page_slide" = "Slide";
+"read_page_scroll" = "Scroll";
+"read_read_aloud" = "Read Aloud";
+"read_auto_page" = "Auto Page";
+"read_change_source" = "Change Source";
+"read_refresh" = "Refresh";
+"read_full_screen" = "Full Screen";
+
+// MARK: - Book Source
+"book_source" = "Book Source";
+"book_source_manage" = "Manage Sources";
+"book_source_edit" = "Edit Source";
+"book_source_import" = "Import Source";
+"book_source_export" = "Export Source";
+"book_source_search" = "Search Source";
+"book_source_debug" = "Debug Source";
+"book_source_enable" = "Enable";
+"book_source_disable" = "Disable";
+"book_source_group" = "Group";
+"book_source_login" = "Login";
+"book_source_url" = "Source URL";
+"book_source_name" = "Source Name";
+"book_source_group_name" = "Group Name";
+
+// MARK: - Search
+"search" = "Search";
+"search_hint" = "Enter book name or author";
+"search_scope" = "Search Scope";
+"search_all" = "All Sources";
+"search_history" = "Search History";
+"search_clear_history" = "Clear History";
+
+// MARK: - RSS
+"rss_source" = "RSS Source";
+"rss_source_manage" = "Manage RSS";
+"rss_article" = "Article";
+"rss_favorite" = "Favorite";
+"rss_read_record" = "Read Record";
+"rss_mark_read" = "Mark Read";
+"rss_mark_all_read" = "Mark All Read";
+
+// MARK: - Replace Rule
+"replace_rule" = "Replace Rule";
+"replace_rule_manage" = "Manage Rules";
+"replace_rule_import" = "Import Rule";
+"replace_rule_export" = "Export Rule";
+"replace_rule_name" = "Rule Name";
+"replace_rule_pattern" = "Pattern";
+"replace_rule_replacement" = "Replacement";
+"replace_rule_scope" = "Scope";
+
+// MARK: - Config
+"config" = "Settings";
+"config_theme" = "Theme";
+"config_font" = "Font";
+"config_backup" = "Backup";
+"config_restore" = "Restore";
+"config_about" = "About";
+"config_donate" = "Donate";
+"config_other" = "Other";
+"config_check_update" = "Check Update";
+"config_clear_cache" = "Clear Cache";
+
+// MARK: - Theme
+"theme_default" = "Default White";
+"theme_dark" = "Dark";
+"theme_sepia" = "Sepia";
+"theme_green" = "Green";
+"theme_custom" = "Custom";
+
+// MARK: - Import/Export
+"import_success" = "Import Success";
+"import_failed" = "Import Failed";
+"export_success" = "Export Success";
+"export_failed" = "Export Failed";
+"import_online" = "Online Import";
+
+// MARK: - Common
+"ok" = "OK";
+"cancel" = "Cancel";
+"save" = "Save";
+"delete" = "Delete";
+"edit" = "Edit";
+"copy" = "Copy";
+"share" = "Share";
+"select_all" = "Select All";
+"select_none" = "Deselect All";
+"loading" = "Loading...";
+"error" = "Error";
+"success" = "Success";
+"warning" = "Warning";
+"confirm" = "Confirm";
+"tip" = "Tip";
+"no_data" = "No Data";
+"retry" = "Retry";
+"back" = "Back";
