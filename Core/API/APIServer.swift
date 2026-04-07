@@ -99,10 +99,15 @@ class APIServer {
     }
     
     private func handleSync(path: String, request: HTTPRequest) -> HTTPResponse {
+        let queryParameters: [String: String] = Dictionary(uniqueKeysWithValues: request.queryItems.compactMap { item in
+            guard let value = item.value else { return nil }
+            return (item.name, value)
+        })
+        
         let apiRequest = APIRequest(
             method: request.method,
             path: request.path,
-            queryParameters: Dictionary(uniqueKeysWithValues: request.queryItems.map { ($0.name, $0.value) }),
+            queryParameters: queryParameters,
             headers: request.headers,
             body: nil
         )
