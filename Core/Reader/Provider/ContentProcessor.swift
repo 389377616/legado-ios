@@ -108,7 +108,7 @@ class ContentProcessor {
             if !removeSameTitleCache.contains(fileName) {
                 do {
                     let name = Pattern.quote(book.name)
-                    var title = chapter.title?.escapeRegex().replacingOccurrences(of: "\\s+", with: "\\s*", options: .regularExpression) ?? ""
+                    var title = chapter.title.escapeRegex().replacingOccurrences(of: "\\s+", with: "\\s*", options: .regularExpression)
                     
                     let pattern1 = "^(\\s|\\p{P}|\(name))*\(title)(\\s)*"
                     if let regex = try? NSRegularExpression(pattern: pattern1, options: [.caseInsensitive]) {
@@ -159,7 +159,8 @@ class ContentProcessor {
                 mContent = mContent.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: "\n")
                 
                 for item in getContentReplaceRules() {
-                    guard let pattern = item.pattern, !pattern.isEmpty else { continue }
+                    let pattern = item.pattern
+                    if pattern.isEmpty { continue }
                     
                     do {
                         let tmp: String
@@ -175,15 +176,15 @@ class ContentProcessor {
                         }
                     } catch {
                         item.isEnabled = false
-                        CoreDataStack.shared.saveContext()
-                        mContent = "\(item.name ?? "") \(error.localizedDescription)"
+                        try? CoreDataStack.shared.save()
+                        mContent = "\(item.name) \(error.localizedDescription)"
                     }
                 }
             }
         }
         
         if includeTitle {
-            let displayTitle = chapter.getDisplayTitle(replaceRules: getTitleReplaceRules(), useReplace: useReplace && book.getUseReplaceRule())
+            let displayTitle = chapter.getDisplayTitle(replaceRules: getTitleReplaceRules(), useReplace: useReplace && book.getUseReplaceRule(), chineseConvert: chineseConvert)
             mContent = displayTitle + "\n" + mContent
         }
         
@@ -313,7 +314,8 @@ extension BookChapter {
         
         if useReplace {
             for rule in replaceRules {
-                guard let pattern = rule.pattern, !pattern.isEmpty else { continue }
+                let pattern = rule.pattern
+                if pattern.isEmpty { continue }
                 if rule.isRegex {
                     if let regex = try? NSRegularExpression(pattern: pattern) {
                         let range = NSRange(displayTitle.startIndex..., in: displayTitle)
