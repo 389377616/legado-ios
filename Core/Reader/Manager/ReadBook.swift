@@ -59,8 +59,8 @@ class ReadBook: ObservableObject {
         self.book = book
         chapterSize = book.chapterSize
         simulatedChapterSize = chapterSize
-        durChapterIndex = book.durChapterIndex
-        durChapterPos = book.durChapterPos
+        durChapterIndex = Int(book.durChapterIndex)
+        durChapterPos = Int(book.durChapterPos)
         isLocalBook = book.isLocal
         clearTextChapter()
         callBack?.upContent()
@@ -77,9 +77,9 @@ class ReadBook: ObservableObject {
         chapterSize = book.chapterSize
         simulatedChapterSize = chapterSize
         
-        if durChapterIndex != book.durChapterIndex {
-            durChapterIndex = book.durChapterIndex
-            durChapterPos = book.durChapterPos
+        if durChapterIndex != Int(book.durChapterIndex) {
+            durChapterIndex = Int(book.durChapterIndex)
+            durChapterPos = Int(book.durChapterPos)
             clearTextChapter()
         }
         

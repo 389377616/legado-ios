@@ -22,6 +22,13 @@ class TextPage {
     var height: Float = 0.0
     var leftLineSize: Int = 0
     var renderHeight: Int = 0
+    var doublePage: Bool = false
+    var paddingTop: CGFloat = 0
+    
+    init(text: String = "加载中...", title: String = "加载中...") {
+        self.text = text
+        self.title = title
+    }
     
     static let empty = TextPage()
     

@@ -98,20 +98,24 @@ class TextPageFactory {
     // MARK: - 获取页面
     var curPage: TextPage {
         if let msg = ReadBook.shared.msg {
-            return TextPage(text: msg).format()
+            let page = TextPage(text: msg)
+            return page.format()
         }
         if let chapter = dataSource.currentChapter {
             if let page = chapter.getPage(dataSource.pageIndex) {
                 return page
             }
-            return TextPage(title: chapter.title).apply { $0.textChapter = chapter }.format()
+            let page = TextPage(title: chapter.title)
+            page.textChapter = chapter
+            return page.format()
         }
         return TextPage().format()
     }
     
     var nextPage: TextPage {
         if let msg = ReadBook.shared.msg {
-            return TextPage(text: msg).format()
+            let page = TextPage(text: msg)
+            return page.format()
         }
         if let chapter = dataSource.currentChapter {
             let pageIndex = dataSource.pageIndex
@@ -136,7 +140,8 @@ class TextPageFactory {
     
     var prevPage: TextPage {
         if let msg = ReadBook.shared.msg {
-            return TextPage(text: msg).format()
+            let page = TextPage(text: msg)
+            return page.format()
         }
         if let chapter = dataSource.currentChapter {
             let pageIndex = dataSource.pageIndex

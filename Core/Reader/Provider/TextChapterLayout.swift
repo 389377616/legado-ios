@@ -103,10 +103,10 @@ class TextChapterLayout {
         let endPadding: CGFloat = 20
         let durYPadding = durY + endPadding
         
-        if textPage.height < durYPadding {
-            textPage.height = durYPadding
+        if Float(textPage.height) < Float(durYPadding) {
+            textPage.height = Float(durYPadding)
         } else {
-            textPage.height += endPadding
+            textPage.height += Float(endPadding)
         }
         
         textPage.text = stringBuilder.toString()
@@ -121,7 +121,7 @@ class TextChapterLayout {
         
         let textPage = pendingTextPage
         textPage.index = textPages.count
-        textPage.chapterIndex = textChapter.chapter.index
+        textPage.chapterIndex = Int(textChapter.chapter.index)
         textPage.chapterSize = textChapter.chaptersSize
         textPage.title = textChapter.title
         textPage.doublePage = ChapterProvider.shared.doublePage
@@ -145,27 +145,16 @@ class TextChapterLayout {
     }
     
     private func onException(_ error: Error) {
-        pageStreamContinuation?.finish(throwing: error)
+        pageStreamContinuation?.finish()
         listener?.onLayoutException(error)
         listener = nil
     }
 }
 
-/// StringBuilder 辅助类
-class StringBuilder {
-    private var buffer = ""
-    
-    func append(_ string: String) {
-        buffer += string
-    }
-    
-    func clear() {
-        buffer.removeAll()
-    }
-    
-    func toString() -> String {
-        return buffer
-    }
-    
-    var length: Int { buffer.count }
+/// 书籍内容占位类型
+/// TODO: 从 BookHelp 模块导入或创建完整实现
+struct BookContent {
+    var textList: [String] = []
+    var sameTitleRemoved: Bool = false
+    var effectiveReplaceRules: [ReplaceRule]? = nil
 }
