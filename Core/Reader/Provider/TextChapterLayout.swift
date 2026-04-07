@@ -97,7 +97,6 @@ class TextChapterLayout {
         let paragraphSpacing = provider.paragraphSpacing
         let indentCharWidth = provider.indentCharWidth
         
-        // 获取配置
         let paragraphIndent = ReadBookConfig.paragraphIndent
         let textFullJustify = ReadBookConfig.textFullJustify
         
@@ -142,8 +141,8 @@ class TextChapterLayout {
                     // 处理图片前的文本
                     if match.range.location > start {
                         let textRange = NSRange(location: start, length: match.range.location - start)
-                        if let text = (content as NSString).substring(with: textRange),
-                           !text.trimmingCharacters(in: .whitespaces).isEmpty {
+                        let text = (content as NSString).substring(with: textRange)
+                        if !text.trimmingCharacters(in: .whitespaces).isEmpty {
                             await setTypeText(
                                 text: text,
                                 font: contentPaint,
@@ -270,7 +269,7 @@ class TextChapterLayout {
         var width: CGFloat = visibleWidth
         var height: CGFloat = visibleHeight * 0.5
         
-        prepareNextPageIfNeed(durY)
+        prepareNextPageIfNeed(requestHeight: durY)
         
         // 根据图片样式调整尺寸
         let style = imageStyle?.uppercased() ?? ""
@@ -281,7 +280,7 @@ class TextChapterLayout {
                 width = width * visibleHeight / height
                 height = visibleHeight
             }
-            prepareNextPageIfNeed(durY + height)
+            prepareNextPageIfNeed(requestHeight: durY + height)
         }
         
         // 创建图片行
@@ -310,7 +309,7 @@ class TextChapterLayout {
         stringBuilder.append(" ")
         pendingTextPage.addLine(textLine)
         
-        durY += textHeight * Float(provider.paragraphSpacing) / 10.0
+        durY += textHeight * CGFloat(provider.paragraphSpacing) / 10.0
     }
     
     // MARK: - 文字排版核心
@@ -359,13 +358,13 @@ class TextChapterLayout {
             textLine.isTitle = isTitle
             
             // 检查是否需要换页
-            prepareNextPageIfNeed(durY + textHeight)
+            prepareNextPageIfNeed(requestHeight: durY + textHeight)
             
             let lineText = layoutLine.text
             textLine.text = lineText
             
             // 计算该行的字符宽度
-            let lineWords = measureText(lineText, font: font)
+            let lineWords = ChapterProvider.shared.measureText(lineText, font: font)
             let lineWidths = measureTextWidths(lineText, font: font)
             let lineDesiredWidth = lineWidths.reduce(0, +)
             
@@ -403,7 +402,7 @@ class TextChapterLayout {
             }
         }
         
-        durY += textHeight * Float(paragraphSpacing) / 10.0
+        durY += textHeight * CGFloat(paragraphSpacing) / 10.0
     }
     
     // MARK: - 添加字符到行
@@ -505,9 +504,12 @@ class TextChapterLayout {
         textLine.paragraphNum = paragraphNum
         
         // 计算章节位置
-        let lastChapterPos = textPages.last?.lines.last?.run {
-            chapterPosition + charSize + (isParagraphEnd ? 1 : 0)
-        } ?? 0
+        let lastChapterPos: Int
+        if let lastPage = textPages.last, let lastLine = lastPage.lines.last {
+            lastChapterPos = lastLine.chapterPosition + lastLine.charSize + (lastLine.isParagraphEnd ? 1 : 0)
+        } else {
+            lastChapterPos = 0
+        }
         
         textLine.chapterPosition = lastChapterPos + sbLength
         textLine.pagePosition = sbLength

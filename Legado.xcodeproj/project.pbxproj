@@ -20,6 +20,7 @@
 		910C4BCD /* TextChapterLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD13C263 /* TextChapterLayout.swift */; };
 		8519857C /* TextPageFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8569919F /* TextPageFactory.swift */; };
 		9F865F37 /* ReadBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF737BB /* ReadBook.swift */; };
+		A1B2C3D4 /* ReadBookConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8 /* ReadBookConfig.swift */; };
 		8F40273B /* PageDirection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DFC2498 /* PageDirection.swift */; };
 		801672A7 /* TextPos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCC516F /* TextPos.swift */; };
 		957EA2BA /* BaseColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1DC1970 /* BaseColumn.swift */; };
@@ -351,6 +352,7 @@
 		1A100000000000F3 /* RuleBasedRSSParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleBasedRSSParser.swift; sourceTree = "<group>"; };
 		1A100000000000F4 /* RSSRefreshManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSRefreshManager.swift; sourceTree = "<group>"; };
 		1A100000000000F5 /* RSSViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSViewModel.swift; sourceTree = "<group>"; };
+		E5F6A7B8 /* ReadBookConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBookConfig.swift; sourceTree = "<group>"; };
 		1A1000000000006D /* EPUBReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBReaderView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -739,6 +741,7 @@
 	1A30000000000067 /* Reader */ = {
 		isa = PBXGroup;
 		children = (
+			1A300000000000A3 /* Config */,
 			1A30000000000068 /* Models */,
 			1A30000000000069 /* Views */,
 			1A300000000000A1 /* Provider */,
@@ -747,6 +750,14 @@
 		path = Reader;
 		sourceTree = "<group>";
 	};
+		1A300000000000A3 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				E5F6A7B8 /* ReadBookConfig.swift */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 		1A30000000000068 /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -1006,6 +1017,7 @@
 			8EBB34D2 /* TextPage.swift in Sources */,
 			AB1FD768 /* TextChapter.swift in Sources */,
 			A5BC7534 /* ContentTextView.swift in Sources */,
+			A1B2C3D4 /* ReadBookConfig.swift in Sources */,
 		);
 		runOnlyForDeploymentPostprocessing = 0;
 	};
