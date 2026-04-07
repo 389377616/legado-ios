@@ -1,16 +1,5 @@
-//
-//  TextLine.swift
-//  Legado
-//
-//  基于 Android Legado 原版 TextLine.kt 移植
-//  原版路径: app/src/main/java/io/legado/app/ui/book/read/page/entities/TextLine.kt
-//
-
 import UIKit
 
-/// 行信息
-/// 一比一移植自 Android Legado TextLine 数据类
-/// 用于表示页面中的一行文本或图片
 class TextLine {
     var text: String = ""
     private var textColumns: [BaseColumn] = []
@@ -90,10 +79,39 @@ class TextLine {
     }
     
     func draw(in view: ContentTextView, context: CGContext) {
-        // TODO: 实现绘制逻辑
-        for column in columns {
-            column.draw(in: view, context: context)
+        context.saveGState()
+        
+        if onlyTextColumn && textColumns.count > 0 {
+            fastDrawTextLine(in: view, context: context)
+        } else {
+            for column in columns {
+                column.draw(in: view, context: context)
+            }
         }
+        
+        context.restoreGState()
+    }
+    
+    private func fastDrawTextLine(in view: ContentTextView, context: CGContext) {
+        let provider = ChapterProvider.shared
+        let font = isTitle ? provider.titleFont : provider.contentFont
+        
+        let textColor: UIColor
+        if isReadAloud || searchResultColumnCount > 0 {
+            textColor = .systemBlue
+        } else {
+            textColor = provider.textColor
+        }
+        
+        let y = CGFloat(lineBase - lineTop)
+        
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: textColor
+        ]
+        
+        let attributedString = NSAttributedString(string: text, attributes: attributes)
+        attributedString.draw(at: CGPoint(x: CGFloat(lineStart), y: y - font.lineHeight))
     }
     
     func invalidate() {
@@ -102,6 +120,5 @@ class TextLine {
     }
     
     func invalidateSelf() {
-        // TODO: 实现 canvas recorder invalidation
     }
 }

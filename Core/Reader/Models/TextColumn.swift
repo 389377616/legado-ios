@@ -1,16 +1,5 @@
-//
-//  TextColumn.swift
-//  Legado
-//
-//  基于 Android Legado 原版 TextColumn.kt 移植
-//  原版路径: app/src/main/java/io/legado/app/ui/book/read/page/entities/column/TextColumn.kt
-//
-
 import UIKit
 
-/// 文字列
-/// 一比一移植自 Android Legado TextColumn 数据类
-/// 用于表示页面中的单个字符或字符片段
 class TextColumn: BaseColumn, Hashable {
     var start: Float
     var end: Float
@@ -55,8 +44,30 @@ class TextColumn: BaseColumn, Hashable {
     }
     
     func draw(in view: ContentTextView, context: CGContext) {
-        // TODO: 实现绘制逻辑
-        // 需要根据 textLine.isTitle 选择 titlePaint 或 contentPaint
-        // 需要根据 isReadAloud 或 isSearchResult 选择强调色
+        let provider = ChapterProvider.shared
+        let font = textLine.isTitle ? provider.titleFont : provider.contentFont
+        
+        let textColor: UIColor
+        if textLine.isReadAloud || isSearchResult {
+            textColor = .systemBlue
+        } else {
+            textColor = provider.textColor
+        }
+        
+        let y = CGFloat(textLine.lineBase - textLine.lineTop)
+        let x = CGFloat(start)
+        
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: textColor
+        ]
+        
+        let attributedString = NSAttributedString(string: charData, attributes: attributes)
+        attributedString.draw(at: CGPoint(x: x, y: y - font.lineHeight))
+        
+        if selected {
+            context.setFillColor(UIColor.systemBlue.withAlphaComponent(0.3).cgColor)
+            context.fill(CGRect(x: CGFloat(start), y: 0, width: CGFloat(end - start), height: CGFloat(textLine.height)))
+        }
     }
 }
