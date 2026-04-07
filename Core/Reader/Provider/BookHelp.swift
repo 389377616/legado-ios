@@ -131,8 +131,12 @@ enum BookHelp {
     
     private static func getMutex(for src: String) -> NSLock {
         downloadLock.lock()
-        let mutex = downloadImages.getOrPut(src, defaultValue: NSLock())
-        downloadLock.unlock()
+        defer { downloadLock.unlock() }
+        if let mutex = downloadImages[src] {
+            return mutex
+        }
+        let mutex = NSLock()
+        downloadImages[src] = mutex
         return mutex
     }
     
@@ -272,19 +276,6 @@ extension BookChapter {
     func getFileName() -> String {
         let safeTitle = (title ?? "unknown").replacingOccurrences(of: "/", with: "_")
         return "\(index)_\(safeTitle).txt"
-    }
-}
-
-// MARK: - Dictionary 扩展
-
-extension Dictionary {
-    func getOrPut(_ key: Key, defaultValue: Value) -> Value {
-        if let value = self[key] {
-            return value
-        }
-        let value = defaultValue
-        self[key] = value
-        return value
     }
 }
 

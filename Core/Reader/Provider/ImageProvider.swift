@@ -221,7 +221,7 @@ enum ImageProvider {
                         inputStream = MobiFile.getImage(book, src)
                     } else {
                         // 网络图片: BookHelp.saveImage(bookSource, book, src)
-                        BookHelp.saveImage(bookSource: bookSource, book: book, src: src)
+                        await BookHelp.saveImage(bookSource: bookSource, book: book, src: src)
                     }
                     
                     // 保存输入流到文件 (原版 line 141-146)
@@ -403,65 +403,5 @@ enum MobiFile {
     static func getImage(_ book: Book, _ src: String) -> Data? {
         // TODO: 实现 MOBI 图片提取
         return nil
-    }
-}
-
-// MARK: - BookHelp 占位声明
-
-/// 书籍帮助类
-/// 对照 Android 原版 BookHelp.kt
-/// 详细实现见 BookHelp.swift
-enum BookHelp {
-    /// 获取图片缓存路径 (对照原版 line 264-271)
-    static func getImage(_ book: Book, _ src: String) -> URL {
-        // 原版使用 MD5Utils.md5Encode16(src) + suffix
-        // 简化实现，使用缓存目录
-        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        let imageDir = cacheDir.appendingPathComponent("book_cache/images", isDirectory: true)
-        
-        // 创建目录
-        try? FileManager.default.createDirectory(at: imageDir, withIntermediateDirectories: true)
-        
-        // 生成文件名 (原版使用 MD5)
-        let fileName = src.md5() + "." + getImageSuffix(src)
-        return imageDir.appendingPathComponent(fileName)
-    }
-    
-    /// 检查图片是否存在 (对照原版 line 278-281)
-    static func isImageExist(_ book: Book, _ src: String) -> Bool {
-        let fileURL = getImage(book, src)
-        return FileManager.default.fileExists(atPath: fileURL.path)
-    }
-    
-    /// 保存图片 (对照原版 line 219-262)
-    static func saveImage(bookSource: BookSource?, book: Book, src: String) {
-        // TODO: 实现异步网络图片下载
-        // 原版使用 AnalyzeUrl.getByteArrayAwait() + ImageUtils.decode
-        // 简化版本，使用 ImageCacheManager
-        Task.detached {
-            let image = await ImageCacheManager.shared.loadImage(from: src)
-            if let image = image {
-                let fileURL = getImage(book, src)
-                if let data = image.jpegData(compressionQuality: 0.8) {
-                    try? data.write(to: fileURL)
-                }
-            }
-        }
-    }
-    
-    /// 获取图片后缀 (对照原版 line 283-285)
-    static func getImageSuffix(_ src: String) -> String {
-        // 原版: UrlUtil.getSuffix(src, "jpg")
-        let url = URL(string: src)
-        if let pathExtension = url?.pathExtension, !pathExtension.isEmpty {
-            return pathExtension.lowercased()
-        }
-        return "jpg"
-    }
-    
-    /// 写入图片数据 (对照原版 line 274-276)
-    static func writeImage(_ book: Book, _ src: String, _ bytes: Data) {
-        let fileURL = getImage(book, src)
-        try? bytes.write(to: fileURL)
     }
 }
