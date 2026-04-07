@@ -91,7 +91,7 @@ class APIServer {
         isRunning = false
     }
     
-    private func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
+    private func handleRequest(_ request: APIRequest) async -> APIResponseData {
         let path = request.path
         let method = request.method
         let query = request.queryParameters
@@ -133,14 +133,15 @@ class APIServer {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
         guard let jsonData = try? encoder.encode(response) else {
-            return HTTPResponse(statusCode: 500, body: "{\"isSuccess\":false,\"errorMsg\":\"编码失败\"}".data(using: .utf8)!)
+            return APIResponseData(statusCode: 500, headers: ["Content-Type": "application/json"], body: "{\"isSuccess\":false,\"errorMsg\":\"编码失败\"}".data(using: .utf8)!)
         }
         
-        return HTTPResponse(statusCode: 200, headers: ["Content-Type": "application/json; charset=utf-8"], body: jsonData)
+        return APIResponseData(statusCode: 200, headers: ["Content-Type": "application/json; charset=utf-8"], body: jsonData)
     }
 }
 
-struct HTTPRequest {
+// API 模块专用的请求/响应类型
+struct APIRequest {
     let method: String
     let path: String
     let queryParameters: [String: String]
@@ -148,19 +149,16 @@ struct HTTPRequest {
     let body: String?
 }
 
-struct HTTPResponse {
+struct APIResponseData {
     let statusCode: Int
     let headers: [String: String]
     let body: Data
-    
-    init(statusCode: Int, headers: [String: String] = [:], body: Data) {
-        self.statusCode = statusCode
-        self.headers = headers
-        self.body = body
-    }
 }
 
-protocol HTTPServer {
+// 使用 Core/WebServer 模块的 HTTPRequest/HTTPResponse 类型
+// 这里只定义 API 特定的 HTTPServer 接口
+
+protocol APIServerProtocol {
     func start() throws
     func stop()
 }

@@ -31,7 +31,7 @@ struct BookAPI {
         
         do {
             let decoder = JSONDecoder()
-            let json = try decoder.decode(BookJSON.self, from: data)
+            let json = try decoder.decode(APIBookJSON.self, from: data)
             
             let context = CoreDataStack.shared.viewContext
             let book = Book.create(in: context)
@@ -55,7 +55,7 @@ struct BookAPI {
         
         do {
             let decoder = JSONDecoder()
-            let json = try decoder.decode(BookJSON.self, from: data)
+            let json = try decoder.decode(APIBookJSON.self, from: data)
             
             let context = CoreDataStack.shared.viewContext
             let fetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
@@ -160,8 +160,13 @@ struct BookAPI {
                 return .error("未找到章节")
             }
             
-            let content = chapter.content ?? ""
-            return .success(.string(content))
+            if let cachePath = chapter.cachePath {
+                if let cachedContent = try? String(contentsOfFile: cachePath, encoding: .utf8) {
+                    return .success(.string(cachedContent))
+                }
+            }
+            
+            return .error("章节内容未缓存，请先下载")
         } catch {
             return .error("获取内容失败: \(error.localizedDescription)")
         }
@@ -192,7 +197,7 @@ struct BookAPI {
         dict["kind"] = .string(book.kind ?? "")
         dict["intro"] = .string(book.intro ?? "")
         dict["coverUrl"] = .string(book.coverUrl ?? "")
-        dict["customCover"] = .string(book.customCover ?? "")
+        dict["customCoverUrl"] = .string(book.customCoverUrl ?? "")
         dict["group"] = .int(Int(book.group))
         dict["durChapterIndex"] = .int(Int(book.durChapterIndex))
         dict["durChapterPos"] = .int(Int(book.durChapterPos))
@@ -224,7 +229,7 @@ struct BookAPI {
         return .dictionary(dict)
     }
     
-    private static func applyJSONToBook(_ json: BookJSON, _ book: Book) {
+    private static func applyJSONToBook(_ json: APIBookJSON, _ book: Book) {
         book.bookUrl = json.bookUrl
         book.tocUrl = json.tocUrl ?? ""
         book.name = json.name
@@ -232,7 +237,7 @@ struct BookAPI {
         book.kind = json.kind ?? ""
         book.intro = json.intro ?? ""
         book.coverUrl = json.coverUrl ?? ""
-        book.customCover = json.customCover ?? ""
+        book.customCoverUrl = json.customCover ?? ""
         book.group = Int16(json.group ?? 0)
         book.durChapterIndex = Int32(json.durChapterIndex ?? 0)
         book.durChapterPos = Int32(json.durChapterPos ?? 0)
@@ -248,7 +253,7 @@ struct BookAPI {
     }
 }
 
-private struct BookJSON: Codable {
+private struct APIBookJSON: Codable {
     let bookUrl: String
     let tocUrl: String?
     let name: String

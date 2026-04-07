@@ -1,6 +1,6 @@
 import SwiftUI
 
-public struct ReaderSettingsView: View {
+public struct EnhancedReaderSettingsView: View {
     @StateObject private var preferences = ObservableEPUBPreferences()
     @StateObject private var tweakManager = StyleTweakManager.shared
     @State private var selectedTab: SettingsTab = .display

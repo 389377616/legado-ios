@@ -31,7 +31,7 @@ struct BookSourceAPI {
         
         do {
             let decoder = JSONDecoder()
-            let json = try decoder.decode(BookSourceJSON.self, from: data)
+            let json = try decoder.decode(APIBookSourceJSON.self, from: data)
             
             if json.bookSourceName.isEmpty || json.bookSourceUrl.isEmpty {
                 return .error("源名称和URL不能为空")
@@ -59,7 +59,7 @@ struct BookSourceAPI {
         
         do {
             let decoder = JSONDecoder()
-            let jsonArray = try decoder.decode([BookSourceJSON].self, from: data)
+            let jsonArray = try decoder.decode([APIBookSourceJSON].self, from: data)
             
             if jsonArray.isEmpty {
                 return .error("转换源失败")
@@ -114,7 +114,7 @@ struct BookSourceAPI {
         
         do {
             let decoder = JSONDecoder()
-            let jsonArray = try decoder.decode([BookSourceJSON].self, from: data)
+            let jsonArray = try decoder.decode([APIBookSourceJSON].self, from: data)
             
             let context = CoreDataStack.shared.viewContext
             for json in jsonArray {
@@ -151,7 +151,7 @@ struct BookSourceAPI {
         return .dictionary(dict)
     }
     
-    private static func applyJSONToBookSource(_ json: BookSourceJSON, _ source: BookSource) {
+    private static func applyJSONToBookSource(_ json: APIBookSourceJSON, _ source: BookSource) {
         source.bookSourceUrl = json.bookSourceUrl
         source.bookSourceName = json.bookSourceName
         source.bookSourceGroup = json.bookSourceGroup ?? ""
@@ -169,7 +169,7 @@ struct BookSourceAPI {
     }
 }
 
-private struct BookSourceJSON: Codable {
+private struct APIBookSourceJSON: Codable {
     let bookSourceUrl: String
     let bookSourceName: String
     let bookSourceGroup: String?
