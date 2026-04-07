@@ -39,7 +39,7 @@ struct BookSourceAPI {
             
             let context = CoreDataStack.shared.viewContext
             let source = BookSource.create(in: context)
-            applyJSONToBookSource(json, source: source)
+            applyJSONToBookSource(json, source)
             try context.save()
             
             return .success(.string(""))
@@ -71,7 +71,7 @@ struct BookSourceAPI {
             for json in jsonArray {
                 if !json.bookSourceName.isEmpty && !json.bookSourceUrl.isEmpty {
                     let source = BookSource.create(in: context)
-                    applyJSONToBookSource(json, source: source)
+                    applyJSONToBookSource(json, source)
                     okSources.append(encodeBookSource(source))
                 }
             }
@@ -155,7 +155,7 @@ struct BookSourceAPI {
         source.bookSourceUrl = json.bookSourceUrl
         source.bookSourceName = json.bookSourceName
         source.bookSourceGroup = json.bookSourceGroup ?? ""
-        source.bookSourceType = Int16(json.bookSourceType ?? 0)
+        source.bookSourceType = Int32(json.bookSourceType ?? 0)
         source.enabled = json.enabled ?? true
         source.enabledExplore = json.enabledExplore ?? true
         source.searchUrl = json.searchUrl ?? ""

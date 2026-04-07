@@ -70,7 +70,8 @@ indirect enum CodableValue: Codable {
 class APIServer {
     static let shared = APIServer()
     
-    private var server: HTTPServer?
+    private var router: HTTPRouter?
+    private var handler: HTTPRequestHandler?
     private(set) var isRunning = false
     private(set) var port: UInt16 = 8080
     
@@ -80,63 +81,46 @@ class APIServer {
         guard !isRunning else { return }
         
         self.port = port
-        server = HTTPServer(port: port, handler: handleRequest)
-        try server?.start()
+        let router = HTTPRouter()
+        
+        router.register(method: "GET", path: "/getBookSources") { [weak self] request in
+            self?.handleSync(path: "/getBookSources", request: request) ?? .text(statusCode: 500, text: "Server error")
+        }
+        
+        handler = HTTPRequestHandler(router: router)
+        self.router = router
         isRunning = true
     }
     
     func stop() {
-        server?.stop()
-        server = nil
+        handler = nil
+        router = nil
         isRunning = false
     }
     
-    private func handleRequest(_ request: APIRequest) async -> APIResponseData {
-        let path = request.path
-        let method = request.method
-        let query = request.queryParameters
-        let body = request.body
+    private func handleSync(path: String, request: HTTPRequest) -> HTTPResponse {
+        let apiRequest = APIRequest(
+            method: request.method,
+            path: request.path,
+            queryParameters: Dictionary(uniqueKeysWithValues: request.queryItems.map { ($0.name, $0.value) }),
+            headers: request.headers,
+            body: nil
+        )
         
-        let response: APIResponse
-        
+        let apiResponse: APIResponse
         switch path {
         case "/getBookSources":
-            response = BookSourceAPI.getSources()
-        case "/saveBookSource":
-            response = BookSourceAPI.saveSource(body)
-        case "/saveBookSources":
-            response = BookSourceAPI.saveSources(body)
-        case "/getBookSource":
-            response = BookSourceAPI.getSource(query)
-        case "/deleteBookSources":
-            response = BookSourceAPI.deleteSources(body)
-        case "/getBookshelf":
-            response = BookAPI.getBookshelf()
-        case "/saveBook":
-            response = await BookAPI.saveBook(body)
-        case "/deleteBook":
-            response = BookAPI.deleteBook(body)
-        case "/saveBookProgress":
-            response = await BookAPI.saveBookProgress(body)
-        case "/getChapterList":
-            response = BookAPI.getChapterList(query)
-        case "/getBookContent":
-            response = BookAPI.getBookContent(query)
-        case "/refreshToc":
-            response = BookAPI.refreshToc(query)
-        case "/getCover":
-            response = BookAPI.getCover(query)
+            apiResponse = BookSourceAPI.getSources()
         default:
-            response = .error("未知接口: \(path)")
+            apiResponse = .error("未知接口: \(path)")
         }
         
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
-        guard let jsonData = try? encoder.encode(response) else {
-            return APIResponseData(statusCode: 500, headers: ["Content-Type": "application/json"], body: "{\"isSuccess\":false,\"errorMsg\":\"编码失败\"}".data(using: .utf8)!)
+        guard let jsonData = try? encoder.encode(apiResponse) else {
+            return HTTPResponse(statusCode: 500, body: Data("{\"isSuccess\":false}".utf8))
         }
-        
-        return APIResponseData(statusCode: 200, headers: ["Content-Type": "application/json; charset=utf-8"], body: jsonData)
+        return HTTPResponse(statusCode: 200, headers: ["Content-Type": "application/json; charset=utf-8"], body: jsonData)
     }
 }
 
@@ -153,12 +137,4 @@ struct APIResponseData {
     let statusCode: Int
     let headers: [String: String]
     let body: Data
-}
-
-// 使用 Core/WebServer 模块的 HTTPRequest/HTTPResponse 类型
-// 这里只定义 API 特定的 HTTPServer 接口
-
-protocol APIServerProtocol {
-    func start() throws
-    func stop()
 }

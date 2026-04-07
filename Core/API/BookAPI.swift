@@ -206,7 +206,6 @@ struct BookAPI {
         dict["latestChapterTitle"] = .string(book.latestChapterTitle ?? "")
         dict["latestChapterTime"] = .int(Int(book.latestChapterTime))
         dict["totalChapterNum"] = .int(Int(book.totalChapterNum))
-        dict["readOrder"] = .int(Int(book.readOrder))
         dict["origin"] = .string(book.origin ?? "")
         dict["originName"] = .string(book.originName ?? "")
         dict["canUpdate"] = .bool(book.canUpdate)
@@ -216,16 +215,13 @@ struct BookAPI {
     
     private static func encodeChapter(_ chapter: BookChapter) -> CodableValue {
         var dict: [String: CodableValue] = [:]
-        dict["bookUrl"] = .string(chapter.bookUrl ?? "")
-        dict["chapterUrl"] = .string(chapter.url ?? "")
-        dict["title"] = .string(chapter.title ?? "")
+        dict["chapterUrl"] = .string(chapter.chapterUrl)
+        dict["title"] = .string(chapter.title)
         dict["index"] = .int(Int(chapter.index))
-        dict["isVip"] = .bool(chapter.isVip)
+        dict["isVip"] = .bool(chapter.isVIP)
         dict["isPay"] = .bool(chapter.isPay)
-        dict["resourceUrl"] = .string(chapter.resourceUrl ?? "")
         dict["tag"] = .string(chapter.tag ?? "")
-        dict["start"] = .int(Int(chapter.startFragmentId ?? "") ?? 0)
-        dict["end"] = .int(Int(chapter.endFragmentId ?? "") ?? 0)
+        dict["isCached"] = .bool(chapter.isCached)
         return .dictionary(dict)
     }
     
@@ -238,7 +234,7 @@ struct BookAPI {
         book.intro = json.intro ?? ""
         book.coverUrl = json.coverUrl ?? ""
         book.customCoverUrl = json.customCover ?? ""
-        book.group = Int16(json.group ?? 0)
+        book.group = Int64(json.group ?? 0)
         book.durChapterIndex = Int32(json.durChapterIndex ?? 0)
         book.durChapterPos = Int32(json.durChapterPos ?? 0)
         book.durChapterTitle = json.durChapterTitle ?? ""
