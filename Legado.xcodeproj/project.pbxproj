@@ -791,6 +791,8 @@
 			983E8F21 /* ChapterProvider.swift */,
 			AD13C263 /* TextChapterLayout.swift */,
 			8569919F /* TextPageFactory.swift */,
+			1A100000000000F6 /* ImageProvider.swift */,
+			1A100000000000F7 /* BookHelp.swift */,
 		);
 		path = Provider;
 		sourceTree = "<group>";
