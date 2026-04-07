@@ -11,11 +11,21 @@ import UIKit
 /// 文字列
 /// 一比一移植自 Android Legado TextColumn 数据类
 /// 用于表示页面中的单个字符或字符片段
-class TextColumn: BaseColumn {
+class TextColumn: BaseColumn, Hashable {
     var start: Float
     var end: Float
     let charData: String
     var textLine: TextLine = TextLine.empty
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(start)
+        hasher.combine(end)
+        hasher.combine(charData)
+    }
+    
+    static func == (lhs: TextColumn, rhs: TextColumn) -> Bool {
+        return lhs.start == rhs.start && lhs.end == rhs.end && lhs.charData == rhs.charData
+    }
     
     var selected: Bool = false {
         didSet {

@@ -26,16 +26,20 @@ class TextChapter {
     
     var isCompleted: Bool = false
     
-    static let empty = TextChapter(
-        chapter: BookChapter(),
-        position: -1,
-        title: "emptyTextChapter",
-        chaptersSize: -1,
-        sameTitleRemoved: false,
-        isVip: false,
-        isPay: false,
-        effectiveReplaceRules: nil
-    )
+    static let empty: TextChapter = {
+        let chapter = TextChapter(
+            chapter: BookChapter(),
+            position: -1,
+            title: "emptyTextChapter",
+            chaptersSize: -1,
+            sameTitleRemoved: false,
+            isVip: false,
+            isPay: false,
+            effectiveReplaceRules: nil
+        )
+        chapter.isCompleted = true
+        return chapter
+    }()
     
     init(
         chapter: BookChapter,
@@ -55,7 +59,6 @@ class TextChapter {
         self.isVip = isVip
         self.isPay = isPay
         self.effectiveReplaceRules = effectiveReplaceRules
-        empty.isCompleted = true
     }
     
     func getPage(_ index: Int) -> TextPage? {

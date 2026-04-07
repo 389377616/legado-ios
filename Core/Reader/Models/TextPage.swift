@@ -101,13 +101,12 @@ class TextPage {
     }
     
     func draw(in view: ContentTextView, context: CGContext, relativeOffset: Float) {
-        // TODO: 实现页面绘制逻辑
         context.saveGState()
-        context.translateBy(x: 0, y: relativeOffset)
+        context.translateBy(x: 0, y: CGFloat(relativeOffset))
         
         for line in lines {
             context.saveGState()
-            context.translateBy(x: 0, y: line.lineTop)
+            context.translateBy(x: 0, y: CGFloat(line.lineTop))
             line.draw(in: view, context: context)
             context.restoreGState()
         }
