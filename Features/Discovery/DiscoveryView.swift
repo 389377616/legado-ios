@@ -20,8 +20,10 @@ struct DiscoveryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.loadExploreGroups() }
         .refreshable { await viewModel.refresh() }
-        .navigationDestination(item: $viewModel.selectedExplore) { selection in
-            ExploreResultsView(selection: selection)
+        .sheet(item: $viewModel.selectedExplore) { selection in
+            NavigationView {
+                ExploreResultsView(selection: selection)
+            }
         }
     }
     
@@ -407,7 +409,6 @@ final class ExploreResultsViewModel: ObservableObject {
                 coverUrl: $0.coverUrl,
                 intro: $0.intro,
                 kind: $0.kind,
-                wordCount: $0.wordCount,
                 lastChapter: $0.lastChapter,
                 sourceName: source.bookSourceName,
                 sourceId: source.sourceId,

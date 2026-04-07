@@ -10,6 +10,14 @@ import JavaScriptCore
 import SwiftSoup
 import Kanna
 
+// MARK: - 辅助函数
+
+func resolveUrl(_ url: String, baseUrl: String?) -> String {
+    if url.hasPrefix("http") { return url }
+    guard let base = baseUrl, let baseURL = URL(string: base) else { return url }
+    return URL(string: url, relativeTo: baseURL)?.absoluteString ?? url
+}
+
 // MARK: - 元素上下文（用于列表项提取）
 class ElementContext {
     var element: Any      // SwiftSoup.Element, JSON dict, 或 String
@@ -653,13 +661,6 @@ class RuleEngine {
         let values = JSONPathParser.evaluate(path: path, root: json)
         guard let first = values.first else { return "" }
         return JSONPathParser.stringify(first) ?? ""
-    }
-    
-    /// 解析相对 URL
-    private func resolveUrl(_ url: String, baseUrl: String?) -> String {
-        if url.hasPrefix("http") { return url }
-        guard let base = baseUrl, let baseURL = URL(string: base) else { return url }
-        return URL(string: url, relativeTo: baseURL)?.absoluteString ?? url
     }
     
     // MARK: - 获取字符串列表

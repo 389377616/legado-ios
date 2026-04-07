@@ -97,12 +97,11 @@ class SearchViewModel: ObservableObject {
         
         return results.map { searchBook in
             SearchResult(
-                name: searchBook.name,
+name: searchBook.name,
                 author: searchBook.author,
                 coverUrl: searchBook.coverUrl,
                 intro: searchBook.intro,
                 kind: searchBook.kind,
-                wordCount: searchBook.wordCount,
                 lastChapter: searchBook.lastChapter,
                 sourceName: source.bookSourceName,
                 sourceId: source.sourceId,
@@ -127,13 +126,12 @@ class SearchViewModel: ObservableObject {
                 sourceBuckets[key] = sourceSet
                 existing.sourceCount = sourceSet.count
                 if (existing.kind?.isEmpty ?? true), let kind = item.kind, !kind.isEmpty {
-                    existing = SearchResult(
+existing = SearchResult(
                         name: existing.name,
                         author: existing.author,
                         coverUrl: existing.coverUrl ?? item.coverUrl,
                         intro: existing.intro ?? item.intro,
                         kind: kind,
-                        wordCount: existing.wordCount ?? item.wordCount,
                         lastChapter: existing.lastChapter ?? item.lastChapter,
                         sourceName: existing.sourceName,
                         sourceId: existing.sourceId,
@@ -141,13 +139,12 @@ class SearchViewModel: ObservableObject {
                         sourceCount: existing.sourceCount
                     )
                 } else {
-                    existing = SearchResult(
+existing = SearchResult(
                         name: existing.name,
                         author: existing.author,
                         coverUrl: existing.coverUrl ?? item.coverUrl,
                         intro: existing.intro ?? item.intro,
                         kind: existing.kind,
-                        wordCount: existing.wordCount ?? item.wordCount,
                         lastChapter: existing.lastChapter ?? item.lastChapter,
                         sourceName: existing.sourceName,
                         sourceId: existing.sourceId,

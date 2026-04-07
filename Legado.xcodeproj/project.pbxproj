@@ -90,6 +90,7 @@
 		1A00000000000057 /* WebDAVConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000057 /* WebDAVConfigView.swift */; };
 		1A00000000000058 /* PagedReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000058 /* PagedReaderView.swift */; };
 		1A00000000000059 /* PageSplitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000059 /* PageSplitter.swift */; };
+		1A00000000000068 /* HTMLContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000068 /* HTMLContentView.swift */; };
 		1A0000000000005A /* CoverPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000005A /* CoverPageView.swift */; };
 		1A0000000000005B /* SlidePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000005B /* SlidePageView.swift */; };
 		1A0000000000005C /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1000000000005C /* DiscoveryView.swift */; };
@@ -235,6 +236,7 @@
 		1A10000000000057 /* WebDAVConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebDAVConfigView.swift; sourceTree = "<group>"; };
 		1A10000000000058 /* PagedReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PagedReaderView.swift"; sourceTree = "<group>"; };
 		1A10000000000059 /* PageSplitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageSplitter.swift"; sourceTree = "<group>"; };
+		1A10000000000068 /* HTMLContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/HTMLContentView.swift"; sourceTree = "<group>"; };
 		1A1000000000005A /* CoverPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageViews/CoverPageView.swift"; sourceTree = "<group>"; };
 		1A1000000000005B /* SlidePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Reader/PageViews/SlidePageView.swift"; sourceTree = "<group>"; };
 		1A1000000000005C /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Discovery/DiscoveryView.swift"; sourceTree = "<group>"; };
@@ -764,6 +766,7 @@
 				1A00000000000022 /* ReaderView.swift in Sources */,
 				1A00000000000023 /* ReaderViewModel.swift in Sources */,
 				1A00000000000058 /* PagedReaderView.swift in Sources */,
+				1A00000000000068 /* HTMLContentView.swift in Sources */,
 				1A00000000000059 /* PageSplitter.swift in Sources */,
 				1A0000000000005A /* CoverPageView.swift in Sources */,
 				1A0000000000005B /* SlidePageView.swift in Sources */,
