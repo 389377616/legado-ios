@@ -43,6 +43,7 @@
 		8D320709 /* DownloadManageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD6B8F6F /* DownloadManageView.swift */; };
 		B5894EDE /* ChapterListDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98DA8EA6 /* ChapterListDrawer.swift */; };
 		1A00000000000001 /* LegadoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000001 /* LegadoApp.swift */; };
+		1A000000000000A1 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A1 /* WelcomeView.swift */; };
 		1A00000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A10000000000003 /* Assets.xcassets */; };
 		1A00000000000004 /* Legado.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000004 /* Legado.xcdatamodeld */; };
 		
@@ -360,6 +361,7 @@
 		1A100000000000F5 /* RSSViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSViewModel.swift; sourceTree = "<group>"; };
 		E5F6A7B8 /* ReadBookConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBookConfig.swift; sourceTree = "<group>"; };
 		1A1000000000006D /* EPUBReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBReaderView.swift; sourceTree = "<group>"; };
+		1A100000000000A1 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -392,6 +394,7 @@
 			children = (
 				1A10000000000001 /* LegadoApp.swift */,
 				1A10000000000030 /* MainTabView.swift */,
+				1A100000000000A1 /* WelcomeView.swift */,
 
 			);
 			path = App;
@@ -889,6 +892,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A00000000000001 /* LegadoApp.swift in Sources */,
+				1A000000000000A1 /* WelcomeView.swift in Sources */,
 				1A00000000000030 /* MainTabView.swift in Sources */,
 				1A00000000000010 /* Book+CoreDataClass.swift in Sources */,
 				1A00000000000011 /* BookSource+CoreDataClass.swift in Sources */,
