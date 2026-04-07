@@ -46,9 +46,7 @@
 		1A000000000000A1 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A1 /* WelcomeView.swift */; };
 		1A000000000000A2 /* Router.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A2 /* Router.swift */; };
 		1A000000000000A3 /* CookieManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A3 /* CookieManager.swift */; };
-		1A000000000000A4 /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A4 /* NetworkError.swift */; };
 		1A000000000000A5 /* HTTPClient+Retry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A5 /* HTTPClient+Retry.swift */; };
-		1A000000000000A6 /* ResponseCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A6 /* ResponseCache.swift */; };
 		1A000000000000A7 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A7 /* Logger.swift */; };
 		1A00000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A10000000000003 /* Assets.xcassets */; };
 		1A00000000000004 /* Legado.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000004 /* Legado.xcdatamodeld */; };
@@ -370,9 +368,7 @@
 		1A100000000000A1 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		1A100000000000A2 /* Router.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Router.swift; sourceTree = "<group>"; };
 		1A100000000000A3 /* CookieManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieManager.swift; sourceTree = "<group>"; };
-		1A100000000000A4 /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
 		1A100000000000A5 /* HTTPClient+Retry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HTTPClient+Retry.swift"; sourceTree = "<group>"; };
-		1A100000000000A6 /* ResponseCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponseCache.swift; sourceTree = "<group>"; };
 		1A100000000000A7 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -502,9 +498,7 @@
 				1A10000000000040 /* AnalyzeUrl.swift */,
 				1A10000000000068 /* FullTextFetcher.swift */,
 				1A100000000000A3 /* CookieManager.swift */,
-				1A100000000000A4 /* NetworkError.swift */,
 				1A100000000000A5 /* HTTPClient+Retry.swift */,
-				1A100000000000A6 /* ResponseCache.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
@@ -921,9 +915,7 @@
 				1A000000000000A1 /* WelcomeView.swift in Sources */,
 				1A000000000000A2 /* Router.swift in Sources */,
 				1A000000000000A3 /* CookieManager.swift in Sources */,
-				1A000000000000A4 /* NetworkError.swift in Sources */,
 				1A000000000000A5 /* HTTPClient+Retry.swift in Sources */,
-				1A000000000000A6 /* ResponseCache.swift in Sources */,
 				1A000000000000A7 /* Logger.swift in Sources */,
 				1A00000000000030 /* MainTabView.swift in Sources */,
 				1A00000000000010 /* Book+CoreDataClass.swift in Sources */,
