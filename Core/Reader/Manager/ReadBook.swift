@@ -226,14 +226,18 @@ class ReadBook: ObservableObject {
         
         let bookContent = BookContent(textList: content)
         
-        let layout = TextChapterLayout(
-            textChapter: textChapter,
-            textPages: [],
-            book: book,
-            bookContent: bookContent
-        )
-        
-        await layout.startLayout()
+        await MainActor.run {
+            let layout = TextChapterLayout(
+                textChapter: textChapter,
+                textPages: [],
+                book: book,
+                bookContent: bookContent
+            )
+            
+            Task {
+                await layout.startLayout()
+            }
+        }
         
         return textChapter
     }
