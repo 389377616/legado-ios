@@ -64,7 +64,7 @@ struct BookDetailView: View {
                         Divider()
                         
                         Button(action: { viewModel.toggleTop() }) {
-                            Label(book.topOrder ? "取消置顶" : "置顶", systemImage: book.topOrder ? "pin.slash" : "pin")
+                            Label(book.order < 0 ? "取消置顶" : "置顶", systemImage: book.order < 0 ? "pin.slash" : "pin")
                         }
                         
                         Button(action: { showingSourceVariableSheet = true }) {
@@ -483,7 +483,7 @@ class BookDetailViewModel: ObservableObject {
     }
     
     func toggleTop() {
-        book.topOrder = !book.topOrder
+        book.order = book.order < 0 ? 0 : -1
         try? CoreDataStack.shared.save()
     }
     
@@ -498,13 +498,15 @@ class BookDetailViewModel: ObservableObject {
     }
     
     func copyBookUrl() {
-        if let url = book.bookUrl, !url.isEmpty {
+        let url = book.bookUrl
+        if !url.isEmpty {
             UIPasteboard.general.string = url
         }
     }
     
     func copyTocUrl() {
-        if let url = book.tocUrl, !url.isEmpty {
+        let url = book.tocUrl
+        if !url.isEmpty {
             UIPasteboard.general.string = url
         }
     }
