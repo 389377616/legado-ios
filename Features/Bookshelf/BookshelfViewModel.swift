@@ -12,6 +12,8 @@ final class BookshelfViewModel: ObservableObject {
     
     @Published var viewMode: ViewMode = .grid
     @Published var sortMode: SortMode = .readTime
+    @Published var groupStyle: GroupStyle = .tabs // 分组样式：分组Tab vs 统一列表
+    @Published var gridColumns: Int = 3 // 网格列数（3-6）
     @Published var showUnread = true
     @Published var showUpdateTime = true
     @Published var showFastScroller = false
@@ -20,6 +22,12 @@ final class BookshelfViewModel: ObservableObject {
     
     private let pageSize = 50
     private var currentPage = 0
+    
+    // 参考 Android BookshelfFragment1（分组Tab）和 BookshelfFragment2（统一列表）
+    enum GroupStyle: Int, CaseIterable {
+        case tabs = 0      // Fragment1: ViewPager + TabLayout，每个分组一个Tab
+        case unified = 1   // Fragment2: 统一列表，分组作为分隔标题
+    }
     
     enum ViewMode: Int, CaseIterable {
         case grid = 0

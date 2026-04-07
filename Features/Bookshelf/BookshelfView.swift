@@ -12,7 +12,8 @@ struct BookshelfView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            if !viewModel.groups.isEmpty {
+            // 分组样式：Fragment1（分组Tab）或 Fragment2（统一列表）
+            if viewModel.groupStyle == .tabs && !viewModel.groups.isEmpty {
                 groupTabs
             }
             bookshelfContent
@@ -109,16 +110,132 @@ struct BookshelfView: View {
     // MARK: - 书架内容
     @ViewBuilder
     private var bookshelfContent: some View {
-        let books = filteredBooks
+        if viewModel.groupStyle == .unified {
+            unifiedListView
+        } else {
+            let books = filteredBooks
+            
+            if books.isEmpty && !viewModel.isLoading {
+                emptyView
+            } else {
+                switch viewModel.viewMode {
+                case .grid:
+                    gridView(books)
+                case .list:
+                    listView(books)
+                }
+            }
+        }
+    }
+    
+    // Fragment2: 统一列表模式，分组作为分隔标题
+    private var unifiedListView: some View {
+        let groupedBooks = booksByGroup
         
-        if books.isEmpty && !viewModel.isLoading {
+        if groupedBooks.isEmpty && !viewModel.isLoading {
             emptyView
         } else {
             switch viewModel.viewMode {
             case .grid:
-                gridView(books)
+                unifiedGridView(groupedBooks)
             case .list:
-                listView(books)
+                unifiedListViewRows(groupedBooks)
+            }
+        }
+    }
+    
+    // 按分组整理书籍（Fragment2 模式）
+    private var booksByGroup: [(group: BookGroup?, books: [Book])] {
+        var result: [(group: BookGroup?, books: [Book])] = []
+        
+        // 先添加无分组的书籍
+        let ungroupedBooks = viewModel.books.filter { $0.group == 0 }
+        if !ungroupedBooks.isEmpty {
+            result.append((group: nil, books: ungroupedBooks))
+        }
+        
+        // 再添加各分组的书籍
+        for group in viewModel.groups {
+            let groupBooks = viewModel.books.filter { $0.group == group.groupId }
+            if !groupBooks.isEmpty {
+                result.append((group: group, books: groupBooks))
+            }
+        }
+        
+        return result
+    }
+    
+    // 统一网格视图（Fragment2）
+    private func unifiedGridView(_ groupedBooks: [(group: BookGroup?, books: [Book])]) -> some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(groupedBooks, id: \.group?.groupId) { item in
+                    VStack(spacing: 8) {
+                        // 分组标题
+                        if let group = item.group {
+                            Text(group.groupName)
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 12)
+                        }
+                        
+                        // 书籍网格
+                        LazyVGrid(columns: gridColumnsArray, spacing: 12) {
+                            ForEach(item.books, id: \.bookId) { book in
+                                NavigationLink(value: book.objectID) {
+                                    BookGridCell(book: book, showUnread: viewModel.showUnread)
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    bookContextMenu(book)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                    }
+                }
+            }
+        }
+        .navigationDestination(for: NSManagedObjectID.self) { objectID in
+            if let book = try? viewContext.existingObject(with: objectID) as? Book {
+                ReaderView(bookId: book.bookId)
+            }
+        }
+    }
+    
+    // 统一列表视图（Fragment2）
+    private func unifiedListViewRows(_ groupedBooks: [(group: BookGroup?, books: [Book])]) -> some View {
+        List {
+            ForEach(groupedBooks, id: \.group?.groupId) { item in
+                Section {
+                    ForEach(item.books, id: \.bookId) { book in
+                        NavigationLink(value: book.objectID) {
+                            BookListCell(
+                                book: book,
+                                showUnread: viewModel.showUnread,
+                                showUpdateTime: viewModel.showUpdateTime
+                            )
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                viewModel.removeBook(book)
+                            } label: {
+                                Label("删除", systemImage: "trash")
+                            }
+                        }
+                    }
+                } header: {
+                    if let group = item.group {
+                        Text(group.groupName)
+                    }
+                }
+            }
+        }
+        .listStyle(.plain)
+        .navigationDestination(for: NSManagedObjectID.self) { objectID in
+            if let book = try? viewContext.existingObject(with: objectID) as? Book {
+                ReaderView(bookId: book.bookId)
             }
         }
     }
@@ -128,6 +245,11 @@ struct BookshelfView: View {
             return viewModel.books
         }
         return viewModel.books.filter { $0.group == groupId }
+    }
+    
+    // 网格列数动态配置（参考 Android 3-6列）
+    private var gridColumnsArray: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 12), count: viewModel.gridColumns)
     }
     
     // MARK: - 空视图
@@ -151,11 +273,7 @@ struct BookshelfView: View {
     // MARK: - 网格视图（参考 Android item_bookshelf_grid）
     private func gridView(_ books: [Book]) -> some View {
         ScrollView {
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 16) {
+            LazyVGrid(columns: gridColumnsArray, spacing: 16) {
                 ForEach(books, id: \.bookId) { book in
                     NavigationLink(value: book.objectID) {
                         BookGridCell(book: book, showUnread: viewModel.showUnread)
@@ -461,7 +579,7 @@ struct AddBookByUrlSheet: View {
     }
 }
 
-// MARK: - 书架配置弹窗
+// MARK: - 书架配置弹窗（参考 Android BookshelfConfigDialog）
 struct BookshelfConfigSheet: View {
     @ObservedObject var viewModel: BookshelfViewModel
     @Environment(\.dismiss) private var dismiss
@@ -469,12 +587,24 @@ struct BookshelfConfigSheet: View {
     var body: some View {
         NavigationView {
             Form {
+                Section("分组样式") {
+                    Picker("样式", selection: $viewModel.groupStyle) {
+                        Text("分组Tab").tag(BookshelfViewModel.GroupStyle.tabs)
+                        Text("统一列表").tag(BookshelfViewModel.GroupStyle.unified)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                
                 Section("布局方式") {
                     Picker("布局", selection: $viewModel.viewMode) {
                         Text("网格布局").tag(BookshelfViewModel.ViewMode.grid)
                         Text("列表布局").tag(BookshelfViewModel.ViewMode.list)
                     }
                     .pickerStyle(.segmented)
+                    
+                    if viewModel.viewMode == .grid {
+                        Stepper("网格列数: \(viewModel.gridColumns)", value: $viewModel.gridColumns, in: 3...6)
+                    }
                 }
                 
                 Section("排序方式") {
