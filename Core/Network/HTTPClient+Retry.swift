@@ -102,8 +102,6 @@ extension HTTPClient {
         
         if let networkError = error as? NetworkError {
             switch networkError {
-            case .timeout, .noConnection:
-                return true
             case .httpError(let statusCode):
                 return config.retryableStatusCodes.contains(statusCode)
             case .networkFailure:
