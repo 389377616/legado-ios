@@ -1024,6 +1024,8 @@
 			AB1FD768 /* TextChapter.swift in Sources */,
 			A5BC7534 /* ContentTextView.swift in Sources */,
 			A1B2C3D4 /* ReadBookConfig.swift in Sources */,
+			1A000000000000F6 /* ImageProvider.swift in Sources */,
+			1A000000000000F7 /* BookHelp.swift in Sources */,
 		);
 		runOnlyForDeploymentPostprocessing = 0;
 	};
