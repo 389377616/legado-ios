@@ -13,9 +13,12 @@ package_refs = project.root_object.package_references || []
 readium_exists = package_refs.any? { |ref| ref.respond_to?(:repositoryURL) && ref.repositoryURL.include?('readium/swift-toolkit') }
 
 unless readium_exists
-  package = project.new(XCRemoteSwiftPackageReference)
+  package = project.new(Xcodeproj::Project::Object::XCRemoteSwiftPackageReference)
   package.repositoryURL = 'https://github.com/readium/swift-toolkit.git'
-  package.requirement = { kind: 'upToNextMajorVersion', minimumVersion: '3.8.0' }
+  package.requirement = Xcodeproj::Project::Object::XCRemoteSwiftPackageReference::VersionRequirement.new(
+    kind: 'upToNextMajorVersion',
+    minimumVersion: '3.8.0'
+  )
   project.root_object.package_references << package
   puts "Added Readium Swift Toolkit package"
 end
