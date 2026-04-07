@@ -197,11 +197,11 @@ class ReadBook: ObservableObject {
     }
     
     private func loadChapter(index: Int, book: Book) async throws -> TextChapter {
-        let context = CoreDataStack.shared.backgroundContext
+        let context = CoreDataStack.shared.newBackgroundContext()
         
         let chapter: BookChapter = try await context.perform {
             let request: NSFetchRequest<BookChapter> = BookChapter.fetchRequest()
-            request.predicate = NSPredicate(format: "bookUrl == %@ AND index == %d", book.bookUrl, index)
+            request.predicate = NSPredicate(format: "book.bookUrl == %@ AND index == %d", book.bookUrl, index)
             request.fetchLimit = 1
             
             guard let chapter = try context.fetch(request).first else {
@@ -210,7 +210,7 @@ class ReadBook: ObservableObject {
             return chapter
         }
         
-        let title = chapter.name
+        let title = chapter.title
         let content = try await getChapterContent(chapter: chapter, book: book)
         
         let textChapter = TextChapter(
@@ -240,14 +240,8 @@ class ReadBook: ObservableObject {
     
     private func getChapterContent(chapter: BookChapter, book: Book) async throws -> [String] {
         if book.isLocal {
-            if let content = chapter.content, !content.isEmpty {
-                return [content]
-            }
             return ["章节内容加载中..."]
         } else {
-            if let content = chapter.content, !content.isEmpty {
-                return [content]
-            }
             return ["正在加载章节内容..."]
         }
     }
@@ -302,7 +296,8 @@ class ReadBook: ObservableObject {
         context.perform {
             book.durChapterIndex = Int32(self.durChapterIndex)
             book.durChapterPos = Int32(self.durChapterPos)
-            book.lastReadTime = Date()
+            book.durChapterTime = Int64(Date().timeIntervalSince1970)
+            book.updatedAt = Date()
             
             do {
                 try context.save()
