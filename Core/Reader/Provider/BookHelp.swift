@@ -235,6 +235,28 @@ enum BookHelp {
         return FileManager.default.fileExists(atPath: fileURL.path)
     }
     
+    /// 获取书籍缓存文件夹中的所有文件名
+    /// 对照原版 fun getChapterFiles(book: Book): HashSet<String> (line 324-336)
+    static func getChapterFiles(_ book: Book) -> Set<String> {
+        var fileNames: Set<String> = []
+        
+        if book.isLocalTxt {
+            return fileNames
+        }
+        
+        let folderURL = downloadDir
+            .appendingPathComponent(cacheFolderName)
+            .appendingPathComponent(book.getFolderName())
+        
+        try? FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+        
+        if let files = try? FileManager.default.contentsOfDirectory(atPath: folderURL.path) {
+            fileNames = Set(files)
+        }
+        
+        return fileNames
+    }
+    
     /// 删除章节内容
     /// 对照原版 fun delContent(book, bookChapter) (line 426-433)
     static func delContent(_ book: Book, _ bookChapter: BookChapter) {

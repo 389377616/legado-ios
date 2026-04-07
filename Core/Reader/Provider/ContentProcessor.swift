@@ -1,7 +1,9 @@
 import Foundation
 import CoreData
 
-struct BookContent {
+/// 处理后的书籍内容结构
+/// 一比一移植自 Android Legado BookContent (ContentProcessor.kt line 99-206)
+struct ProcessedContent {
     let sameTitleRemoved: Bool
     let contents: [String]
     let effectiveReplaceRules: [ReplaceRule]?
@@ -95,7 +97,7 @@ class ContentProcessor {
         useReplace: Bool = true,
         chineseConvert: Bool = true,
         reSegment: Bool = true
-    ) -> BookContent {
+    ) -> ProcessedContent {
         var mContent = content
         var sameTitleRemoved = false
         var effectiveReplaceRules: [ReplaceRule]? = nil
@@ -199,7 +201,7 @@ class ContentProcessor {
             }
         }
         
-        return BookContent(sameTitleRemoved: sameTitleRemoved, contents: contents, effectiveReplaceRules: effectiveReplaceRules)
+        return ProcessedContent(sameTitleRemoved: sameTitleRemoved, contents: contents, effectiveReplaceRules: effectiveReplaceRules)
     }
 }
 
@@ -324,11 +326,5 @@ extension BookChapter {
         }
         
         return displayTitle
-    }
-}
-
-extension ReplaceRule {
-    func getValidTimeoutMillisecond() -> Int {
-        return Int(timeout)
     }
 }

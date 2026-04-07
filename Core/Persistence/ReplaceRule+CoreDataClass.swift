@@ -24,6 +24,27 @@ public class ReplaceRule: NSManagedObject {
     @NSManaged public var enabled: Bool
     @NSManaged public var priority: Int32
     @NSManaged public var order: Int32
+    @NSManaged public var timeoutMillisecond: Int64
+    
+    /// 启用状态别名，对照原版 isEnabled (ReplaceRule.kt line 50)
+    var isEnabled: Bool {
+        get { enabled }
+        set { enabled = newValue }
+    }
+    
+    /// 懒加载正则表达式，对照原版 regex (ReplaceRule.kt line 76-78)
+    lazy var regex: NSRegularExpression? = {
+        guard !pattern.isEmpty else { return nil }
+        return try? NSRegularExpression(pattern: pattern, options: [])
+    }()
+    
+    /// 获取有效超时时间，对照原版 getValidTimeoutMillisecond (ReplaceRule.kt line 115-120)
+    func getValidTimeoutMillisecond() -> Int {
+        if timeoutMillisecond <= 0 {
+            return 3000
+        }
+        return Int(timeoutMillisecond)
+    }
 }
 
 extension ReplaceRule {
