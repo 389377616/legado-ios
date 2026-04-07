@@ -22,6 +22,10 @@ NEW_FILES = [
     ("TextPage.swift", "Core/Reader/Models/"),
     ("TextChapter.swift", "Core/Reader/Models/"),
     ("ContentTextView.swift", "Core/Reader/Views/"),
+    ("ChapterProvider.swift", "Core/Reader/Provider/"),
+    ("TextChapterLayout.swift", "Core/Reader/Provider/"),
+    ("TextPageFactory.swift", "Core/Reader/Provider/"),
+    ("ReadBook.swift", "Core/Reader/Manager/"),
 ]
 
 def add_files_to_pbxproj(filepath):

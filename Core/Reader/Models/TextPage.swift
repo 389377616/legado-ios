@@ -136,4 +136,22 @@ class TextPage {
             renderHeight = max(renderHeight, leftHeight)
         }
     }
+    
+    func removePageAloudSpan() -> TextPage {
+        if !hasReadAloudSpan {
+            return self
+        }
+        hasReadAloudSpan = false
+        for line in textLines {
+            line.isReadAloud = false
+        }
+        return self
+    }
+    
+    func format() -> TextPage {
+        if textLines.isEmpty {
+            isMsgPage = true
+        }
+        return self
+    }
 }

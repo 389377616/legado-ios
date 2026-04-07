@@ -119,6 +119,14 @@ extension Book {
     var realAuthor: String {
         author.trimmingCharacters(in: .whitespaces)
     }
+    
+    var chapterSize: Int {
+        return Int(totalChapterNum)
+    }
+    
+    var pageAnim: Int {
+        return Int(pageAnimation)
+    }
 }
 
 // MARK: - ReadConfig 访问器
