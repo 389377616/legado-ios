@@ -129,6 +129,7 @@ struct BookshelfView: View {
     }
     
     // Fragment2: 统一列表模式，分组作为分隔标题
+    @ViewBuilder
     private var unifiedListView: some View {
         let groupedBooks = booksByGroup
         
