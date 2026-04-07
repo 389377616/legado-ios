@@ -556,7 +556,8 @@ class TextChapterLayout {
     }
     
     private func isZeroWidthChar(_ char: Character) -> Bool {
-        let code = char.asciiValue ?? 0
+        guard let scalar = char.unicodeScalars.first else { return false }
+        let code = scalar.value
         return code == 8203 || code == 8204 || code == 8205 || code == 8288
     }
     
