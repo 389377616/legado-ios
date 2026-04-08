@@ -729,7 +729,7 @@ struct DebugLogView: View {
             }
         }
         .sheet(isPresented: $showShareSheet) {
-            ShareSheet(items: [URL(fileURLWithPath: DebugLogger.shared.logFilePath)])
+            ShareSheet(activityItems: [URL(fileURLWithPath: DebugLogger.shared.logFilePath)])
         }
         .onAppear {
             loadLog()
@@ -745,16 +745,6 @@ struct DebugLogView: View {
         let startIndex = max(0, allLines.count - maxLines)
         logLines = Array(allLines[startIndex...])
     }
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-    
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

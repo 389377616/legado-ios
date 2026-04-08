@@ -15,26 +15,24 @@ struct RssFavoritesView: View {
     @State private var searchText = ""
     
     var body: some View {
-        NavigationView {
-            Group {
-                if favorites.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "star").font(.system(size: 48)).foregroundColor(.gray)
-                        Text("暂无收藏").foregroundColor(.gray)
-                    }
-                } else {
-                    List {
-                        ForEach(filteredFavorites) { star in
-                            RssStarRow(star: star)
-                        }
-                        .onDelete(perform: deleteFavorites)
-                    }
-                    .searchable(text: $searchText)
+        Group {
+            if favorites.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "star").font(.system(size: 48)).foregroundColor(.gray)
+                    Text("暂无收藏").foregroundColor(.gray)
                 }
+            } else {
+                List {
+                    ForEach(filteredFavorites, id: \.origin) { star in
+                        RssStarRow(star: star)
+                    }
+                    .onDelete(perform: deleteFavorites)
+                }
+                .searchable(text: $searchText)
             }
-            .navigationTitle("收藏")
-            .navigationBarTitleDisplayMode(.inline)
         }
+        .navigationTitle("收藏")
+        .navigationBarTitleDisplayMode(.inline)
     }
     
     private var filteredFavorites: [RssStar] {
@@ -75,7 +73,7 @@ struct RssStarRow: View {
     }
     
     private func formatDate(_ timestamp: Int64) -> String {
-        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+        let date = Date(timeIntervalSince1970: TimeInterval(timestamp / 1000))
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
