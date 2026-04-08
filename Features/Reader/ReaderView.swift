@@ -147,7 +147,7 @@ struct ReaderView: View {
                 if let book = book { BookmarkSheet(viewModel: viewModel, book: book) }
             }
             .sheet(isPresented: $showingEffectiveReplaces) {
-                EffectiveReplacesSheet(isPresented: $showingEffectiveReplaces, bookSourceUrl: book?.originName)
+                ReplaceRuleView()
             }
         }
         .navigationBarHidden(true)
