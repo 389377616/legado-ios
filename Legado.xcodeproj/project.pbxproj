@@ -187,6 +187,14 @@
 		1A000000000000F6 /* ImageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F6 /* ImageProvider.swift */; };
 		1A000000000000F7 /* BookHelp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F7 /* BookHelp.swift */; };
 		1A000000000000F8 /* ContentProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F8 /* ContentProcessor.swift */; };
+		1A000000000000F9 /* MyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000F9 /* MyView.swift */; };
+		1A000000000000FA /* OnLineImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000FA /* OnLineImportView.swift */; };
+		1A000000000000FB /* SourceExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000FB /* SourceExportView.swift */; };
+		1A000000000000FD /* RssSortView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000FD /* RssSortView.swift */; };
+		1A000000000000FE /* RssFavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000FE /* RssFavoritesView.swift */; };
+		1A00000000000100 /* CoverConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000100 /* CoverConfigView.swift */; };
+		1A00000000000102 /* TTSSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000102 /* TTSSettingsView.swift */; };
+		1A00000000000103 /* AllBookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000103 /* AllBookmarksView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -363,6 +371,14 @@
 		1A100000000000F3 /* RuleBasedRSSParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleBasedRSSParser.swift; sourceTree = "<group>"; };
 		1A100000000000F4 /* RSSRefreshManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSRefreshManager.swift; sourceTree = "<group>"; };
 		1A100000000000F5 /* RSSViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSViewModel.swift; sourceTree = "<group>"; };
+		1A100000000000F9 /* MyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyView.swift; sourceTree = "<group>"; };
+		1A100000000000FA /* OnLineImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnLineImportView.swift; sourceTree = "<group>"; };
+		1A100000000000FB /* SourceExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceExportView.swift; sourceTree = "<group>"; };
+		1A100000000000FD /* RssSortView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RssSortView.swift; sourceTree = "<group>"; };
+		1A100000000000FE /* RssFavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RssFavoritesView.swift; sourceTree = "<group>"; };
+		1A10000000000100 /* CoverConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverConfigView.swift; sourceTree = "<group>"; };
+		1A10000000000102 /* TTSSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSSettingsView.swift; sourceTree = "<group>"; };
+		1A10000000000103 /* AllBookmarksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllBookmarksView.swift; sourceTree = "<group>"; };
 		E5F6A7B8 /* ReadBookConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBookConfig.swift; sourceTree = "<group>"; };
 		1A1000000000006D /* EPUBReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBReaderView.swift; sourceTree = "<group>"; };
 		1A100000000000A1 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
@@ -606,10 +622,19 @@
 				1A30000000000026 /* BookDetail */,
 				1A30000000000028 /* RSS */,
 				1A30000000000063 /* Remote */,
+				1A300000000000A5 /* My */,
 				1A1000000000005C /* DiscoveryView.swift */,
 				1A1000000000005D /* ReadingStatisticsView.swift */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		1A300000000000A5 /* My */ = {
+			isa = PBXGroup;
+			children = (
+				1A100000000000F9 /* MyView.swift */,
+			);
+			path = My;
 			sourceTree = "<group>";
 		};
 		1A30000000000021 /* Bookshelf */ = {
@@ -638,6 +663,7 @@
 				1A10000000000065 /* AutoPageTurnManager.swift */,
 				1A10000000000066 /* AutoPageTurnControlsView.swift */,
 				1A10000000000067 /* ReadingEnhancementManager.swift */,
+				1A10000000000103 /* AllBookmarksView.swift */,
 				1A30000000000066 /* PageViews */,
 			);
 			path = Reader;
@@ -675,6 +701,8 @@
 				1A30000000000029 /* Components */,
 				1A10000000000043 /* QRCodeScanView.swift */,
 				1A1000000000008A /* VerificationWebView.swift */,
+				1A100000000000FA /* OnLineImportView.swift */,
+				1A100000000000FB /* SourceExportView.swift */,
 			);
 			path = Source;
 			sourceTree = "<group>";
@@ -704,6 +732,8 @@
 				1A100000000000E1 /* TxtTocRuleView.swift */,
 				1A100000000000E2 /* FileManageView.swift */,
 				1A1000000000008F /* HttpTTSConfigView.swift */,
+				1A10000000000100 /* CoverConfigView.swift */,
+				1A10000000000102 /* TTSSettingsView.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -715,6 +745,8 @@
 				1A100000000000F5 /* RSSViewModel.swift */,
 				1A100000000000F4 /* RSSRefreshManager.swift */,
 				1A100000000000F3 /* RuleBasedRSSParser.swift */,
+				1A100000000000FD /* RssSortView.swift */,
+				1A100000000000FE /* RssFavoritesView.swift */,
 			);
 			path = RSS;
 			sourceTree = "<group>";
@@ -1058,6 +1090,14 @@
 			1A000000000000F6 /* ImageProvider.swift in Sources */,
 			1A000000000000F7 /* BookHelp.swift in Sources */,
 			1A000000000000F8 /* ContentProcessor.swift in Sources */,
+			1A000000000000F9 /* MyView.swift in Sources */,
+			1A000000000000FA /* OnLineImportView.swift in Sources */,
+			1A000000000000FB /* SourceExportView.swift in Sources */,
+			1A000000000000FD /* RssSortView.swift in Sources */,
+			1A000000000000FE /* RssFavoritesView.swift in Sources */,
+			1A00000000000100 /* CoverConfigView.swift in Sources */,
+			1A00000000000102 /* TTSSettingsView.swift in Sources */,
+			1A00000000000103 /* AllBookmarksView.swift in Sources */,
 		);
 		runOnlyForDeploymentPostprocessing = 0;
 	};

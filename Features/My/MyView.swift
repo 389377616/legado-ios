@@ -12,7 +12,7 @@ struct MyView: View {
                         .foregroundColor(.blue)
                     Text("今日阅读")
                     Spacer()
-                    Text(formatDuration(statistics.todayReadingTime))
+                    Text(formatDuration(statistics.todayStats?.readingTime ?? 0))
                         .foregroundColor(.secondary)
                 }
                 
@@ -125,7 +125,7 @@ struct MyView: View {
             
             Section("关于") {
                 NavigationLink("阅读统计") {
-                    ReadingStatsView()
+                    ReadingStatisticsView()
                 }
                 
                 NavigationLink("全部书签") {
