@@ -15,7 +15,7 @@ struct ReaderView: View {
     @State private var showingBookmarks = false
     @State private var showingChangeSource = false
     @State private var showingSearchContent = false
-    @State private var showUI = true
+    @State private var showUI = false
     @State private var brightness: Double = UIScreen.main.brightness
     @State private var isNightMode = false
     @State private var autoBrightness = true
@@ -43,6 +43,8 @@ struct ReaderView: View {
                 if showUI {
                     VStack(spacing: 0) {
                         topBar
+                            .padding(.top, geometry.safeAreaInsets.top)
+                            .background(.ultraThinMaterial)
                             .transition(.move(edge: .top))
                         
                         Spacer()
@@ -51,8 +53,11 @@ struct ReaderView: View {
                             .transition(.opacity)
                         
                         bottomBar
+                            .padding(.bottom, geometry.safeAreaInsets.bottom)
+                            .background(.ultraThinMaterial)
                             .transition(.move(edge: .bottom))
                     }
+                    .ignoresSafeArea(.container, edges: [.top, .bottom])
                     
                     brightnessSlider
                         .transition(.opacity)
@@ -164,17 +169,19 @@ struct ReaderView: View {
                 Button(action: { showingChangeSource = true }) {
                     Text(book?.originName ?? "书源")
                         .font(.caption)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(Color.blue.opacity(0.2))
                         .cornerRadius(4)
                 }
+                .frame(maxWidth: 180)
             }
             .padding(.horizontal)
             .padding(.top, 8)
             .padding(.bottom, 12)
         }
-        .background(.ultraThinMaterial)
     }
     
     private var floatingButtons: some View {
@@ -194,7 +201,7 @@ struct ReaderView: View {
     
     private var bottomBar: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 HStack {
                     Text("第\(viewModel.currentChapterIndex + 1)/\(viewModel.totalChapters)章")
                         .font(.caption)
@@ -214,7 +221,7 @@ struct ReaderView: View {
                 HStack(spacing: 20) {
                     Button(action: { Task { await viewModel.prevChapter() } }) {
                         Text("上一章")
-                            .font(.subheadline)
+                            .font(.footnote)
                     }
                     .disabled(viewModel.currentChapterIndex <= 0)
                     .opacity(viewModel.currentChapterIndex <= 0 ? 0.5 : 1)
@@ -223,15 +230,15 @@ struct ReaderView: View {
                     
                     Button(action: { Task { await viewModel.nextChapter() } }) {
                         Text("下一章")
-                            .font(.subheadline)
+                            .font(.footnote)
                     }
                     .disabled(viewModel.currentChapterIndex >= viewModel.totalChapters - 1)
                     .opacity(viewModel.currentChapterIndex >= viewModel.totalChapters - 1 ? 0.5 : 1)
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 5)
-            .padding(.bottom, 5)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
             
             Divider()
             
@@ -243,7 +250,6 @@ struct ReaderView: View {
             }
             .padding(.vertical, 7)
         }
-        .background(Color(.systemGray6))
     }
     
     private var brightnessSlider: some View {
