@@ -215,11 +215,11 @@ struct BookAPI {
                 if let url = URL(string: path) {
                     do {
                         let (data, _) = try await URLSession.shared.data(from: url)
-                        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-                            .appendingPathComponent("covers", isDirectory: true)
+                        guard let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+                            .appendingPathComponent("covers", isDirectory: true) else { return }
                         try? FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
                         
-                        let fileName = path.md5 ?? UUID().uuidString
+                        let fileName = path.md5()
                         let fileURL = cacheDir.appendingPathComponent(fileName)
                         try data.write(to: fileURL)
                         DebugLogger.shared.log("封面下载成功: \(fileURL.path)")

@@ -401,10 +401,9 @@ enum EpubFile {
             return try? Data(contentsOf: imagePath)
         }
         
-        if let bookURL = URL(string: book.bookUrl) ?? URL(fileURLWithPath: book.bookUrl) {
-            if bookURL.pathExtension.lowercased() == "epub" {
-                return extractFromEPUB(url: bookURL, imagePath: src)
-            }
+        let bookURL = URL(string: book.bookUrl) ?? URL(fileURLWithPath: book.bookUrl)
+        if bookURL.pathExtension.lowercased() == "epub" {
+            return extractFromEPUB(url: bookURL, imagePath: src)
         }
         
         return nil
@@ -436,8 +435,8 @@ enum EpubFile {
 
 enum PdfFile {
     static func getImage(_ book: Book, _ src: String) -> Data? {
-        guard let bookURL = URL(string: book.bookUrl) ?? URL(fileURLWithPath: book.bookUrl),
-              bookURL.pathExtension.lowercased() == "pdf" else { return nil }
+        let bookURL = URL(string: book.bookUrl) ?? URL(fileURLWithPath: book.bookUrl)
+        guard bookURL.pathExtension.lowercased() == "pdf" else { return nil }
         
         guard let document = PDFDocument(url: bookURL) else { return nil }
         
@@ -462,8 +461,8 @@ enum PdfFile {
 
 enum MobiFile {
     static func getImage(_ book: Book, _ src: String) -> Data? {
-        guard let bookURL = URL(string: book.bookUrl) ?? URL(fileURLWithPath: book.bookUrl),
-              bookURL.pathExtension.lowercased() == "mobi" || bookURL.pathExtension.lowercased() == "azw3" else { return nil }
+        let bookURL = URL(string: book.bookUrl) ?? URL(fileURLWithPath: book.bookUrl)
+        guard bookURL.pathExtension.lowercased() == "mobi" || bookURL.pathExtension.lowercased() == "azw3" else { return nil }
         
         return nil
     }

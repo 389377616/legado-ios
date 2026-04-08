@@ -96,7 +96,6 @@ final class ChapterCacheManager: ObservableObject {
         
         preloadTasks.append(task)
     }
-    }
     
     // MARK: - 批量缓存（下载全书）
     
