@@ -264,8 +264,6 @@ class TextChapterLayout {
         let paddingTop = provider.paddingTop
         let paddingLeft = provider.paddingLeft
         
-        // TODO: 从 ImageProvider 获取图片尺寸
-        // 暂时使用默认尺寸
         var width: CGFloat = visibleWidth
         var height: CGFloat = visibleHeight * 0.5
         
@@ -599,8 +597,6 @@ class TextChapterLayout {
     }
 }
 
-/// 书籍内容占位类型
-/// TODO: 从 BookHelp 模块导入或创建完整实现
 struct BookContent {
     var textList: [String] = []
     var sameTitleRemoved: Bool = false

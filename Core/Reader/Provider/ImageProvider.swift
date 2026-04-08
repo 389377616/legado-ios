@@ -385,9 +385,6 @@ extension Book {
 
 // MARK: - 占位类（待后续实现）
 
-/// 本地书籍文件解析器占位类
-/// 对照 Android 原版 localBook 包下的各类
-/// TODO: 后续阶段实现完整功能
 enum EpubFile {
     static func getImage(_ book: Book, _ src: String) -> Data? {
         guard let epubCacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?

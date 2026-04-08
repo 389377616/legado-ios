@@ -53,8 +53,6 @@ class TextPage {
     }
     
     func upLinesPosition() {
-        // TODO: 实现底部对齐更新行位置逻辑
-        // 参考 Android 原版 TextPage.kt upLinesPosition()
     }
     
     func getPosByLineColumn(lineIndex: Int, columnIndex: Int) -> Int {
@@ -122,7 +120,6 @@ class TextPage {
     }
     
     func invalidate() {
-        // TODO: 实现 canvas recorder invalidation
     }
     
     func invalidateAll() {

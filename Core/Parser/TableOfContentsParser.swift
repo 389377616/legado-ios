@@ -20,11 +20,9 @@ struct RuleToc: Codable {
 // MARK: - 规则解析器占位
 class RuleParser {
     static func parse(html: String, rule: String) throws -> String {
-        // 简化实现：返回原始HTML或按规则提取
         if rule.isEmpty {
             return html
         }
-        // TODO: 实现完整的规则解析
         return html
     }
 }
