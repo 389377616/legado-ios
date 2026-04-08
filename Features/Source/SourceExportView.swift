@@ -95,7 +95,7 @@ struct SourceExportView: View {
     }
     
     private func exportSources(_ sources: [BookSource]) {
-        let exportData = sources.map { ExportableSource(from: $0) }
+        let exportData = sources.map { SourceExportItem(from: $0) }
         
         guard let jsonData = try? JSONEncoder().encode(exportData),
               let jsonString = String(data: jsonData, encoding: .utf8) else {
@@ -118,7 +118,7 @@ struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
-struct ExportableSource: Codable {
+struct SourceExportItem: Codable {
     let bookSourceUrl: String
     let bookSourceName: String
     let bookSourceGroup: String?
@@ -147,7 +147,7 @@ struct ExportableSource: Codable {
         self.enabledExplore = source.enabledExplore
         self.weight = Int(source.weight)
         self.lastUpdateTime = source.lastUpdateTime
-        self.respondTime = source.respondTime
+        self.respondTime = Int(source.respondTime)
         self.loginUrl = source.loginUrl
         self.loginUi = source.loginUi
         self.loginCheckJs = source.loginCheckJs

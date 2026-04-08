@@ -7,6 +7,10 @@ struct GroupManageView: View {
     @State private var showingAddGroup = false
     @State private var newGroupName = ""
     
+    init(viewModel: SourceViewModel = SourceViewModel()) {
+        self._viewModel = ObservedObject(wrappedValue: viewModel)
+    }
+    
     var body: some View {
         NavigationView {
             List {

@@ -86,7 +86,7 @@ struct RssSortView: View {
     private func loadSources() {
         let context = CoreDataStack.shared.viewContext
         let request: NSFetchRequest<RssSource> = RssSource.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(key: "sortOrder", ascending: true)]
+        request.sortDescriptors = [NSSortDescriptor(key: "customOrder", ascending: true)]
         sources = (try? context.fetch(request)) ?? []
     }
     
@@ -101,7 +101,7 @@ struct RssSortView: View {
         reordered.move(fromOffsets: source, toOffset: destination)
         
         for (index, source) in reordered.enumerated() {
-            source.sortOrder = Int32(index)
+            source.customOrder = Int32(index)
         }
         
         try? CoreDataStack.shared.save()

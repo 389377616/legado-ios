@@ -193,8 +193,6 @@
 		1A000000000000FD /* RssSortView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000FD /* RssSortView.swift */; };
 		1A000000000000FE /* RssFavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000FE /* RssFavoritesView.swift */; };
 		1A00000000000100 /* CoverConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000100 /* CoverConfigView.swift */; };
-		1A00000000000102 /* TTSSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000102 /* TTSSettingsView.swift */; };
-		1A00000000000103 /* AllBookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000103 /* AllBookmarksView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -377,8 +375,6 @@
 		1A100000000000FD /* RssSortView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RssSortView.swift; sourceTree = "<group>"; };
 		1A100000000000FE /* RssFavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RssFavoritesView.swift; sourceTree = "<group>"; };
 		1A10000000000100 /* CoverConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverConfigView.swift; sourceTree = "<group>"; };
-		1A10000000000102 /* TTSSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSSettingsView.swift; sourceTree = "<group>"; };
-		1A10000000000103 /* AllBookmarksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllBookmarksView.swift; sourceTree = "<group>"; };
 		E5F6A7B8 /* ReadBookConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBookConfig.swift; sourceTree = "<group>"; };
 		1A1000000000006D /* EPUBReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBReaderView.swift; sourceTree = "<group>"; };
 		1A100000000000A1 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
@@ -733,7 +729,6 @@
 				1A100000000000E2 /* FileManageView.swift */,
 				1A1000000000008F /* HttpTTSConfigView.swift */,
 				1A10000000000100 /* CoverConfigView.swift */,
-				1A10000000000102 /* TTSSettingsView.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -1096,8 +1091,6 @@
 			1A000000000000FD /* RssSortView.swift in Sources */,
 			1A000000000000FE /* RssFavoritesView.swift in Sources */,
 			1A00000000000100 /* CoverConfigView.swift in Sources */,
-			1A00000000000102 /* TTSSettingsView.swift in Sources */,
-			1A00000000000103 /* AllBookmarksView.swift in Sources */,
 		);
 		runOnlyForDeploymentPostprocessing = 0;
 	};
