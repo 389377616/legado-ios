@@ -77,9 +77,8 @@ class DownloadManager: ObservableObject {
         do {
             let content = try await WebBook.getContent(source: source, book: book, chapter: chapter)
             
-            // 缓存内容
-            let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-                .appendingPathComponent("ChapterCache")
+            guard let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+                .appendingPathComponent("ChapterCache") else { return }
             try FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
             
             let fileURL = cacheDir.appendingPathComponent("\(chapter.chapterId.uuidString).txt")

@@ -19,6 +19,9 @@ final class ChapterCacheManager: ObservableObject {
     /// 最大并发下载数
     private let maxConcurrency: Int = 3
     
+    private var activeTaskCount: Int = 0
+    private var pendingChapters: [BookChapter] = []
+    
     /// 缓存任务
     private var preloadTasks: [Task<Void, Never>] = []
     
@@ -56,28 +59,43 @@ final class ChapterCacheManager: ObservableObject {
         isCaching = true
         totalCacheTarget = targetChapters.count
         cachedChapterCount = 0
+        pendingChapters = targetChapters
+        activeTaskCount = 0
         
-        // 分批预加载
+        for _ in 0..<min(maxConcurrency, pendingChapters.count) {
+            startNextCacheTask(book: book)
+        }
+    }
+    
+    private func startNextCacheTask(book: Book) {
+        guard !pendingChapters.isEmpty, activeTaskCount < maxConcurrency else { return }
+        
+        let chapter = pendingChapters.removeFirst()
+        activeTaskCount += 1
+        
         let task = Task { [weak self] in
-            for chapter in targetChapters {
-                guard !Task.isCancelled else { break }
-                
-                do {
-                    try await self?.cacheChapterContent(chapter, book: book)
-                    await MainActor.run {
-                        self?.cachedChapterCount += 1
-                    }
-                } catch {
-                    print("预缓存失败[\(chapter.title)]: \(error.localizedDescription)")
+            do {
+                try await self?.cacheChapterContent(chapter, book: book)
+                await MainActor.run {
+                    self?.cachedChapterCount += 1
                 }
+            } catch {
+                DebugLogger.shared.log("预缓存失败[\(chapter.title)]: \(error.localizedDescription)")
             }
             
             await MainActor.run {
-                self?.isCaching = false
+                self?.activeTaskCount -= 1
+                
+                if self?.pendingChapters.isEmpty == true && self?.activeTaskCount == 0 {
+                    self?.isCaching = false
+                } else {
+                    self?.startNextCacheTask(book: book)
+                }
             }
         }
         
         preloadTasks.append(task)
+    }
     }
     
     // MARK: - 批量缓存（下载全书）

@@ -493,12 +493,10 @@ class TextChapterLayout {
             ?? textPages.last?.lines.last { $0.paragraphNum > 0 }
         
         let paragraphNum: Int
-        if lastLine == nil {
-            paragraphNum = 1
-        } else if lastLine!.isParagraphEnd {
-            paragraphNum = lastLine!.paragraphNum + 1
+        if let line = lastLine {
+            paragraphNum = line.isParagraphEnd ? line.paragraphNum + 1 : line.paragraphNum
         } else {
-            paragraphNum = lastLine!.paragraphNum
+            paragraphNum = 1
         }
         
         textLine.paragraphNum = paragraphNum

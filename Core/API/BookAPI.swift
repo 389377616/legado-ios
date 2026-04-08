@@ -236,7 +236,7 @@ struct BookAPI {
             return .success(.string(path))
         }
         
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return .error("无法访问文档目录") }
         let fullPath = documentsPath.appendingPathComponent(path).path
         if fileManager.fileExists(atPath: fullPath) {
             return .success(.string(fullPath))

@@ -169,6 +169,8 @@ class ImageCacheManager: ObservableObject {
     
     // MARK: - 下载图片
     
+    private let downloadTimeout: TimeInterval = 30
+    
     private func downloadImage(from url: String, headers: [String: String] = [:], completion: @escaping (UIImage?) -> Void) {
         guard let imageURL = URL(string: url) else {
             completion(nil)
@@ -176,16 +178,25 @@ class ImageCacheManager: ObservableObject {
         }
 
         var request = URLRequest(url: imageURL)
+        request.timeoutInterval = downloadTimeout
+        request.httpShouldHandleCookies = true
         for (key, value) in headers {
             request.setValue(value, forHTTPHeaderField: key)
         }
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let session = URLSession(configuration: .default)
+        session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DebugLogger.shared.log("图片下载失败: \(url) - \(error.localizedDescription)")
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
+            
             guard let data = data,
                   let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode),
                   let image = UIImage(data: data) else {
-                completion(nil)
+                DispatchQueue.main.async { completion(nil) }
                 return
             }
             

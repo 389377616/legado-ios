@@ -72,12 +72,16 @@ class ReadView: UIView, ReadViewProtocol {
     }
     
     private func setupView() {
-        addSubview(nextPage as! UIView)
-        addSubview(curPage as! UIView)
-        addSubview(prevPage as! UIView)
+        guard let nextView = nextPage as? UIView,
+              let curView = curPage as? UIView,
+              let prevView = prevPage as? UIView else { return }
         
-        (prevPage as? UIView)?.isHidden = true
-        (nextPage as? UIView)?.isHidden = true
+        addSubview(nextView)
+        addSubview(curView)
+        addSubview(prevView)
+        
+        prevView.isHidden = true
+        nextView.isHidden = true
         
         backgroundColor = .white
         isUserInteractionEnabled = true

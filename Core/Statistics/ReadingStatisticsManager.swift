@@ -152,7 +152,9 @@ class ReadingStatisticsManager: ObservableObject {
         stopSessionTimer()
         
         session.endTime = Date()
-        session.duration = session.endTime!.timeIntervalSince(session.startTime)
+        if let endTime = session.endTime, let startTime = session.startTime {
+            session.duration = endTime.timeIntervalSince(startTime)
+        }
         session.wordsRead = wordsRead
         session.endChapter = endChapter ?? session.startChapter
         

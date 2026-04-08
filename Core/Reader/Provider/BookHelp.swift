@@ -23,13 +23,15 @@ enum BookHelp {
     
     /// 缓存路径 (对照原版 line 63)
     static var cachePath: String {
-        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        guard let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            return NSTemporaryDirectory()
+        }
         return cacheDir.appendingPathComponent(cacheFolderName).path
     }
     
     /// 下载目录
     private static var downloadDir: URL {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSTemporaryDirectory())
     }
     
     /// 图片下载 Mutex 防重复 (对照原版 line 61)

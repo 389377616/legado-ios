@@ -388,13 +388,36 @@ class BrowserViewModel: ObservableObject {
     // MARK: - JavaScript
     
     func executeJavaScript(_ code: String) {
+        guard isJavaScriptAllowed(code) else {
+            DebugLogger.shared.log("JavaScript 被阻止: 包含不允许的操作")
+            return
+        }
         webView?.evaluateJavaScript(code) { result, error in
             if let error = error {
-                print("JavaScript 错误: \(error)")
+                DebugLogger.shared.log("JavaScript 错误: \(error.localizedDescription)")
             } else if let result = result {
-                print("JavaScript 结果: \(result)")
+                DebugLogger.shared.log("JavaScript 结果: \(result)")
             }
         }
+    }
+    
+    private func isJavaScriptAllowed(_ code: String) -> Bool {
+        let blockedPatterns = [
+            "eval(", "Function(", "setTimeout(", "setInterval(",
+            "XMLHttpRequest", "fetch(", "WebSocket",
+            "localStorage", "sessionStorage", "indexedDB",
+            "document.cookie", "document.write",
+            "window.open", "window.location",
+            "<script", "javascript:"
+        ]
+        
+        let lowercased = code.lowercased()
+        for pattern in blockedPatterns {
+            if lowercased.contains(pattern.lowercased()) {
+                return false
+            }
+        }
+        return true
     }
     
     // MARK: - 其他操作

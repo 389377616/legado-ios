@@ -60,7 +60,11 @@ final class Logger {
     private let osLog = OSLog(subsystem: "com.legado.app", category: "General")
     
     private init() {
-        let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        guard let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            logDirectory = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("Logs")
+            currentLogFile = logDirectory.appendingPathComponent("app.log")
+            return
+        }
         logDirectory = docs.appendingPathComponent("Logs")
         currentLogFile = logDirectory.appendingPathComponent("app.log")
         

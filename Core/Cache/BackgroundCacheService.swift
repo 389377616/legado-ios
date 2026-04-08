@@ -16,7 +16,8 @@ class BackgroundCacheService {
     
     private func registerBackgroundTask() {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { task in
-            self.handleBackgroundTask(task as! BGProcessingTask)
+            guard let processingTask = task as? BGProcessingTask else { return }
+            self.handleBackgroundTask(processingTask)
         }
     }
     
@@ -95,10 +96,10 @@ class BackgroundCacheService {
             chapter: chapter
         )
         
-        let cacheDir = FileManager.default.urls(
+        guard let cacheDir = FileManager.default.urls(
             for: .cachesDirectory,
             in: .userDomainMask
-        ).first!.appendingPathComponent("ChapterCache")
+        ).first?.appendingPathComponent("ChapterCache") else { return }
         
         let cachePath = cacheDir.appendingPathComponent("\(chapter.chapterId.uuidString).txt").path
         try content.write(to: URL(fileURLWithPath: cachePath), atomically: true, encoding: .utf8)

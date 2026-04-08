@@ -390,9 +390,9 @@ extension Book {
 /// TODO: 后续阶段实现完整功能
 enum EpubFile {
     static func getImage(_ book: Book, _ src: String) -> Data? {
-        let epubCacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        guard let epubCacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
             .appendingPathComponent("epub_cache")
-            .appendingPathComponent(book.bookId.uuidString)
+            .appendingPathComponent(book.bookId.uuidString) else { return nil }
         
         if src.hasPrefix("http://") || src.hasPrefix("https://") {
             guard let url = URL(string: src) else { return nil }

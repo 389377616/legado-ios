@@ -277,9 +277,10 @@ class TTSManager: NSObject, ObservableObject {
         for char in text {
             current.append(char)
             
-            if sentenceEnders.contains(char.unicodeScalars.first!) && current.count >= 50 {
+            if let scalar = char.unicodeScalars.first,
+               sentenceEnders.contains(scalar),
+               current.count >= 50 {
                 if current.count >= maxLength {
-                    // 强制分割
                     result.append(current)
                     current = ""
                 } else if current.count >= maxLength / 2 {

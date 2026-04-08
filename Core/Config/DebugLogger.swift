@@ -9,8 +9,11 @@ final class DebugLogger {
     var logFilePath: String { logFileURL.path }
     
     private init() {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        logFileURL = docs.appendingPathComponent("debug.log")
+        if let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            logFileURL = docs.appendingPathComponent("debug.log")
+        } else {
+            logFileURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("debug.log")
+        }
         
         if !FileManager.default.fileExists(atPath: logFileURL.path) {
             FileManager.default.createFile(atPath: logFileURL.path, contents: nil)
