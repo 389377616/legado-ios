@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct GroupManageView: View {
     @ObservedObject var viewModel: SourceViewModel
     @Environment(\.dismiss) var dismiss
@@ -7,7 +8,6 @@ struct GroupManageView: View {
     @State private var showingAddGroup = false
     @State private var newGroupName = ""
     
-    @MainActor
     init(viewModel: SourceViewModel = SourceViewModel()) {
         self._viewModel = ObservedObject(wrappedValue: viewModel)
     }
