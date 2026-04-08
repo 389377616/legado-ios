@@ -8,7 +8,7 @@ struct GroupManageView: View {
     @State private var showingAddGroup = false
     @State private var newGroupName = ""
     
-    init(viewModel: SourceViewModel = SourceViewModel()) {
+    init(viewModel: SourceViewModel) {
         self._viewModel = ObservedObject(wrappedValue: viewModel)
     }
     

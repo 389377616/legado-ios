@@ -53,7 +53,7 @@ struct MyView: View {
                 }
                 
                 NavigationLink("分组管理") {
-                    GroupManageView()
+                    GroupManageView(viewModel: SourceViewModel())
                 }
             }
             
