@@ -15,6 +15,7 @@ struct ReaderView: View {
     @State private var showingBookmarks = false
     @State private var showingChangeSource = false
     @State private var showingSearchContent = false
+    @State private var showingEffectiveReplaces = false
     @State private var showUI = false
     @State private var brightness: Double = UIScreen.main.brightness
     @State private var isNightMode = false
@@ -41,6 +42,12 @@ struct ReaderView: View {
                 }
                 
                 if showUI {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation { showUI = false }
+                        }
+                    
                     VStack(spacing: 0) {
                         topBar
                             .padding(.top, geometry.safeAreaInsets.top)
@@ -139,6 +146,9 @@ struct ReaderView: View {
             .sheet(isPresented: $showingBookmarks) {
                 if let book = book { BookmarkSheet(viewModel: viewModel, book: book) }
             }
+            .sheet(isPresented: $showingEffectiveReplaces) {
+                EffectiveReplacesSheet(isPresented: $showingEffectiveReplaces, bookSourceUrl: book?.originName)
+            }
         }
         .navigationBarHidden(true)
         .statusBar(hidden: !showUI)
@@ -171,10 +181,9 @@ struct ReaderView: View {
                         .font(.caption)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.blue.opacity(0.2))
-                        .cornerRadius(4)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .foregroundColor(.primary)
                 }
                 .frame(maxWidth: 180)
             }
@@ -217,24 +226,6 @@ struct ReaderView: View {
                     get: { Double(viewModel.currentChapterIndex) },
                     set: { viewModel.jumpToChapter(Int($0)) }
                 ), in: 0...Double(max(1, viewModel.totalChapters - 1)), step: 1)
-                
-                HStack(spacing: 20) {
-                    Button(action: { Task { await viewModel.prevChapter() } }) {
-                        Text("上一章")
-                            .font(.footnote)
-                    }
-                    .disabled(viewModel.currentChapterIndex <= 0)
-                    .opacity(viewModel.currentChapterIndex <= 0 ? 0.5 : 1)
-                    
-                    Spacer()
-                    
-                    Button(action: { Task { await viewModel.nextChapter() } }) {
-                        Text("下一章")
-                            .font(.footnote)
-                    }
-                    .disabled(viewModel.currentChapterIndex >= viewModel.totalChapters - 1)
-                    .opacity(viewModel.currentChapterIndex >= viewModel.totalChapters - 1 ? 0.5 : 1)
-                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -244,9 +235,9 @@ struct ReaderView: View {
             
             HStack(spacing: 0) {
                 ToolBarButton(icon: "list.bullet", title: "目录", action: { showingChapterList = true })
+                ToolBarButton(icon: "arrow.triangle.2.circlepath", title: "替换", action: { showingEffectiveReplaces = true })
                 ToolBarButton(icon: "speaker.wave.2", title: "朗读", action: { showingTTSControls = true })
                 ToolBarButton(icon: "a.square", title: "界面", action: { showingSettings = true })
-                ToolBarButton(icon: "gearshape", title: "设置", action: { showingSettings = true })
             }
             .padding(.vertical, 7)
         }
