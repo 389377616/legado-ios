@@ -121,18 +121,10 @@ struct FileAssociationHandler: View {
         }
     }
     
+    @MainActor
     private func importBook() async throws {
-        let context = CoreDataStack.shared.viewContext
-        
-        let book = Book.create(in: context)
-        book.name = url.deletingPathExtension().lastPathComponent
-        book.author = "本地导入"
-        book.bookUrl = url.absoluteString
-        book.origin = "本地文件"
-        book.originName = "本地文件"
-        book.type = fileType == .epub ? 1 : 0
-        
-        try context.save()
+        let importer = LocalBookViewModel()
+        _ = try await importer.importBook(url: url)
         importResult = "成功添加到书架"
     }
     

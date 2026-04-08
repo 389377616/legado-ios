@@ -103,9 +103,37 @@ extension Book {
         guard totalChapterNum > 0 else { return 0 }
         return Double(durChapterIndex) / Double(totalChapterNum)
     }
+
+    var normalizedOrigin: String {
+        origin.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var localFileURL: URL? {
+        let raw = bookUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return nil }
+
+        if let url = URL(string: raw), url.scheme != nil {
+            return url.isFileURL ? url : nil
+        }
+
+        return URL(fileURLWithPath: raw)
+    }
     
     var isLocal: Bool {
-        origin == "local"
+        if ["local", "本地文件"].contains(normalizedOrigin) {
+            return true
+        }
+
+        if originName.trimmingCharacters(in: .whitespacesAndNewlines) == "本地文件" {
+            return true
+        }
+
+        return bookUrl.hasPrefix("file://") || bookUrl.hasPrefix("/")
+    }
+
+    var isLocalEPUB: Bool {
+        guard isLocal else { return false }
+        return type == 1 || localFileURL?.pathExtension.lowercased() == "epub"
     }
     
     var unreadChapterNum: Int {
