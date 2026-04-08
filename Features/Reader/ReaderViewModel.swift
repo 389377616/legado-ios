@@ -204,40 +204,44 @@ class ReaderViewModel: ObservableObject {
         
         DebugLogger.shared.log("loadChapters: 从 CoreData 获取到 \(chapters.count) 章")
 
-        if chapters.isEmpty, !book.isLocal {
-            guard let sourceId = UUID(uuidString: book.origin) else {
-                throw ReaderError.noSource
+        if chapters.isEmpty {
+            if book.isLocal {
+                chapters = try await restoreLocalChaptersIfNeeded(for: book, preferredChapterIndex: Int(book.durChapterIndex))
+            } else {
+                guard let sourceId = UUID(uuidString: book.origin) else {
+                    throw ReaderError.noSource
+                }
+
+                let sourceRequest: NSFetchRequest<BookSource> = BookSource.fetchRequest()
+                sourceRequest.fetchLimit = 1
+                sourceRequest.predicate = NSPredicate(format: "sourceId == %@", sourceId as CVarArg)
+                guard let source = try context.fetch(sourceRequest).first else {
+                    throw ReaderError.noSource
+                }
+
+                let webChapters = try await WebBook.getChapterList(source: source, book: book)
+                guard !webChapters.isEmpty else {
+                    throw ReaderError.noChapters
+                }
+
+                for web in webChapters {
+                    let chapter = BookChapter.create(
+                        in: context,
+                        bookId: book.bookId,
+                        url: web.url,
+                        index: Int32(web.index),
+                        title: web.title
+                    )
+                    chapter.book = book
+                    chapter.sourceId = source.sourceId.uuidString
+                    chapter.isVIP = web.isVip
+                }
+
+                book.totalChapterNum = Int32(webChapters.count)
+                try CoreDataStack.shared.save()
+
+                chapters = try context.fetch(request)
             }
-
-            let sourceRequest: NSFetchRequest<BookSource> = BookSource.fetchRequest()
-            sourceRequest.fetchLimit = 1
-            sourceRequest.predicate = NSPredicate(format: "sourceId == %@", sourceId as CVarArg)
-            guard let source = try context.fetch(sourceRequest).first else {
-                throw ReaderError.noSource
-            }
-
-            let webChapters = try await WebBook.getChapterList(source: source, book: book)
-            guard !webChapters.isEmpty else {
-                throw ReaderError.noChapters
-            }
-
-            for web in webChapters {
-                let chapter = BookChapter.create(
-                    in: context,
-                    bookId: book.bookId,
-                    url: web.url,
-                    index: Int32(web.index),
-                    title: web.title
-                )
-                chapter.book = book
-                chapter.sourceId = source.sourceId.uuidString
-                chapter.isVIP = web.isVip
-            }
-
-            book.totalChapterNum = Int32(webChapters.count)
-            try CoreDataStack.shared.save()
-
-            chapters = try context.fetch(request)
         }
 
         self.chapters = chapters
@@ -304,13 +308,19 @@ class ReaderViewModel: ObservableObject {
             }
             
             DebugLogger.shared.log("loadChapter: 缓存未命中，尝试 fetchChapterContent")
-            // 从网络加载
             let content = try await fetchChapterContent(chapters[index])
-            chapterContentHTML = content
-            let textContent = HTMLToTextConverter.convert(html: content, baseURL: nil)
-            chapterContent = applyReplaceRulesIfNeeded(textContent, chapter: chapters[index])
-            
-            try await cacheChapter(chapters[index], content: textContent)
+
+            if let book = currentBook, book.isLocal {
+                chapterContent = applyReplaceRulesIfNeeded(content, chapter: chapters[index])
+                chapterContentHTML = nil
+                chapterHTMLURL = nil
+                epubBaseURL = nil
+            } else {
+                chapterContentHTML = content
+                let textContent = HTMLToTextConverter.convert(html: content, baseURL: nil)
+                chapterContent = applyReplaceRulesIfNeeded(textContent, chapter: chapters[index])
+                try await cacheChapter(chapters[index], content: textContent)
+            }
             
             isLoading = false
             
@@ -535,8 +545,7 @@ class ReaderViewModel: ObservableObject {
             throw ReaderError.noBook
         }
         
-        // 本地书籍直接返回 TXT 切片内容
-        if book.origin == "local" {
+        if book.isLocal {
             return try await loadLocalChapterContent(chapter)
         }
         
@@ -559,48 +568,212 @@ class ReaderViewModel: ObservableObject {
     /// 加载本地 TXT 书籍的章节内容
     private func loadLocalChapterContent(_ chapter: BookChapter) async throws -> String {
         guard let book = currentBook else { throw ReaderError.noBook }
+        let resolvedChapter = try await resolveLocalChapter(at: Int(chapter.index), for: book)
         
-        // EPUB：从缓存文件读取章节内容
-        if book.type == 1 || book.bookUrl.lowercased().hasSuffix(".epub") {
-            let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let cacheFileName = "\(book.bookId.uuidString)_\(chapter.index).txt"
-            let cacheURL = documents.appendingPathComponent("chapters").appendingPathComponent(cacheFileName)
-            
-            DebugLogger.shared.log("EPUB 读取: bookId=\(book.bookId), chapter=\(chapter.index), path=\(cacheURL.path)")
-            DebugLogger.shared.log("文件存在: \(FileManager.default.fileExists(atPath: cacheURL.path))")
-            
-            let chapterDirPath = documents.appendingPathComponent("chapters").path
-            if let contents = try? FileManager.default.contentsOfDirectory(atPath: chapterDirPath) {
-                DebugLogger.shared.log("chapters 目录文件数: \(contents.count), 前5个: \(contents.prefix(5).joined(separator: ", "))")
-            } else {
-                DebugLogger.shared.log("chapters 目录不存在或为空")
+        if book.isLocalEPUB {
+            guard let epubDirPath = book.folderName, !epubDirPath.isEmpty,
+                  let htmlPath = resolvedChapter.cachePath, !htmlPath.isEmpty else {
+                throw ReaderError.notCached
             }
-            
-            if FileManager.default.fileExists(atPath: cacheURL.path) {
-                return try String(contentsOf: cacheURL, encoding: .utf8)
+
+            let epubDir = URL(fileURLWithPath: epubDirPath)
+            let htmlURL = epubDir.appendingPathComponent(htmlPath)
+
+            DebugLogger.shared.log("EPUB 本地回退读取: bookId=\(book.bookId), chapter=\(resolvedChapter.index), path=\(htmlURL.path)")
+
+            guard FileManager.default.fileExists(atPath: htmlURL.path) else {
+                throw ReaderError.notCached
             }
-            
-            throw ReaderError.notCached
+
+            let htmlContent = try String(contentsOf: htmlURL, encoding: .utf8)
+            return HTMLToTextConverter.convert(html: htmlContent, baseURL: epubDir)
         }
         
-        // TXT：按章节分割读取（原有逻辑）
-        let fileURL = URL(fileURLWithPath: book.bookUrl)
-        let content = try String(contentsOf: fileURL, encoding: .utf8)
-        
-        // 使用与 LocalBookViewModel 相同的分章逻辑
+        guard let fileURL = book.localFileURL else {
+            throw ReaderError.parseFailed("本地文件路径无效")
+        }
+
+        let content = try readLocalText(from: fileURL)
+        let localChapters = splitLocalChapters(content: content)
+        let idx = Int(resolvedChapter.index)
+        guard idx >= 0 && idx < localChapters.count else { throw ReaderError.notCached }
+        return localChapters[idx].content.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func resolveLocalChapter(at index: Int, for book: Book) async throws -> BookChapter {
+        let resolvedChapters = try await restoreLocalChaptersIfNeeded(for: book, preferredChapterIndex: index)
+
+        guard index >= 0 && index < resolvedChapters.count else {
+            throw ReaderError.invalidChapterIndex
+        }
+
+        if currentBook?.objectID == book.objectID {
+            chapters = resolvedChapters
+            totalChapters = resolvedChapters.count
+            currentChapter = resolvedChapters[index]
+        }
+
+        return resolvedChapters[index]
+    }
+
+    private func restoreLocalChaptersIfNeeded(for book: Book, preferredChapterIndex: Int? = nil) async throws -> [BookChapter] {
+        let context = CoreDataStack.shared.viewContext
+        let request = BookChapter.fetchRequest(byBookId: book.bookId)
+        var storedChapters = try context.fetch(request)
+
+        let shouldRestore: Bool = {
+            if storedChapters.isEmpty {
+                return true
+            }
+
+            if book.isLocalEPUB {
+                if book.folderName?.isEmpty != false {
+                    return true
+                }
+
+                if let epubDirPath = book.folderName,
+                   !FileManager.default.fileExists(atPath: epubDirPath) {
+                    return true
+                }
+
+                if let preferredChapterIndex {
+                    guard preferredChapterIndex >= 0, preferredChapterIndex < storedChapters.count else {
+                        return true
+                    }
+
+                    guard let cachePath = storedChapters[preferredChapterIndex].cachePath,
+                          !cachePath.isEmpty,
+                          let epubDirPath = book.folderName else {
+                        return true
+                    }
+
+                    let chapterURL = URL(fileURLWithPath: epubDirPath).appendingPathComponent(cachePath)
+                    return !FileManager.default.fileExists(atPath: chapterURL.path)
+                }
+            }
+
+            return false
+        }()
+
+        guard shouldRestore else {
+            return storedChapters
+        }
+
+        guard let fileURL = book.localFileURL else {
+            throw ReaderError.parseFailed("本地文件路径无效")
+        }
+
+        for storedChapter in storedChapters {
+            context.delete(storedChapter)
+        }
+
+        if book.isLocalEPUB {
+            let epubBook = try EPUBParser.parseSync(file: fileURL, bookId: book.bookId)
+            book.name = epubBook.title
+            book.author = epubBook.author
+            book.totalChapterNum = Int32(epubBook.chapters.count)
+            book.folderName = epubBook.epubDirectory.path
+
+            if (book.intro?.isEmpty ?? true), let description = epubBook.metadata.description {
+                book.intro = description
+            }
+
+            if book.durChapterTitle?.isEmpty ?? true {
+                book.durChapterTitle = epubBook.chapters.first?.title
+            }
+
+            for chapter in epubBook.chapters {
+                let chapterObj = BookChapter.create(
+                    in: context,
+                    bookId: book.bookId,
+                    url: chapter.href,
+                    index: Int32(chapter.index),
+                    title: chapter.title
+                )
+                chapterObj.book = book
+                chapterObj.isCached = true
+                chapterObj.cachePath = chapter.htmlPath
+            }
+        } else {
+            let content = try readLocalText(from: fileURL)
+            let parsedChapters = splitLocalChapters(content: content)
+            book.totalChapterNum = Int32(parsedChapters.count)
+
+            if book.durChapterTitle?.isEmpty ?? true {
+                book.durChapterTitle = parsedChapters.first?.title
+            }
+
+            for (index, parsedChapter) in parsedChapters.enumerated() {
+                let chapterObj = BookChapter.create(
+                    in: context,
+                    bookId: book.bookId,
+                    url: "local:\(index)",
+                    index: Int32(index),
+                    title: parsedChapter.title
+                )
+                chapterObj.book = book
+                chapterObj.wordCount = Int32(parsedChapter.content.count)
+                chapterObj.isCached = true
+            }
+        }
+
+        try CoreDataStack.shared.save()
+        context.refresh(book, mergeChanges: true)
+        storedChapters = try context.fetch(request)
+        return storedChapters
+    }
+
+    private func readLocalText(from fileURL: URL) throws -> String {
+        let data = try Data(contentsOf: fileURL)
+
+        if data.starts(with: [0xEF, 0xBB, 0xBF]), let text = String(data: data, encoding: .utf8) {
+            return text
+        }
+
+        if data.starts(with: [0xFF, 0xFE]), let text = String(data: data, encoding: .utf16LittleEndian) {
+            return text
+        }
+
+        if data.starts(with: [0xFE, 0xFF]), let text = String(data: data, encoding: .utf16BigEndian) {
+            return text
+        }
+
+        if let text = String(data: data, encoding: .utf8) {
+            return text
+        }
+
+        if let text = String(data: data, encoding: .utf16) {
+            return text
+        }
+
+        let gb18030 = String.Encoding(
+            rawValue: CFStringConvertEncodingToNSStringEncoding(
+                CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)
+            )
+        )
+
+        if let text = String(data: data, encoding: gb18030) {
+            return text
+        }
+
+        throw ReaderError.parseFailed("无法识别 TXT 编码")
+    }
+
+    private func splitLocalChapters(content: String) -> [(title: String, content: String)] {
         let chapterPatterns = [
             #"^第[零一二三四五六七八九十百千万0-9]+[章回卷节部篇]"#,
             #"^第[0-9]+章"#,
             #"^Chapter [0-9]+"#,
             #"^\s*第[0-9一二三四五六七八九十]+节"#
         ]
-        
-        var chapters: [(title: String, content: String)] = []
+
+        var parsedChapters: [(title: String, content: String)] = []
         var currentTitle: String?
         var currentContent = ""
-        
+
         for line in content.components(separatedBy: .newlines) {
             var isChapterStart = false
+
             for pattern in chapterPatterns {
                 if let regex = try? NSRegularExpression(pattern: pattern, options: .anchorsMatchLines) {
                     let range = NSRange(line.startIndex..., in: line)
@@ -610,21 +783,28 @@ class ReaderViewModel: ObservableObject {
                     }
                 }
             }
-            
+
             if isChapterStart {
-                if let title = currentTitle { chapters.append((title, currentContent)) }
-                currentTitle = line.trimmingCharacters(in: .whitespaces)
+                if let title = currentTitle, !currentContent.isEmpty {
+                    parsedChapters.append((title, currentContent.trimmingCharacters(in: .whitespacesAndNewlines)))
+                }
+
+                currentTitle = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 currentContent = ""
             } else {
                 currentContent += line + "\n"
             }
         }
-        if let title = currentTitle { chapters.append((title, currentContent)) }
-        if chapters.isEmpty { return content }
-        
-        let idx = Int(chapter.index)
-        guard idx >= 0 && idx < chapters.count else { throw ReaderError.notCached }
-        return chapters[idx].content.trimmingCharacters(in: .whitespaces)
+
+        if let title = currentTitle {
+            parsedChapters.append((title, currentContent.trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+
+        if parsedChapters.isEmpty {
+            return [("第一章", content)]
+        }
+
+        return parsedChapters
     }
     
     private func cacheChapter(_ chapter: BookChapter, content: String) async throws {
