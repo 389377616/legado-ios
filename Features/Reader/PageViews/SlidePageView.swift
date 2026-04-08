@@ -19,7 +19,14 @@ struct SlidePageView: View {
                 SinglePageContent(
                     text: page,
                     viewModel: viewModel,
-                    onTap: onTap
+                    onTap: onTap,
+                    onTurnPage: { forward in
+                        if forward, currentPage + 1 < pages.count {
+                            currentPage += 1
+                        } else if !forward, currentPage > 0 {
+                            currentPage -= 1
+                        }
+                    }
                 )
                 .tag(index)
             }
@@ -37,23 +44,35 @@ private struct SinglePageContent: View {
     let text: String
     @ObservedObject var viewModel: ReaderViewModel
     let onTap: () -> Void
+    let onTurnPage: (Bool) -> Void
     
     var body: some View {
-        ZStack {
-            viewModel.backgroundColor
+        GeometryReader { geometry in
+            let width = geometry.size.width
             
-            ScrollView(.vertical, showsIndicators: false) {
-                Text(text)
-                    .font(.system(size: viewModel.fontSize))
-                    .foregroundColor(viewModel.textColor)
-                    .lineSpacing(viewModel.lineSpacing)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(viewModel.pagePadding)
+            ZStack {
+                viewModel.backgroundColor
+                
+                ScrollView(.vertical, showsIndicators: false) {
+                    Text(text)
+                        .font(.system(size: viewModel.fontSize))
+                        .foregroundColor(viewModel.textColor)
+                        .lineSpacing(viewModel.lineSpacing)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(viewModel.pagePadding)
+                }
             }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
+            .contentShape(Rectangle())
+            .onTapGesture { location in
+                let tapZone = location.x / width
+                if tapZone < 0.3 {
+                    onTurnPage(false)
+                } else if tapZone > 0.7 {
+                    onTurnPage(true)
+                } else {
+                    onTap()
+                }
+            }
         }
     }
 }

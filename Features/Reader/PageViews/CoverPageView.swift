@@ -93,14 +93,24 @@ struct CoverPageView: View {
                         }
                     }
             )
-            .simultaneousGesture(
-                TapGesture()
-                    .onEnded { _ in
-                        if !isDragging {
-                            onTap()
+            .onTapGesture { location in
+                if !isDragging {
+                    let tapZone = location.x / width
+                    if tapZone < 0.3 {
+                        if currentPage > 0 {
+                            currentPage -= 1
+                            viewModel.currentPageIndex = currentPage
                         }
+                    } else if tapZone > 0.7 {
+                        if currentPage + 1 < pages.count {
+                            currentPage += 1
+                            viewModel.currentPageIndex = currentPage
+                        }
+                    } else {
+                        onTap()
                     }
-            )
+                }
+            }
         }
     }
     
