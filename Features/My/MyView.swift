@@ -35,9 +35,17 @@ struct MyView: View {
                 }
             }
             
-            Section("书架管理") {
+            Section("书源管理") {
                 NavigationLink("书源管理") {
                     SourceManageView()
+                }
+                
+                NavigationLink("在线导入") {
+                    OnLineImportView()
+                }
+                
+                NavigationLink("导出书源") {
+                    SourceExportView()
                 }
                 
                 NavigationLink("书源订阅") {
@@ -49,7 +57,21 @@ struct MyView: View {
                 }
             }
             
-            Section("内容管理") {
+            Section("RSS订阅") {
+                NavigationLink("RSS源管理") {
+                    RSSSubscriptionView()
+                }
+                
+                NavigationLink("RSS排序") {
+                    RssSortView()
+                }
+                
+                NavigationLink("RSS收藏") {
+                    RssFavoritesView()
+                }
+            }
+            
+            Section("规则管理") {
                 NavigationLink("替换规则") {
                     ReplaceRuleView()
                 }
@@ -60,6 +82,16 @@ struct MyView: View {
                 
                 NavigationLink("TXT目录规则") {
                     TxtTocRuleView()
+                }
+            }
+            
+            Section("主题与外观") {
+                NavigationLink("主题设置") {
+                    ThemeSettingsView()
+                }
+                
+                NavigationLink("封面设置") {
+                    CoverConfigView()
                 }
             }
             
