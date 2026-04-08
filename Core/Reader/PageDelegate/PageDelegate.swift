@@ -215,7 +215,7 @@ class PageDelegate {
     func hasPrev() -> Bool {
         guard let hasPrev = readView?.pageFactory?.hasPrev() else { return false }
         if !hasPrev {
-            // TODO: show toast
+            Toast.show("已经是第一页了")
         }
         return hasPrev
     }
@@ -224,7 +224,7 @@ class PageDelegate {
         guard let hasNext = readView?.pageFactory?.hasNext() else { return false }
         if !hasNext {
             readView?.callBack?.autoPageStop()
-            // TODO: show toast
+            Toast.show("已经是最后一页了")
         }
         return hasNext
     }

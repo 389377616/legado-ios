@@ -306,7 +306,95 @@ extension BookChapter {
 /// 本地书籍解析器占位
 enum LocalBook {
     static func getContent(_ book: Book, _ bookChapter: BookChapter) -> String? {
-        // TODO: 实现本地书籍内容解析
+        let fileURL: URL?
+        
+        if book.bookUrl.hasPrefix("file://") {
+            fileURL = URL(string: book.bookUrl)
+        } else if book.bookUrl.hasPrefix("/") {
+            fileURL = URL(fileURLWithPath: book.bookUrl)
+        } else {
+            fileURL = URL(fileURLWithPath: book.bookUrl)
+        }
+        
+        guard let url = fileURL else { return nil }
+        
+        let path = url.path.lowercased()
+        
+        if path.hasSuffix(".txt") {
+            return parseTXTContent(fileURL: url, chapter: bookChapter, book: book)
+        } else if path.hasSuffix(".epub") {
+            return parseEPUBContent(fileURL: url, chapter: bookChapter, book: book)
+        }
+        
+        return nil
+    }
+    
+    private static func parseTXTContent(fileURL: URL, chapter: BookChapter, book: Book) -> String? {
+        guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else {
+            let encodings: [String.Encoding] = [.utf8, .utf16, .isoLatin1, .ascii]
+            for encoding in encodings {
+                if let content = try? String(contentsOf: fileURL, encoding: encoding) {
+                    return extractChapter(content: content, chapter: chapter)
+                }
+            }
+            
+            let gb18030 = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)))
+            if let content = try? String(contentsOf: fileURL, encoding: gb18030) {
+                return extractChapter(content: content, chapter: chapter)
+            }
+            
+            return nil
+        }
+        
+        return extractChapter(content: content, chapter: chapter)
+    }
+    
+    private static func extractChapter(content: String, chapter: BookChapter) -> String? {
+        let lines = content.components(separatedBy: .newlines)
+        var startIndex = -1
+        var endIndex = lines.count
+        
+        let chapterPattern = chapter.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        for (index, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.contains(chapterPattern) || chapterPattern.contains(trimmed) {
+                if startIndex == -1 {
+                    startIndex = index
+                } else {
+                    endIndex = index
+                    break
+                }
+            }
+        }
+        
+        if startIndex >= 0 {
+            let chapterLines = Array(lines[startIndex..<min(endIndex, lines.count)])
+            return chapterLines.joined(separator: "\n")
+        }
+        
+        let linesPerChapter = 500
+        let startLine = Int(chapter.index) * linesPerChapter
+        let endLine = min(startLine + linesPerChapter, lines.count)
+        
+        if startLine < lines.count {
+            return Array(lines[startLine..<endLine]).joined(separator: "\n")
+        }
+        
+        return nil
+    }
+    
+    private static func parseEPUBContent(fileURL: URL, chapter: BookChapter, book: Book) -> String? {
+        let epubCacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("epub_cache")
+            .appendingPathComponent(book.bookId.uuidString)
+        
+        let chapterFile = epubCacheDir.appendingPathComponent(chapter.chapterUrl)
+        
+        if FileManager.default.fileExists(atPath: chapterFile.path) {
+            return try? String(contentsOf: chapterFile, encoding: .utf8)
+        }
+        
         return nil
     }
 }

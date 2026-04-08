@@ -177,7 +177,30 @@ struct BookAPI {
             return .error("参数url不能为空，请指定书籍地址")
         }
         
-        return .error("刷新目录功能暂未实现")
+        let context = CoreDataStack.shared.viewContext
+        let bookFetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
+        bookFetchRequest.predicate = NSPredicate(format: "bookUrl == %@", bookUrl)
+        bookFetchRequest.fetchLimit = 1
+        
+        guard let book = try? context.fetch(bookFetchRequest).first else {
+            return .error("未找到书籍")
+        }
+        
+        guard let source = book.source else {
+            return .error("书籍无书源")
+        }
+        
+        Task {
+            do {
+                let service = TableOfContentsService.shared
+                let chapters = try await service.refreshTableOfContents(book: book, source: source)
+                DebugLogger.shared.log("刷新目录成功: \(chapters.count) 章")
+            } catch {
+                DebugLogger.shared.log("刷新目录失败: \(error.localizedDescription)")
+            }
+        }
+        
+        return .success(.string("正在刷新目录"))
     }
     
     static func getCover(_ query: [String: String]) -> APIResponse {
@@ -185,7 +208,41 @@ struct BookAPI {
             return .error("参数path不能为空")
         }
         
-        return .error("获取封面功能暂未实现")
+        var coverPath = path
+        
+        if path.hasPrefix("http://") || path.hasPrefix("https://") {
+            Task {
+                if let url = URL(string: path) {
+                    do {
+                        let (data, _) = try await URLSession.shared.data(from: url)
+                        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+                            .appendingPathComponent("covers", isDirectory: true)
+                        try? FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
+                        
+                        let fileName = path.md5 ?? UUID().uuidString
+                        let fileURL = cacheDir.appendingPathComponent(fileName)
+                        try data.write(to: fileURL)
+                        DebugLogger.shared.log("封面下载成功: \(fileURL.path)")
+                    } catch {
+                        DebugLogger.shared.log("封面下载失败: \(error.localizedDescription)")
+                    }
+                }
+            }
+            return .success(.string(path))
+        }
+        
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: path) {
+            return .success(.string(path))
+        }
+        
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let fullPath = documentsPath.appendingPathComponent(path).path
+        if fileManager.fileExists(atPath: fullPath) {
+            return .success(.string(fullPath))
+        }
+        
+        return .error("封面文件不存在")
     }
     
     private static func encodeBook(_ book: Book) -> CodableValue {

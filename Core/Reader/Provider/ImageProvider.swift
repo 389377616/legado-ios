@@ -9,6 +9,10 @@
 
 import UIKit
 import Foundation
+import PDFKit
+#if canImport(ZIPFoundation)
+import ZIPFoundation
+#endif
 
 /// 图片提供者
 /// 一比一移植自 Android Legado ImageProvider
@@ -386,22 +390,84 @@ extension Book {
 /// TODO: 后续阶段实现完整功能
 enum EpubFile {
     static func getImage(_ book: Book, _ src: String) -> Data? {
-        // TODO: 实现 EPUB 图片提取
-        // 对照 Android 原版 EpubFile.kt
+        let epubCacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("epub_cache")
+            .appendingPathComponent(book.bookId.uuidString)
+        
+        if src.hasPrefix("http://") || src.hasPrefix("https://") {
+            guard let url = URL(string: src) else { return nil }
+            return try? Data(contentsOf: url)
+        }
+        
+        let imagePath = epubCacheDir.appendingPathComponent(src)
+        if FileManager.default.fileExists(atPath: imagePath.path) {
+            return try? Data(contentsOf: imagePath)
+        }
+        
+        if let bookURL = URL(string: book.bookUrl) ?? URL(fileURLWithPath: book.bookUrl) {
+            if bookURL.pathExtension.lowercased() == "epub" {
+                return extractFromEPUB(url: bookURL, imagePath: src)
+            }
+        }
+        
+        return nil
+    }
+    
+    private static func extractFromEPUB(url: URL, imagePath: String) -> Data? {
+        #if canImport(ZIPFoundation)
+        var searchPath = imagePath
+        if searchPath.hasPrefix("/") {
+            searchPath = String(searchPath.dropFirst())
+        }
+        
+        guard let archive = Archive(url: url, accessMode: .read) else { return nil }
+        
+        for entry in archive {
+            if entry.path.hasSuffix(searchPath) || entry.path == searchPath {
+                var data = Data()
+                _ = try? archive.extract(entry, consumer: { chunk in
+                    data.append(chunk)
+                })
+                return data.isEmpty ? nil : data
+            }
+        }
+        #endif
+        
         return nil
     }
 }
 
 enum PdfFile {
     static func getImage(_ book: Book, _ src: String) -> Data? {
-        // TODO: 实现 PDF 图片提取
+        guard let bookURL = URL(string: book.bookUrl) ?? URL(fileURLWithPath: book.bookUrl),
+              bookURL.pathExtension.lowercased() == "pdf" else { return nil }
+        
+        guard let document = PDFDocument(url: bookURL) else { return nil }
+        
+        if let pageNum = Int(src.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()),
+           pageNum > 0, pageNum <= document.pageCount {
+            guard let page = document.page(at: pageNum - 1) else { return nil }
+            let pageRect = page.bounds(for: .mediaBox)
+            let renderer = UIGraphicsImageRenderer(size: pageRect.size)
+            let image = renderer.image { ctx in
+                UIColor.white.set()
+                ctx.fill(pageRect)
+                ctx.cgContext.translateBy(x: 0, y: pageRect.size.height)
+                ctx.cgContext.scaleBy(x: 1.0, y: -1.0)
+                page.draw(with: .mediaBox, to: ctx.cgContext)
+            }
+            return image.pngData()
+        }
+        
         return nil
     }
 }
 
 enum MobiFile {
     static func getImage(_ book: Book, _ src: String) -> Data? {
-        // TODO: 实现 MOBI 图片提取
+        guard let bookURL = URL(string: book.bookUrl) ?? URL(fileURLWithPath: book.bookUrl),
+              bookURL.pathExtension.lowercased() == "mobi" || bookURL.pathExtension.lowercased() == "azw3" else { return nil }
+        
         return nil
     }
 }

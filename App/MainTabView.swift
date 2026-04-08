@@ -48,7 +48,7 @@ struct MainTabView: View {
 // MARK: - 设置视图（完善版）
 struct SettingsView: View {
     var body: some View {
-        SettingsLegacyView()
+        MyView()
     }
 }
 
