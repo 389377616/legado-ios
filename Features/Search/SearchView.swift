@@ -217,7 +217,9 @@ struct SearchView: View {
         request.fetchLimit = 20
         do {
             historyKeywords = try CoreDataStack.shared.viewContext.fetch(request)
-        } catch { }
+        } catch {
+            DebugLogger.shared.log("加载搜索历史失败: \(error.localizedDescription)")
+        }
     }
     
     private func saveHistoryKeyword() {
@@ -357,7 +359,9 @@ struct SourcePickerView: View {
     private func loadSources() async {
         do {
             sources = try CoreDataStack.shared.viewContext.fetch(BookSource.fetchRequest())
-        } catch { }
+        } catch {
+            DebugLogger.shared.log("加载书源失败: \(error.localizedDescription)")
+        }
     }
     
     private func toggleSource(_ source: BookSource) {

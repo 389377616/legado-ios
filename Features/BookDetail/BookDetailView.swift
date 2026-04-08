@@ -365,7 +365,9 @@ class BookDetailViewModel: ObservableObject {
                 title: $0.title,
                 isCached: $0.isCached
             )}
-        } catch { }
+        } catch {
+            DebugLogger.shared.log("加载章节预览失败: \(error.localizedDescription)")
+        }
     }
     
     @discardableResult
@@ -392,7 +394,9 @@ class BookDetailViewModel: ObservableObject {
             book.totalChapterNum = Int32(chapterCount)
             try CoreDataStack.shared.save()
             await loadChapters()
-        } catch { }
+        } catch {
+            DebugLogger.shared.log("刷新书籍信息失败: \(error.localizedDescription)")
+        }
     }
     
     func cacheAllChapters() {
@@ -412,7 +416,9 @@ class BookDetailViewModel: ObservableObject {
                 }
                 try CoreDataStack.shared.save()
                 await loadChapters()
-            } catch { }
+            } catch {
+                DebugLogger.shared.log("缓存章节失败: \(error.localizedDescription)")
+            }
         }
     }
     
@@ -586,7 +592,9 @@ struct SourceSelectionSheet: View {
         request.predicate = NSPredicate(format: "enabled == YES")
         do {
             sources = try CoreDataStack.shared.viewContext.fetch(request)
-        } catch { }
+        } catch {
+            DebugLogger.shared.log("加载书源失败: \(error.localizedDescription)")
+        }
     }
 }
 
@@ -752,7 +760,9 @@ struct GroupSelectionSheet: View {
         request.sortDescriptors = [NSSortDescriptor(key: "order", ascending: true)]
         do {
             groups = try CoreDataStack.shared.viewContext.fetch(request)
-        } catch { }
+        } catch {
+            DebugLogger.shared.log("加载分组失败: \(error.localizedDescription)")
+        }
     }
 }
 

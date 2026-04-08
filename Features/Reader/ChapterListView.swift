@@ -130,7 +130,9 @@ struct ChapterListView: View {
         
         do {
             chapters = try context.fetch(request)
-        } catch { }
+        } catch {
+            DebugLogger.shared.log("加载章节列表失败: \(error.localizedDescription)")
+        }
     }
 }
 
