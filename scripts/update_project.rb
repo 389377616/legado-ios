@@ -15,6 +15,8 @@ new_files = [
   'Core/API/APIServer.swift',
   'Core/API/BookSourceAPI.swift',
   'Core/API/BookAPI.swift',
+  'Core/Import/FileAssociationHandler.swift',
+  'Core/Import/URLSchemeHandler.swift',
 ]
 
 existing_files = target.source_build_phase.files.map { |f| f.file_ref&.path }.compact
