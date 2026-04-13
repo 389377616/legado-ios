@@ -23,7 +23,7 @@
 </p>
 
 > 📚 基于 Legado 的 iOS 原生阅读应用，纯 SwiftUI 实现，支持自定义书源规则
-纯vibe coding玩具
+纯vibe coding玩具 无人工
 ---
 
 ## 功能
