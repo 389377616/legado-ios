@@ -185,7 +185,6 @@ struct ReaderView: View {
     }
     
     private var bottomBar: some View {
-    private func toggleNightMode() {
         VStack(spacing: 0) {
             VStack(spacing: 10) {
                 HStack {
