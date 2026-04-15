@@ -655,7 +655,7 @@ struct BookCoverView: View {
                 if let image = image {
                     Image(uiImage: image)
                         .resizable()
-                        .aspectRatio(contentMode: .aspectFit)
+                        .aspectRatio(contentMode: .fit)
                         .frame(width: targetSize.width, height: targetSize.height)
                         .clipped()
                 } else {
