@@ -136,11 +136,6 @@ struct ReaderView: View {
             .sheet(isPresented: $showingEffectiveReplaces) {
                 ReplaceRuleView()
             }
-            .sheet(isPresented: $showingSearchContent) {
-                NavigationStack {
-                    SearchContentView(viewModel: viewModel)
-                }
-            }
         }
         .navigationBarHidden(true)
         .statusBar(hidden: !showUI)
