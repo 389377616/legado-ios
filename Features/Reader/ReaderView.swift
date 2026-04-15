@@ -14,7 +14,6 @@ struct ReaderView: View {
     @State private var showingAutoPageTurn = false
     @State private var showingBookmarks = false
     @State private var showingChangeSource = false
-    @State private var showingSearchContent = false
     @State private var showingEffectiveReplaces = false
     @State private var showUI = false
     @State private var brightness: Double = UIScreen.main.brightness
@@ -138,7 +137,9 @@ struct ReaderView: View {
                 ReplaceRuleView()
             }
             .sheet(isPresented: $showingSearchContent) {
-                SearchInBookView(viewModel: viewModel)
+                NavigationStack {
+                    SearchContentView(viewModel: viewModel)
+                }
             }
         }
         .navigationBarHidden(true)
@@ -229,7 +230,6 @@ struct ReaderView: View {
             
             HStack(spacing: 0) {
                 ToolBarButton(icon: "list.bullet", title: "目录", action: { showingChapterList = true })
-                ToolBarButton(icon: "magnifyingglass", title: "搜索", action: { showingSearchContent = true })
                 ToolBarButton(icon: "speaker.wave.2", title: "朗读", action: { showingTTSControls = true })
                 ToolBarButton(icon: "sun.max", title: "亮度", action: { withAnimation { showingBrightness.toggle() } })
                 ToolBarButton(icon: "textformat.size", title: "设置", action: { showingSettings = true })
