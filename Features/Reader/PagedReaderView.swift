@@ -120,7 +120,7 @@ struct PagedReaderView: View {
     
     private var scrollView: some View {
         Group {
-            if let htmlContent = viewModel.chapterContentHTML, htmlContent.contains("<img") {
+            if let htmlContent = viewModel.chapterContentHTML {
                 HTMLContentView(
                     htmlContent: htmlContent,
                     fontSize: viewModel.fontSize,
@@ -241,12 +241,15 @@ struct InstantPageView: View {
                 
                 if currentPage >= 0 && currentPage < pages.count {
                     ScrollView(.vertical, showsIndicators: false) {
-                        Text(pages[currentPage])
-                            .font(.system(size: viewModel.fontSize))
-                            .foregroundColor(viewModel.textColor)
-                            .lineSpacing(viewModel.lineSpacing)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(viewModel.pagePadding)
+                        FormattedPageText(
+                            text: pages[currentPage],
+                            fontSize: viewModel.fontSize,
+                            lineSpacing: viewModel.lineSpacing,
+                            textColor: viewModel.textColor,
+                            paragraphSpacing: viewModel.paragraphSpacing
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(viewModel.pagePadding)
                     }
                 }
             }
@@ -282,6 +285,37 @@ struct InstantPageView: View {
                         }
                     }
             )
+        }
+    }
+}
+
+// MARK: - 格式化页面文本（段落缩进 + 段间距）
+
+struct FormattedPageText: View {
+    let text: String
+    let fontSize: CGFloat
+    let lineSpacing: CGFloat
+    let textColor: Color
+    let paragraphSpacing: CGFloat
+
+    init(text: String, fontSize: CGFloat, lineSpacing: CGFloat = 8, textColor: Color, paragraphSpacing: CGFloat = 12) {
+        self.text = text
+        self.fontSize = fontSize
+        self.lineSpacing = lineSpacing
+        self.textColor = textColor
+        self.paragraphSpacing = paragraphSpacing
+    }
+
+    var body: some View {
+        let paragraphs = text.components(separatedBy: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+
+        VStack(alignment: .leading, spacing: paragraphSpacing) {
+            ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, paragraph in
+                Text("\u{3000}\u{3000}" + paragraph.trimmingCharacters(in: .whitespaces))
+                    .font(.system(size: fontSize))
+                    .foregroundColor(textColor)
+                    .lineSpacing(lineSpacing)
+            }
         }
     }
 }

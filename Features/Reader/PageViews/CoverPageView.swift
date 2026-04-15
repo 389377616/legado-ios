@@ -118,12 +118,15 @@ struct CoverPageView: View {
     private func pageContent(at index: Int) -> some View {
         if index >= 0 && index < pages.count {
             ScrollView(.vertical, showsIndicators: false) {
-                Text(pages[index])
-                    .font(.system(size: viewModel.fontSize))
-                    .foregroundColor(viewModel.textColor)
-                    .lineSpacing(viewModel.lineSpacing)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(viewModel.pagePadding)
+                FormattedPageText(
+                    text: pages[index],
+                    fontSize: viewModel.fontSize,
+                    lineSpacing: viewModel.lineSpacing,
+                    textColor: viewModel.textColor,
+                    paragraphSpacing: viewModel.paragraphSpacing
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(viewModel.pagePadding)
             }
             .background(viewModel.backgroundColor)
         } else {

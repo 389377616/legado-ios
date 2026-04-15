@@ -19,7 +19,7 @@ struct ReaderView: View {
     @State private var showUI = false
     @State private var brightness: Double = UIScreen.main.brightness
     @State private var isNightMode = false
-    @State private var autoBrightness = true
+    @State private var showingBrightness = false
     
     let bookId: UUID
     
@@ -45,7 +45,7 @@ struct ReaderView: View {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
                         .onTapGesture {
-                            withAnimation { showUI = false }
+                            withAnimation { showUI = false; showingBrightness = false }
                         }
                     
                     VStack(spacing: 0) {
@@ -56,33 +56,12 @@ struct ReaderView: View {
                         
                         Spacer()
                         
-                        floatingButtons
-                            .transition(.opacity)
-                        
                         bottomBar
                             .padding(.bottom, geometry.safeAreaInsets.bottom)
                             .background(.ultraThinMaterial)
                             .transition(.move(edge: .bottom))
                     }
                     .ignoresSafeArea(.container, edges: [.top, .bottom])
-                    
-                    brightnessSlider
-                        .transition(.opacity)
-                }
-                
-                if showingSettings {
-                    ReaderSettingsView(viewModel: viewModel, isPresented: $showingSettings)
-                        .transition(.move(edge: .bottom))
-                }
-                
-                if showingTTSControls {
-                    TTSControlsView(ttsManager: ttsManager, viewModel: viewModel, isPresented: $showingTTSControls)
-                        .transition(.opacity)
-                }
-                
-                if showingAutoPageTurn {
-                    AutoPageTurnControlsView(manager: autoPageTurnManager, isPresented: $showingAutoPageTurn)
-                        .transition(.opacity)
                 }
                 
                 AutoPageTurnOverlay(manager: autoPageTurnManager)
@@ -133,6 +112,9 @@ struct ReaderView: View {
             } message: {
                 Text("阅读一段时间了，休息一下眼睛。")
             }
+            .sheet(isPresented: $showingSettings) {
+                ReaderSettingsView(viewModel: viewModel, isPresented: $showingSettings)
+            }
             .sheet(isPresented: $showingChapterList) {
                 if let book = book { ChapterListView(viewModel: viewModel, book: book) }
             }
@@ -146,8 +128,17 @@ struct ReaderView: View {
             .sheet(isPresented: $showingBookmarks) {
                 if let book = book { BookmarkSheet(viewModel: viewModel, book: book) }
             }
+            .sheet(isPresented: $showingTTSControls) {
+                TTSControlsView(ttsManager: ttsManager, viewModel: viewModel, isPresented: $showingTTSControls)
+            }
+            .sheet(isPresented: $showingAutoPageTurn) {
+                AutoPageTurnControlsView(manager: autoPageTurnManager, isPresented: $showingAutoPageTurn)
+            }
             .sheet(isPresented: $showingEffectiveReplaces) {
                 ReplaceRuleView()
+            }
+            .sheet(isPresented: $showingSearchContent) {
+                SearchInBookView(viewModel: viewModel)
             }
         }
         .navigationBarHidden(true)
@@ -193,22 +184,8 @@ struct ReaderView: View {
         }
     }
     
-    private var floatingButtons: some View {
-        HStack(spacing: 0) {
-            Spacer()
-            FloatingButton(icon: "magnifyingglass", action: { showingSearchContent = true })
-            Spacer()
-            FloatingButton(icon: "timer", action: { showingAutoPageTurn = true })
-            Spacer()
-            FloatingButton(icon: "arrow.3.trianglepath", action: { showingSettings = true })
-            Spacer()
-            FloatingButton(icon: isNightMode ? "sun.max" : "moon", action: toggleNightMode)
-            Spacer()
-        }
-        .padding(.bottom, 16)
-    }
-    
     private var bottomBar: some View {
+    private func toggleNightMode() {
         VStack(spacing: 0) {
             VStack(spacing: 10) {
                 HStack {
@@ -228,75 +205,44 @@ struct ReaderView: View {
                 ), in: 0...Double(max(1, viewModel.totalChapters - 1)), step: 1)
             }
             .padding(.horizontal, 20)
-            .padding(.top, 8)
+            .padding(.top, 12)
             .padding(.bottom, 8)
+            
+            if showingBrightness {
+                HStack(spacing: 12) {
+                    Image(systemName: "sun.min")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Slider(value: $brightness, in: 0.1...1.0)
+                        .onChange(of: brightness) { newValue in
+                            UIScreen.main.brightness = newValue
+                        }
+                    Image(systemName: "sun.max")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 6)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
             
             Divider()
             
             HStack(spacing: 0) {
                 ToolBarButton(icon: "list.bullet", title: "目录", action: { showingChapterList = true })
-                ToolBarButton(icon: "arrow.triangle.2.circlepath", title: "替换", action: { showingEffectiveReplaces = true })
+                ToolBarButton(icon: "magnifyingglass", title: "搜索", action: { showingSearchContent = true })
                 ToolBarButton(icon: "speaker.wave.2", title: "朗读", action: { showingTTSControls = true })
-                ToolBarButton(icon: "a.square", title: "界面", action: { showingSettings = true })
+                ToolBarButton(icon: "sun.max", title: "亮度", action: { withAnimation { showingBrightness.toggle() } })
+                ToolBarButton(icon: "textformat.size", title: "设置", action: { showingSettings = true })
+                ToolBarButton(icon: isNightMode ? "sun.max" : "moon", title: isNightMode ? "日间" : "夜间", action: toggleNightMode)
             }
             .padding(.vertical, 7)
-        }
-    }
-    
-    private var brightnessSlider: some View {
-        VStack {
-            Spacer()
-            HStack {
-                VStack(spacing: 8) {
-                    Button(action: { autoBrightness.toggle() }) {
-                        Image(systemName: autoBrightness ? "sun.max.circle.fill" : "sun.max.circle")
-                            .font(.title3)
-                    }
-                    .padding(8)
-                    
-                    Slider(value: $brightness, in: 0...1)
-                        .frame(height: 120)
-                        .rotationEffect(.degrees(-90))
-                        .frame(width: 120, height: 30)
-                    
-                    Image(systemName: "sun.min")
-                        .font(.caption)
-                        .padding(8)
-                }
-                .padding(12)
-                .background(Color.black.opacity(0.6))
-                .cornerRadius(8)
-                .padding(.leading, 16)
-                
-                Spacer()
-            }
-            .padding(.top, 80)
-            Spacer()
-        }
-        .onChange(of: brightness) { newValue in
-            if !autoBrightness { UIScreen.main.brightness = newValue }
         }
     }
     
     private func toggleNightMode() {
         isNightMode.toggle()
         viewModel.applyTheme(isNightMode ? .dark : .light)
-    }
-}
-
-private struct FloatingButton: View {
-    let icon: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(.primary)
-                .frame(width: 44, height: 44)
-                .background(Color(.systemGray5))
-                .clipShape(Circle())
-        }
     }
 }
 

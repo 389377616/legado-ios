@@ -54,12 +54,15 @@ private struct SinglePageContent: View {
                 viewModel.backgroundColor
                 
                 ScrollView(.vertical, showsIndicators: false) {
-                    Text(text)
-                        .font(.system(size: viewModel.fontSize))
-                        .foregroundColor(viewModel.textColor)
-                        .lineSpacing(viewModel.lineSpacing)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(viewModel.pagePadding)
+                    FormattedPageText(
+                        text: text,
+                        fontSize: viewModel.fontSize,
+                        lineSpacing: viewModel.lineSpacing,
+                        textColor: viewModel.textColor,
+                        paragraphSpacing: viewModel.paragraphSpacing
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(viewModel.pagePadding)
                 }
             }
             .contentShape(Rectangle())

@@ -200,13 +200,16 @@ private struct PageContent: View {
                 
                 // 文本内容
                 ScrollView(.vertical, showsIndicators: false) {
-                    Text(text)
-                        .font(.system(size: viewModel.fontSize))
-                        .foregroundColor(viewModel.textColor)
-                        .lineSpacing(viewModel.lineSpacing)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(viewModel.pagePadding)
-                        .textSelection(.enabled)
+                    FormattedPageText(
+                        text: text,
+                        fontSize: viewModel.fontSize,
+                        lineSpacing: viewModel.lineSpacing,
+                        textColor: viewModel.textColor,
+                        paragraphSpacing: viewModel.paragraphSpacing
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(viewModel.pagePadding)
+                    .textSelection(.enabled)
                 }
                 
                 // 点击区域覆盖层
