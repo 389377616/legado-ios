@@ -184,7 +184,7 @@ struct BookshelfView: View {
                         // 书籍网格
                         LazyVGrid(columns: gridColumnsArray, spacing: 12) {
                             ForEach(item.books, id: \.bookId) { book in
-                                NavigationLink(value: book.objectID) {
+                                NavigationLink(value: book.bookId) {
                                     BookGridCell(book: book, showUnread: viewModel.showUnread)
                                 }
                                 .buttonStyle(.plain)
@@ -198,10 +198,8 @@ struct BookshelfView: View {
                 }
             }
         }
-        .navigationDestination(for: NSManagedObjectID.self) { objectID in
-            if let book = try? viewContext.existingObject(with: objectID) as? Book {
-                ReaderView(bookId: book.bookId)
-            }
+        .navigationDestination(for: UUID.self) { bookId in
+            ReaderView(bookId: bookId)
         }
     }
     
@@ -211,7 +209,7 @@ struct BookshelfView: View {
             ForEach(groupedBooks, id: \.group?.groupId) { item in
                 Section {
                     ForEach(item.books, id: \.bookId) { book in
-                        NavigationLink(value: book.objectID) {
+                        NavigationLink(value: book.bookId) {
                             BookListCell(
                                 book: book,
                                 showUnread: viewModel.showUnread,
@@ -234,10 +232,8 @@ struct BookshelfView: View {
             }
         }
         .listStyle(.plain)
-        .navigationDestination(for: NSManagedObjectID.self) { objectID in
-            if let book = try? viewContext.existingObject(with: objectID) as? Book {
-                ReaderView(bookId: book.bookId)
-            }
+        .navigationDestination(for: UUID.self) { bookId in
+            ReaderView(bookId: bookId)
         }
     }
     
@@ -276,7 +272,7 @@ struct BookshelfView: View {
         ScrollView {
             LazyVGrid(columns: gridColumnsArray, spacing: 16) {
                 ForEach(books, id: \.bookId) { book in
-                    NavigationLink(value: book.objectID) {
+                    NavigationLink(value: book.bookId) {
                         BookGridCell(book: book, showUnread: viewModel.showUnread)
                     }
                     .buttonStyle(.plain)
@@ -287,10 +283,8 @@ struct BookshelfView: View {
             }
             .padding(12)
         }
-        .navigationDestination(for: NSManagedObjectID.self) { objectID in
-            if let book = try? viewContext.existingObject(with: objectID) as? Book {
-                ReaderView(bookId: book.bookId)
-            }
+        .navigationDestination(for: UUID.self) { bookId in
+            ReaderView(bookId: bookId)
         }
     }
     
@@ -298,7 +292,7 @@ struct BookshelfView: View {
     private func listView(_ books: [Book]) -> some View {
         List {
             ForEach(books, id: \.bookId) { book in
-                NavigationLink(value: book.objectID) {
+                NavigationLink(value: book.bookId) {
                     BookListCell(
                         book: book,
                         showUnread: viewModel.showUnread,
@@ -315,10 +309,8 @@ struct BookshelfView: View {
             }
         }
         .listStyle(.plain)
-        .navigationDestination(for: NSManagedObjectID.self) { objectID in
-            if let book = try? viewContext.existingObject(with: objectID) as? Book {
-                ReaderView(bookId: book.bookId)
-            }
+        .navigationDestination(for: UUID.self) { bookId in
+            ReaderView(bookId: bookId)
         }
     }
     
@@ -406,8 +398,6 @@ struct BookGridCell: View {
             ZStack(alignment: .topTrailing) {
                 // 封面
                 BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(3/4, contentMode: .fill)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                     .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
                 
@@ -659,19 +649,27 @@ struct BookCoverView: View {
     }
     
     var body: some View {
-        Group {
-            if let image = image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                ZStack {
-                    Color(.systemGray5)
-                    Image(systemName: "book.closed")
-                        .foregroundColor(.gray.opacity(0.5))
+        GeometryReader { geo in
+            let targetSize = geo.size
+            Group {
+                if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .aspectFit)
+                        .frame(width: targetSize.width, height: targetSize.height)
+                        .clipped()
+                } else {
+                    ZStack {
+                        Color(.systemGray5)
+                        Image(systemName: "book.closed")
+                            .font(.title2)
+                            .foregroundColor(.gray.opacity(0.5))
+                    }
+                    .frame(width: targetSize.width, height: targetSize.height)
                 }
             }
         }
+        .aspectRatio(3/4, contentMode: .fit)
         .task(id: loadIdentity) {
             let identity = loadIdentity
             requestIdentity = identity
