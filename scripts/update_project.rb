@@ -6,33 +6,32 @@ project_path = 'Legado.xcodeproj'
 project = Xcodeproj::Project.open(project_path)
 target = project.targets.find { |t| t.name == 'Legado' }
 
-new_files = [
-  'Features/ReaderEnhanced/ReaderEnhanced.swift',
-  'Features/ReaderEnhanced/Preferences/EPUBPreferences.swift',
-  'Features/ReaderEnhanced/Preferences/PreferencesApplier.swift',
-  'Features/ReaderEnhanced/Tweaks/StyleTweakManager.swift',
-  'Features/ReaderEnhanced/Settings/ReaderSettingsView.swift',
-  'Core/API/APIServer.swift',
-  'Core/API/BookSourceAPI.swift',
-  'Core/API/BookAPI.swift',
-  'Core/Import/FileAssociationHandler.swift',
-  'Core/Import/URLSchemeHandler.swift',
-]
-
 existing_files = target.source_build_phase.files.map { |f| f.file_ref&.path }.compact
 
-new_files.each do |file_path|
-  next unless File.exist?(file_path)
+swift_files = Dir.glob('**/*.swift').reject { |f|
+  f.start_with?('Tests/') || f.start_with?('Widget/') || f.start_with?('ShareExtension/')
+}
+
+added = 0
+swift_files.each do |file_path|
   next if existing_files.include?(file_path)
   
   begin
     file_ref = project.main_group.new_file(file_path)
     target.source_build_phase.add_file_reference(file_ref)
     puts "Added: #{file_path}"
+    added += 1
   rescue => e
     puts "Warning: #{file_path}: #{e.message}"
   end
 end
 
+if target.name == 'Legado'
+  widget_target = project.targets.find { |t| t.name == 'LegadoWidget' || t.name == 'Widget' }
+  if widget_target.nil?
+    puts "No widget target found, skipping widget files"
+  end
+end
+
 project.save
-puts "Project saved"
+puts "Project saved. Added #{added} new file(s)."
