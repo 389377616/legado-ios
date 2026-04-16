@@ -164,73 +164,114 @@ struct ReaderView: View {
                 Spacer()
                 
                 Button(action: { showingChangeSource = true }) {
-                    Text(book?.originName ?? "书源")
-                        .font(.caption)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .foregroundColor(.primary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "book.circle")
+                            .font(.caption)
+                        Text(book?.originName ?? "书源")
+                            .font(.caption)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.accentColor.opacity(0.15))
+                    .foregroundColor(.primary)
+                    .cornerRadius(4)
                 }
-                .frame(maxWidth: 180)
+                .frame(maxWidth: 120)
             }
             .padding(.horizontal)
             .padding(.top, 8)
             .padding(.bottom, 12)
+            
+            if let chapter = viewModel.currentChapter, !chapter.title.isEmpty {
+                HStack {
+                    Text(chapter.title)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .padding(.leading, 10)
+                    Spacer()
+                }
+                .padding(.bottom, 4)
+            }
         }
+    }
+    
+    private var floatingButtons: some View {
+        HStack(spacing: 0) {
+            Spacer()
+            
+            FloatingButton(icon: "magnifyingglass", action: { })
+            
+            Spacer()
+            
+            FloatingButton(icon: autoPageTurnManager.isActive ? "play.fill" : "play", action: { showingAutoPageTurn = true })
+            
+            Spacer()
+            
+            FloatingButton(icon: "findAndReplace", action: { showingEffectiveReplaces = true })
+            
+            Spacer()
+            
+            FloatingButton(icon: isNightMode ? "sun.max.fill" : "moon.fill", action: toggleNightMode)
+            
+            Spacer()
+        }
+        .padding(.vertical, 16)
     }
     
     private var bottomBar: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 10) {
-                HStack {
-                    Text("第\(viewModel.currentChapterIndex + 1)/\(viewModel.totalChapters)章")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(viewModel.currentChapter?.title ?? "")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-                
-                Slider(value: Binding(
-                    get: { Double(viewModel.currentChapterIndex) },
-                    set: { viewModel.jumpToChapter(Int($0)) }
-                ), in: 0...Double(max(1, viewModel.totalChapters - 1)), step: 1)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
+            floatingButtons
             
-            if showingBrightness {
-                HStack(spacing: 12) {
-                    Image(systemName: "sun.min")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Slider(value: $brightness, in: 0.1...1.0)
-                        .onChange(of: brightness) { newValue in
-                            UIScreen.main.brightness = newValue
-                        }
-                    Image(systemName: "sun.max")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    Button("上一章") {
+                        Task { await viewModel.prevChapter() }
+                    }
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
+                    .disabled(viewModel.currentChapterIndex <= 0)
+                    
+                    Slider(value: Binding(
+                        get: { Double(viewModel.currentChapterIndex) },
+                        set: { viewModel.jumpToChapter(Int($0)) }
+                    ), in: 0...Double(max(1, viewModel.totalChapters - 1)), step: 1)
+                    .frame(height: 25)
+                    
+                    Button("下一章") {
+                        Task { await viewModel.nextChapter() }
+                    }
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
+                    .disabled(viewModel.currentChapterIndex >= viewModel.totalChapters - 1)
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 6)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .padding(.top, 5)
+                .padding(.bottom, 5)
+                
+                HStack(spacing: 0) {
+                    Spacer().frame(width: 20)
+                    
+                    BottomMenuButton(icon: "list.bullet", title: "目录", action: { showingChapterList = true })
+                    
+                    Spacer().frame(width: 40)
+                    
+                    BottomMenuButton(icon: "speaker.wave.2", title: "朗读", action: { showingTTSControls = true })
+                    
+                    Spacer().frame(width: 40)
+                    
+                    BottomMenuButton(icon: "textformat.size", title: "界面", action: { showingSettings = true })
+                    
+                    Spacer().frame(width: 40)
+                    
+                    BottomMenuButton(icon: "gearshape", title: "设置", action: { showingSettings = true })
+                    
+                    Spacer().frame(width: 20)
+                }
+                .padding(.bottom, 7)
             }
-            
-            Divider()
-            
-            HStack(spacing: 0) {
-                ToolBarButton(icon: "list.bullet", title: "目录", action: { showingChapterList = true })
-                ToolBarButton(icon: "speaker.wave.2", title: "朗读", action: { showingTTSControls = true })
-                ToolBarButton(icon: "sun.max", title: "亮度", action: { withAnimation { showingBrightness.toggle() } })
-                ToolBarButton(icon: "textformat.size", title: "设置", action: { showingSettings = true })
-                ToolBarButton(icon: isNightMode ? "sun.max" : "moon", title: isNightMode ? "日间" : "夜间", action: toggleNightMode)
-            }
-            .padding(.vertical, 7)
         }
     }
     
@@ -254,6 +295,43 @@ struct ToolBarButton: View {
                     .font(.caption)
             }
             .frame(maxWidth: 60)
+            .foregroundColor(.primary)
+        }
+    }
+}
+
+struct FloatingButton: View {
+    let icon: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundColor(.primary)
+                .frame(width: 40, height: 40)
+                .background(Color(.systemGray6))
+                .cornerRadius(20)
+        }
+    }
+}
+
+struct BottomMenuButton: View {
+    let icon: String
+    let title: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .frame(height: 20)
+                Text(title)
+                    .font(.system(size: 12))
+                    .lineLimit(1)
+            }
+            .frame(width: 60)
             .foregroundColor(.primary)
         }
     }

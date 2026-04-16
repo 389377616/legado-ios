@@ -28,13 +28,39 @@ extension RuleSub {
 
 // MARK: - 类型枚举
 extension RuleSub {
-    enum SubType: Int32 {
+    enum SubType: Int32, CaseIterable {
         case bookSource = 0
         case rssSource = 1
         case replaceRule = 2
         case httpTTS = 3
         case dictRule = 4
         case txtTocRule = 5
+
+        public static var allCases: [RuleSub.SubType] {
+            [.bookSource, .rssSource, .replaceRule, .httpTTS, .dictRule, .txtTocRule]
+        }
+
+        var title: String {
+            switch self {
+            case .bookSource: return "书源"
+            case .rssSource: return "RSS源"
+            case .replaceRule: return "替换规则"
+            case .httpTTS: return "在线TTS"
+            case .dictRule: return "词典规则"
+            case .txtTocRule: return "TXT目录规则"
+            }
+        }
+
+        var iconName: String {
+            switch self {
+            case .bookSource: return "book"
+            case .rssSource: return "antenna.radiowaves.left.and.right"
+            case .replaceRule: return "arrow.triangle.2.circlepath"
+            case .httpTTS: return "speaker.wave.2"
+            case .dictRule: return "character.book.closed"
+            case .txtTocRule: return "list.bullet.indent"
+            }
+        }
     }
 
     var subType: SubType? {

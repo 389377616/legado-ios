@@ -264,6 +264,15 @@
         <attribute name="example" optional="YES" attributeType="String"/>
         <attribute name="enabled" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
     </entity>
+    <entity name="Server" representedClassName="Server" syncable="YES" codeGenerationType="none">
+        <attribute name="id" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+        <attribute name="configUrl" optional="NO" attributeType="String"/>
+        <attribute name="type" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="customOrder" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="lastUpdateTime" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+    </entity>
+
     <elements>
         <element name="Book" positionX="-63" positionY="-18" width="128" height="704"/>
         <element name="BookSource" positionX="180" positionY="-18" width="128" height="560"/>
@@ -284,5 +293,6 @@
         <element name="DictRule" positionX="1060" positionY="220" width="128" height="118"/>
         <element name="RuleSub" positionX="1060" positionY="360" width="128" height="148"/>
         <element name="TxtTocRule" positionX="1060" positionY="530" width="128" height="118"/>
+        <element name="Server" positionX="1280" positionY="-18" width="128" height="148"/>
     </elements>
 </model>

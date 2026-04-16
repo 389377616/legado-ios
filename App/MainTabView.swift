@@ -10,45 +10,51 @@ import UniformTypeIdentifiers
 
 struct MainTabView: View {
     @State private var selectedTab = 0
-    
+    @AppStorage("app.defaultHomePage") private var defaultHomePage = 0
+    @AppStorage("app.showDiscoveryPage") private var showDiscoveryPage = true
+    @AppStorage("app.showRssPage") private var showRssPage = true
+
     var body: some View {
         TabView(selection: $selectedTab) {
-            // 书架（含本地书籍入口）
             NavigationStack { BookshelfView() }
                 .tabItem {
-                    Image(systemName: "books.vertical.fill")
+                    Label("书架", systemImage: "books.vertical.fill")
                 }
                 .tag(0)
-            
-            // 发现
-            NavigationStack { DiscoveryView() }
+
+            if showDiscoveryPage {
+                NavigationStack { DiscoveryView() }
+                    .tabItem {
+                        Label("发现", systemImage: "safari.fill")
+                    }
+                    .tag(1)
+            }
+
+            if showRssPage {
+                NavigationStack { RSSSubscriptionView() }
+                    .tabItem {
+                        Label("订阅", systemImage: "antenna.radiowaves.left.and.right")
+                    }
+                    .tag(showDiscoveryPage ? 2 : 1)
+            }
+
+            NavigationStack { MyView() }
                 .tabItem {
-                    Image(systemName: "safari")
+                    Label("我的", systemImage: "person.fill")
                 }
-                .tag(1)
-            
-            // RSS订阅
-            NavigationStack { RSSSubscriptionView() }
-                .tabItem {
-                    Image(systemName: "dot.radiowaves.left.and.right")
-                }
-                .tag(2)
-            
-            // 我的
-            SettingsView()
-                .tabItem {
-                    Image(systemName: "person.crop.circle")
-                }
-                .tag(3)
+                .tag(computeMyTabTag)
         }
         .accentColor(.blue)
+        .onAppear {
+            selectedTab = defaultHomePage
+        }
     }
-}
 
-// MARK: - 设置视图（完善版）
-struct SettingsView: View {
-    var body: some View {
-        MyView()
+    private var computeMyTabTag: Int {
+        var tag = 1
+        if showDiscoveryPage { tag += 1 }
+        if showRssPage { tag += 1 }
+        return tag
     }
 }
 

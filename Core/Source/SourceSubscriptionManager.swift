@@ -3,11 +3,14 @@
 //  Legado-iOS
 //
 //  书源订阅管理器 - 支持从网络订阅源自动更新书源
-//  P2-T5 实现
+//  ⚠️ 已弃用：请使用 RuleSubscriptionManager 替代，后者基于 CoreData RuleSub 实体，支持6种规则类型
+//  本文件保留以兼容现有 SourceSubscriptionView 引用，后续版本将移除
 //
 
 import Foundation
 import CoreData
+
+@available(*, deprecated, message: "请使用 RuleSubscriptionManager 替代")
 
 // MARK: - 书源订阅配置
 

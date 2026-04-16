@@ -1,235 +1,300 @@
-//
-//  ReaderSettingsFullView.swift
-//  Legado-iOS
-//
-//  完整阅读设置界面
-//
-
 import SwiftUI
 
 struct ReaderSettingsFullView: View {
-    @Environment(\.dismiss) var dismiss
-
-    @AppStorage("reader.fontSize") private var storedFontSize: Double = 18
-    @AppStorage("reader.lineSpacing") private var storedLineSpacing: Double = 8
-    @AppStorage("reader.paragraphSpacing") private var storedParagraphSpacing: Double = 12
-    @AppStorage("reader.pageMargin") private var storedPageMargin: Double = 16
-    @AppStorage("reader.brightness") private var storedBrightness: Double = 1.0
-    @AppStorage("reader.theme") private var storedTheme: String = ReaderThemeType.light.rawValue
-    @AppStorage("pageAnimation") private var storedPageAnimation: String = PageAnimation.cover.rawValue
-    @AppStorage("reader.fontFamily") private var storedFontFamily: String = "System"
-    @AppStorage("reader.showStatusBar") private var storedShowStatusBar: Bool = false
-    @AppStorage("reader.clickToFlip") private var storedClickToFlip: Bool = true
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: ReaderViewModel
+    @Binding var isPresented: Bool
     
-    // 阅读配置
-    @State private var fontSize: Double = 18
-    @State private var lineSpacing: Double = 8
-    @State private var paragraphSpacing: Double = 12
-    @State private var pageMargin: Double = 16
-    @State private var brightness: Double = 1.0
-    @State private var theme: ReaderThemeType = .light
-    @State private var pageAnimation: PageAnimation = .cover
-    @State private var fontFamily: String = "System"
-    @State private var showStatusBar = false
-    @State private var clickToFlip = true
+    @AppStorage("pageAnimation") private var pageAnimation: String = PageAnimationType.cover.rawValue
+    @AppStorage("leftTapRatio") private var leftTapRatio: Double = 0.3
+    @AppStorage("rightTapRatio") private var rightTapRatio: Double = 0.3
+    @AppStorage("showHeader") private var showHeader: Bool = true
+    @AppStorage("showFooter") private var showFooter: Bool = true
+    @AppStorage("headerContent") private var headerContent: String = "章节名"
+    @AppStorage("footerContent") private var footerContent: String = "进度"
+    @AppStorage("textFullJustify") private var textFullJustify: Bool = true
+    @AppStorage("useZhLayout") private var useZhLayout: Bool = true
+    @AppStorage("paragraphIndent") private var paragraphIndent: Int = 2
     
-    enum ReaderThemeType: String, CaseIterable, Identifiable {
-        case light = "亮色"
-        case dark = "暗色"
-        case sepia = "羊皮纸"
-        case eyeProtection = "护眼"
-        case custom = "自定义"
-        
-        var id: String { self.rawValue }
-    }
-    
-    enum PageAnimation: String, CaseIterable, Identifiable {
-        case cover = "覆盖"
-        case simulation = "仿真"
-        case slide = "滑动"
-        case scroll = "滚动"
-        case none = "无动画"
-        
-        var id: String { self.rawValue }
-    }
+    private let pageAnimations: [PageAnimationType] = PageAnimationType.allCases
     
     var body: some View {
-        Form {
-                Section(header: Text("主题")) {
-                    Picker("主题", selection: $theme) {
-                        ForEach(ReaderThemeType.allCases) { theme in
-                            Text(theme.rawValue).tag(theme)
+        NavigationView {
+            List {
+                Section(header: Text("翻页动画")) {
+                    ForEach(pageAnimations, id: \.self) { animation in
+                        Button(action: { pageAnimation = animation.rawValue }) {
+                            HStack {
+                                Text(animation.displayName)
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                if pageAnimation == animation.rawValue {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.blue)
+                                }
+                            }
                         }
                     }
-                    .pickerStyle(.segmented)
+                }
+                
+                Section(header: Text("点击区域")) {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("左侧区域（上一页）")
+                            Spacer()
+                            Text("\(Int(leftTapRatio * 100))%")
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Slider(value: $leftTapRatio, in: 0.1...0.5, step: 0.05)
+                    }
+                    .padding(.vertical, 8)
                     
-                    if theme == .custom {
-                        ColorPicker("背景颜色", selection: .constant(.white))
-                        ColorPicker("文字颜色", selection: .constant(.black))
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("右侧区域（下一页）")
+                            Spacer()
+                            Text("\(Int(rightTapRatio * 100))%")
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Slider(value: $rightTapRatio, in: 0.1...0.5, step: 0.05)
+                    }
+                    .padding(.vertical, 8)
+                    
+                    HStack {
+                        Text("中间区域")
+                        Spacer()
+                        Text("\(Int((1 - leftTapRatio - rightTapRatio) * 100))%")
+                            .foregroundColor(.secondary)
                     }
                 }
                 
-                Section(header: Text("字体")) {
-                    Stepper("字号：\(Int(fontSize))", value: $fontSize, in: 12...32, step: 1)
+                Section(header: Text("页眉设置")) {
+                    Toggle("显示页眉", isOn: $showHeader)
                     
-                    Stepper("行距：\(Int(lineSpacing))", value: $lineSpacing, in: 4...20, step: 1)
-                    
-                    Stepper("段距：\(Int(paragraphSpacing))", value: $paragraphSpacing, in: 0...30, step: 2)
-                    
-                    Picker("字体", selection: $fontFamily) {
-                        Text("系统").tag("System")
-                        Text("宋体").tag("Songti")
-                        Text("黑体").tag("Heiti")
-                        Text("楷体").tag("Kaiti")
-                    }
-                    .pickerStyle(.menu)
-                }
-                
-                Section(header: Text("翻页")) {
-                    Picker("翻页动画", selection: $pageAnimation) {
-                        ForEach(PageAnimation.allCases) { anim in
-                            Text(anim.rawValue).tag(anim)
+                    if showHeader {
+                        Picker("页眉内容", selection: $headerContent) {
+                            Text("章节名").tag("章节名")
+                            Text("书名").tag("书名")
+                            Text("书名+章节").tag("书名+章节")
+                            Text("时间").tag("时间")
+                            Text("自定义").tag("自定义")
                         }
                     }
-                    
-                    Toggle("点击翻页", isOn: $clickToFlip)
                 }
                 
-                Section(header: Text("显示")) {
-                    Stepper("页边距：\(Int(pageMargin))", value: $pageMargin, in: 0...40, step: 4)
+                Section(header: Text("页脚设置")) {
+                    Toggle("显示页脚", isOn: $showFooter)
                     
-                    Slider(value: $brightness, in: 0.5...1.5, step: 0.1) {
-                        Text("亮度")
+                    if showFooter {
+                        Picker("页脚内容", selection: $footerContent) {
+                            Text("进度").tag("进度")
+                            Text("页码").tag("页码")
+                            Text("时间").tag("时间")
+                            Text("章节进度").tag("章节进度")
+                            Text("自定义").tag("自定义")
+                        }
+                    }
+                }
+                
+                Section(header: Text("排版设置")) {
+                    Toggle("两端对齐", isOn: $textFullJustify)
+                    Toggle("中文排版优化", isOn: $useZhLayout)
+                    
+                    Stepper("首行缩进：\(paragraphIndent) 字", value: $paragraphIndent, in: 0...4)
+                }
+                
+                Section(header: Text("阅读体验")) {
+                    NavigationLink(destination: FontSettingsView(viewModel: viewModel, isPresented: $isPresented)) {
+                        Text("字体设置")
                     }
                     
-                    Toggle("显示状态栏", isOn: $showStatusBar)
-                }
-                
-                Section(header: Text("预览")) {
-                    ReaderPreviewView(
-                        fontSize: fontSize,
-                        lineSpacing: lineSpacing,
-                        theme: theme
-                    )
-                    .frame(height: 200)
-                }
-                
-                Section {
-                    Button("恢复默认设置") {
-                        resetToDefault()
+                    NavigationLink(destination: ThemeSettingsView(viewModel: viewModel, isPresented: $isPresented)) {
+                        Text("主题设置")
                     }
-                    .foregroundColor(.red)
+                    
+                    NavigationLink(destination: CoverConfigView()) {
+                        Text("封面设置")
+                    }
+                    
+                    NavigationLink(destination: ReplaceRuleView()) {
+                        Text("替换规则")
+                    }
+                    
+                    NavigationLink(destination: TxtTocRuleView()) {
+                        Text("目录规则")
+                    }
+                }
+                
+                Section(header: Text("高级设置")) {
+                    NavigationLink(destination: HttpTTSConfigView()) {
+                        Text("TTS设置")
+                    }
+                    
+                    NavigationLink(destination: DictRuleView()) {
+                        Text("字典规则")
+                    }
+                    
+                    NavigationLink(destination: AboutView()) {
+                        Text("关于")
+                    }
                 }
             }
             .navigationTitle("阅读设置")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("保存") {
-                        saveSettings()
-                        dismiss()
-                    }
+                    Button("完成") { dismiss() }
                 }
             }
-            .onAppear {
-                loadSettings()
-            }
-    }
-    
-    private func resetToDefault() {
-        fontSize = 18
-        lineSpacing = 8
-        paragraphSpacing = 12
-        pageMargin = 16
-        brightness = 1.0
-        theme = .light
-        pageAnimation = .cover
-        fontFamily = "System"
-    }
-    
-    private func saveSettings() {
-        storedFontSize = fontSize
-        storedLineSpacing = lineSpacing
-        storedParagraphSpacing = paragraphSpacing
-        storedPageMargin = pageMargin
-        storedBrightness = brightness
-        storedTheme = theme.rawValue
-        storedPageAnimation = pageAnimation.rawValue
-        storedFontFamily = fontFamily
-        storedShowStatusBar = showStatusBar
-        storedClickToFlip = clickToFlip
-    }
-
-    private func loadSettings() {
-        fontSize = storedFontSize
-        lineSpacing = storedLineSpacing
-        paragraphSpacing = storedParagraphSpacing
-        pageMargin = storedPageMargin
-        brightness = storedBrightness
-        theme = ReaderThemeType(rawValue: storedTheme) ?? .light
-        pageAnimation = PageAnimation(rawValue: storedPageAnimation) ?? .cover
-        fontFamily = storedFontFamily
-        showStatusBar = storedShowStatusBar
-        clickToFlip = storedClickToFlip
+        }
     }
 }
 
-// MARK: - 预览视图
-struct ReaderPreviewView: View {
-    let fontSize: Double
-    let lineSpacing: Double
-    let theme: ReaderSettingsFullView.ReaderThemeType
+enum PageAnimationType: String, CaseIterable {
+    case cover = "cover"
+    case simulation = "simulation"
+    case slide = "slide"
+    case scroll = "scroll"
+    case none = "none"
     
-    var backgroundColor: Color {
-        switch theme {
-        case .light: return .white
-        case .dark: return .black
-        case .sepia: return Color(red: 0.96, green: 0.91, blue: 0.83)
-        case .eyeProtection: return Color(red: 0.75, green: 0.84, blue: 0.71)
-        case .custom: return .white
+    var displayName: String {
+        switch self {
+        case .cover: return "覆盖"
+        case .simulation: return "仿真"
+        case .slide: return "滑动"
+        case .scroll: return "滚动"
+        case .none: return "无动画"
         }
     }
+}
+
+struct ThemeSettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: ReaderViewModel
+    @Binding var isPresented: Bool
     
-    var textColor: Color {
-        switch theme {
-        case .light: return .black
-        case .dark: return .white
-        case .sepia: return Color(red: 0.33, green: 0.28, blue: 0.22)
-        case .eyeProtection: return .black
-        case .custom: return .black
-        }
-    }
+    @State private var customBackgroundColor: Color = .white
+    @State private var customTextColor: Color = .black
+    @State private var showingBackgroundPicker = false
+    @State private var customBackgroundImage: UIImage?
+    
+    private let presetThemes: [(name: String, background: Color, text: Color)] = [
+        ("亮色", .white, .black),
+        ("暗色", .black, .white),
+        ("羊皮纸", Color(red: 0.96, green: 0.91, blue: 0.83), Color(red: 0.33, green: 0.28, blue: 0.22)),
+        ("护眼", Color(red: 0.75, green: 0.84, blue: 0.71), .black),
+        ("微信读书", Color(red: 0.75, green: 0.93, blue: 0.78), .black),
+        ("淡紫", Color(red: 0.86, green: 0.73, blue: 0.89), .black),
+        ("浅蓝", Color(red: 0.67, green: 0.81, blue: 0.88), .black)
+    ]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: lineSpacing) {
-            Text("预览文本")
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(textColor)
+        List {
+            Section(header: Text("预设主题")) {
+                ForEach(presetThemes, id: \.name) { theme in
+                    Button(action: {
+                        viewModel.backgroundColor = theme.background
+                        viewModel.textColor = theme.text
+                        viewModel.applyTheme(themeFromColors(theme.background, theme.text))
+                    }) {
+                        HStack {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(theme.background)
+                                .frame(width: 40, height: 40)
+                                .overlay(
+                                    Text("文")
+                                        .foregroundColor(theme.text)
+                                        .font(.system(size: 14))
+                                )
+                            
+                            Text(theme.name)
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            if viewModel.backgroundColor == theme.background {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
             
-            Text("""
-            这是阅读效果预览。您可以根据个人喜好调整字体大小、行距、段距等参数，以获得最佳的阅读体验。
+            Section(header: Text("自定义颜色")) {
+                ColorPicker("背景色", selection: $customBackgroundColor, supportsOpacity: false)
+                ColorPicker("文字色", selection: $customTextColor, supportsOpacity: false)
+                
+                Button("应用自定义颜色") {
+                    viewModel.backgroundColor = customBackgroundColor
+                    viewModel.textColor = customTextColor
+                }
+            }
             
-            点击屏幕左侧可返回上一章，点击右侧可进入下一章。点击屏幕中央可显示或隐藏菜单。
-            """)
-            .font(.system(size: fontSize))
-            .foregroundColor(textColor)
-            .lineSpacing(lineSpacing)
+            Section(header: Text("自定义背景图")) {
+                Button(action: { showingBackgroundPicker = true }) {
+                    HStack {
+                        Image(systemName: "photo")
+                            .foregroundColor(.blue)
+                        Text("选择背景图")
+                    }
+                }
+                
+                if let image = customBackgroundImage {
+                    HStack {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 60, height: 60)
+                            .cornerRadius(4)
+                        
+                        Button("清除背景图") {
+                            customBackgroundImage = nil
+                        }
+                        .foregroundColor(.red)
+                    }
+                }
+            }
+            
+            Section(header: Text("预览")) {
+                Text("这是主题预览文本，用于展示当前主题效果。阅读是一种美好的体验，让我们享受文字带来的乐趣。")
+                    .padding()
+                    .background(
+                        Group {
+                            if let image = customBackgroundImage {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                            } else {
+                                viewModel.backgroundColor
+                            }
+                        }
+                    )
+                    .foregroundColor(viewModel.textColor)
+            }
         }
-        .padding(16)
-        .background(backgroundColor)
-        .cornerRadius(8)
+        .navigationTitle("主题设置")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingBackgroundPicker) {
+            ImagePicker(image: $customBackgroundImage)
+        }
+    }
+    
+    private func themeFromColors(_ background: Color, _ text: Color) -> ReaderViewModel.ReaderTheme {
+        if background == .white { return .light }
+        if background == .black { return .dark }
+        if background == Color(red: 0.96, green: 0.91, blue: 0.83) { return .sepia }
+        return .eyeProtection
     }
 }
 
 #Preview {
-    NavigationView {
-        ReaderSettingsFullView()
-    }
+    ReaderSettingsFullView(
+        viewModel: ReaderViewModel(),
+        isPresented: .constant(true)
+    )
 }

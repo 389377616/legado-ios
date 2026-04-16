@@ -10,7 +10,28 @@ import SwiftUI
 import CoreData
 
 @MainActor
-class ReaderViewModel: ObservableObject {
+class ReaderViewModel: ObservableObject, ReadBookCallBack {
+    private let readBook = ReadBook.shared
+    
+    // MARK: - ReadBookCallBack 协议实现
+    func upContent() {
+        curTextChapter = readBook.curTextChapter
+        prevTextChapter = readBook.prevTextChapter
+        nextTextChapter = readBook.nextTextChapter
+        
+        if let textChapter = curTextChapter, let pages = textChapter.pages {
+            totalPages = pages.count
+        }
+    }
+    
+    func upMenuView() {
+        currentChapterIndex = readBook.durChapterIndex
+        durChapterPos = Int32(readBook.durChapterPos)
+    }
+    
+    func upPageAnim() {
+    }
+    
     // MARK: - Published 属性
     @Published var chapterContent: String?
     @Published var chapterContentHTML: String?
@@ -27,6 +48,11 @@ class ReaderViewModel: ObservableObject {
     
     @Published var chapterHTMLURL: URL?
     @Published var epubBaseURL: URL?
+    
+    // MARK: - 三章节预加载状态（来自ReadBook）
+    @Published var prevTextChapter: TextChapter?
+    @Published var curTextChapter: TextChapter?
+    @Published var nextTextChapter: TextChapter?
     
     // MARK: - 分页状态
     @Published var currentPageIndex: Int = 0 {
@@ -164,16 +190,21 @@ class ReaderViewModel: ObservableObject {
 
                 applyReadConfig(book)
 
-                // 加载目录
+                readBook.callBack = self
+                readBook.resetData(book)
+
                 try await loadChapters(book: book)
                 
-                // 加载当前章节
                 let chapterIndex = Int(book.durChapterIndex)
                 if chapterIndex < chapters.count {
                     currentChapterIndex = chapterIndex
                     durChapterPos = book.durChapterPos
+                    currentChapter = chapters[chapterIndex]
+                    
+                    readBook.loadContent(resetPageOffset: false)
+                    
                     let restorePage = max(0, Int(book.durChapterPos))
-                    try await loadChapter(at: chapterIndex, restorePageIndex: restorePage)
+                    currentPageIndex = restorePage
                 }
                 
                 isLoading = false
@@ -342,22 +373,18 @@ class ReaderViewModel: ObservableObject {
     // MARK: - 章节导航
     func prevChapter() async {
         guard currentChapterIndex > 0 else { return }
-        do {
-            try await loadChapter(at: currentChapterIndex - 1)
-            saveProgress()
-        } catch {
-            errorMessage = "加载章节失败：\(error.localizedDescription)"
-        }
+        readBook.moveToPrevChapter(true, upContentInPlace: false)
+        currentChapterIndex = readBook.durChapterIndex
+        currentChapter = chapters[safe: currentChapterIndex]
+        saveProgress()
     }
     
     func nextChapter() async {
         guard currentChapterIndex < totalChapters - 1 else { return }
-        do {
-            try await loadChapter(at: currentChapterIndex + 1)
-            saveProgress()
-        } catch {
-            errorMessage = "加载章节失败：\(error.localizedDescription)"
-        }
+        readBook.moveToNextChapter(true, upContentInPlace: false)
+        currentChapterIndex = readBook.durChapterIndex
+        currentChapter = chapters[safe: currentChapterIndex]
+        saveProgress()
     }
     
     func jumpToChapter(_ index: Int) {

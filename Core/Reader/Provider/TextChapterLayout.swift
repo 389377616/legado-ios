@@ -511,44 +511,23 @@ class TextChapterLayout {
         textLine.pagePosition = sbLength
     }
     
-    // MARK: - 文本测量工具
+    private var textMeasure: TextMeasure?
+    
+    // MARK: - 文本测量工具（使用TextMeasure缓存优化）
     private func measureTextWidths(_ text: String, font: UIFont) -> [CGFloat] {
-        let attributes: [NSAttributedString.Key: Any] = [.font: font]
-        return text.map { char in
-            String(char).size(withAttributes: attributes).width
+        if textMeasure == nil || textMeasure!.font != font {
+            textMeasure = TextMeasure(font: font)
         }
+        let result = textMeasure!.measureTextSplit(text: text)
+        return result.widths
     }
     
     private func measureTextSplit(_ text: String, widthsArray: [CGFloat], start: Int = 0) -> ([String], [CGFloat]) {
-        var words: [String] = []
-        var widths: [CGFloat] = []
-        
-        var i = 0
-        let length = text.count
-        while i < length {
-            let startIndex = text.index(text.startIndex, offsetBy: i)
-            let char = text[startIndex]
-            
-            widths.append(widthsArray[start + i])
-            
-            // 处理零宽字符
-            var clusterEnd = i + 1
-            while clusterEnd < length {
-                let endIndex = text.index(text.startIndex, offsetBy: clusterEnd)
-                let nextChar = text[endIndex]
-                if widthsArray[start + clusterEnd] == 0 && !isZeroWidthChar(nextChar) {
-                    clusterEnd += 1
-                } else {
-                    break
-                }
-            }
-            
-            let clusterRange = text.index(text.startIndex, offsetBy: i)..<text.index(text.startIndex, offsetBy: clusterEnd)
-            words.append(String(text[clusterRange]))
-            i = clusterEnd
+        if textMeasure == nil {
+            textMeasure = TextMeasure(font: ChapterProvider.shared.contentFont)
         }
-        
-        return (words, widths)
+        let result = textMeasure!.measureTextSplit(text: text)
+        return (result.strings, result.widths)
     }
     
     private func isZeroWidthChar(_ char: Character) -> Bool {
@@ -558,7 +537,50 @@ class TextChapterLayout {
     }
     
     private func createTextLayout(text: String, font: UIFont, width: CGFloat) -> [TextLayoutLine] {
-        ChapterProvider.shared.createTextLayout(text: text, font: font, width: width)
+        let useZhLayout = ReadBookConfig.useZhLayout
+        
+        if useZhLayout {
+            return createZhTextLayout(text: text, font: font, width: width)
+        } else {
+            return ChapterProvider.shared.createTextLayout(text: text, font: font, width: width)
+        }
+    }
+    
+    private func createZhTextLayout(text: String, font: UIFont, width: CGFloat) -> [TextLayoutLine] {
+        if textMeasure == nil || textMeasure!.font != font {
+            textMeasure = TextMeasure(font: font)
+        }
+        
+        let result = textMeasure!.measureTextSplit(text: text)
+        let indentSize = ReadBookConfig.paragraphIndent.length
+        
+        let zhLayout = ZhLayout(
+            text: text,
+            font: font,
+            width: width,
+            words: result.strings,
+            widths: result.widths,
+            indentSize: indentSize
+        )
+        
+        var lines: [TextLayoutLine] = []
+        for i in 0..<zhLayout.count {
+            let start = zhLayout.getLineStart(i)
+            let end = zhLayout.getLineEnd(i)
+            
+            let startIndex = text.index(text.startIndex, offsetBy: start)
+            let endIndex = text.index(text.startIndex, offsetBy: end)
+            let lineText = String(text[startIndex..<endIndex])
+            
+            lines.append(TextLayoutLine(
+                text: lineText,
+                start: start,
+                end: end,
+                width: zhLayout.getLineWidth(i)
+            ))
+        }
+        
+        return lines
     }
     
     // MARK: - 页面完成回调

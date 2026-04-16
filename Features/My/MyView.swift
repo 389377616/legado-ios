@@ -85,6 +85,12 @@ struct MyView: View {
                 }
             }
             
+            Section("规则订阅") {
+                NavigationLink("规则订阅管理") {
+                    RuleSubscriptionView()
+                }
+            }
+
             Section("主题与外观") {
                 NavigationLink("主题设置") {
                     ThemeSettingsView()
@@ -92,6 +98,16 @@ struct MyView: View {
                 
                 NavigationLink("封面设置") {
                     CoverConfigView()
+                }
+
+                NavigationLink("无障碍设置") {
+                    AccessibilitySettingsView()
+                }
+            }
+
+            Section("应用配置") {
+                NavigationLink("全部配置") {
+                    AppConfigView()
                 }
             }
             
