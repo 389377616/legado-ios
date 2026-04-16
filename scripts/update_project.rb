@@ -8,8 +8,10 @@ target = project.targets.find { |t| t.name == 'Legado' }
 
 existing_files = target.source_build_phase.files.map { |f| f.file_ref&.path }.compact
 
+exclude_dirs = ['Tests/', 'Widget/', 'ShareExtension/', 'docs/', 'scripts/', '.build/', 'DerivedData/']
+
 swift_files = Dir.glob('**/*.swift').reject { |f|
-  f.start_with?('Tests/') || f.start_with?('Widget/') || f.start_with?('ShareExtension/')
+  exclude_dirs.any? { |dir| f.start_with?(dir) }
 }
 
 added = 0
@@ -23,13 +25,6 @@ swift_files.each do |file_path|
     added += 1
   rescue => e
     puts "Warning: #{file_path}: #{e.message}"
-  end
-end
-
-if target.name == 'Legado'
-  widget_target = project.targets.find { |t| t.name == 'LegadoWidget' || t.name == 'Widget' }
-  if widget_target.nil?
-    puts "No widget target found, skipping widget files"
   end
 end
 

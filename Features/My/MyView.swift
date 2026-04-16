@@ -93,7 +93,7 @@ struct MyView: View {
 
             Section("主题与外观") {
                 NavigationLink("主题设置") {
-                    ThemeSettingsView()
+                    AppThemeSettingsView()
                 }
                 
                 NavigationLink("封面设置") {

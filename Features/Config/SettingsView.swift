@@ -36,7 +36,7 @@ struct SettingsLegacyView: View {
                     }
                     
                     NavigationLink("主题") {
-                        ThemeSettingsView()
+                        AppThemeSettingsView()
                     }
                 }
                 

@@ -198,7 +198,7 @@ struct AboutSectionCard<Content: View>: View {
 }
 
 // MARK: - 主题设置视图
-struct ThemeSettingsView: View {
+struct AppThemeSettingsView: View {
     @AppStorage("app_theme") private var selectedTheme = "system"
     
     var body: some View {
