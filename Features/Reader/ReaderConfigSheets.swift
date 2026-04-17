@@ -30,65 +30,9 @@ struct BgTextConfigSheet: View {
     var body: some View {
         NavigationView {
             List {
-                Section("预设背景") {
-                    ForEach(0..<bgPresets.count, id: \.self) { index in
-                        Button {
-                            bgColorIndex = index
-                            viewModel.backgroundColor = bgPresets[index].color
-                        } label: {
-                            HStack {
-                                Circle()
-                                    .fill(bgPresets[index].color)
-                                    .frame(width: 28, height: 28)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                                    )
-                                
-                                Text(bgPresets[index].name)
-                                    .foregroundColor(.primary)
-                                
-                                Spacer()
-                                
-                                if bgColorIndex == index {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                Section("文字颜色") {
-                    HStack {
-                        Text("文字色")
-                        Spacer()
-                        
-                        ForEach(["#000000", "#333333", "#666666", "#FFFFFF"], id: \.self) { hex in
-                            Button {
-                                textColorHex = hex
-                                viewModel.textColor = Color(hex: hex) ?? .primary
-                            } label: {
-                                Circle()
-                                    .fill(Color(hex: hex) ?? .primary)
-                                    .frame(width: 24, height: 24)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(textColorHex == hex ? Color.blue : Color.clear, lineWidth: 2)
-                                    )
-                            }
-                        }
-                    }
-                }
-                
-                Section {
-                    Button("恢复默认") {
-                        bgColorIndex = 0
-                        textColorHex = "#000000"
-                        viewModel.backgroundColor = .white
-                        viewModel.textColor = .primary
-                    }
-                }
+                presetBackgroundSection
+                textColorSection
+                resetSection
             }
             .navigationTitle("背景与文字")
             .navigationBarTitleDisplayMode(.inline)
@@ -98,6 +42,68 @@ struct BgTextConfigSheet: View {
                         isPresented = false
                     }
                 }
+            }
+        }
+    }
+    
+    private var presetBackgroundSection: some View {
+        Section("预设背景") {
+            ForEach(0..<bgPresets.count, id: \.self) { index in
+                Button {
+                    bgColorIndex = index
+                    viewModel.backgroundColor = bgPresets[index].color
+                } label: {
+                    HStack {
+                        Circle()
+                            .fill(bgPresets[index].color)
+                            .frame(width: 28, height: 28)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        Text(bgPresets[index].name)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        if bgColorIndex == index {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private var textColorSection: some View {
+        Section("文字颜色") {
+            HStack {
+                Text("文字色")
+                Spacer()
+                ForEach(["#000000", "#333333", "#666666", "#FFFFFF"], id: \.self) { hex in
+                    Button {
+                        textColorHex = hex
+                        viewModel.textColor = Color(hex: hex) ?? .primary
+                    } label: {
+                        Circle()
+                            .fill(Color(hex: hex) ?? .primary)
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                Circle()
+                                    .stroke(textColorHex == hex ? Color.blue : Color.clear, lineWidth: 2)
+                            )
+                    }
+                }
+            }
+        }
+    }
+    
+    private var resetSection: some View {
+        Section {
+            Button("恢复默认") {
+                bgColorIndex = 0
+                textColorHex = "#000000"
+                viewModel.backgroundColor = .white
+                viewModel.textColor = .primary
             }
         }
     }

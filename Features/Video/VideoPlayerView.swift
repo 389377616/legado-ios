@@ -465,11 +465,9 @@ class VideoPlayerState: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     deinit {
-        let observer = timeObserver
-        let playerRef = player
         Task { @MainActor in
-            if let observer = observer {
-                playerRef?.removeTimeObserver(observer)
+            if let observer = timeObserver {
+                player?.removeTimeObserver(observer)
             }
         }
     }
