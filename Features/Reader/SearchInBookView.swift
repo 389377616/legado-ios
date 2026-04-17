@@ -167,7 +167,7 @@ struct SearchInBookView: View {
             }
             
             await MainActor.run {
-                searchResults = results
+                searchResults = Array(results)
                 isSearching = false
             }
         }

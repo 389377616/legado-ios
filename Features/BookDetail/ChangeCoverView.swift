@@ -19,12 +19,20 @@ struct ChangeCoverView: View {
                 Section(header: Text("当前封面")) {
                     HStack {
                         Spacer()
-                        if let coverData = book.cover, let uiImage = UIImage(data: coverData) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 120, height: 160)
-                                .cornerRadius(8)
+                        if let coverUrlStr = book.displayCoverUrl, let url = URL(string: coverUrlStr) {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image.resizable().scaledToFit()
+                                        .frame(width: 120, height: 160).cornerRadius(8)
+                                case .failure(_), .empty:
+                                    Image(systemName: "book.closed")
+                                        .font(.system(size: 60)).foregroundColor(.secondary)
+                                        .frame(width: 120, height: 160)
+                                @unknown default:
+                                    EmptyView()
+                                }
+                            }
                         } else {
                             Image(systemName: "book.closed")
                                 .font(.system(size: 60))
@@ -134,13 +142,22 @@ struct ChangeCoverView: View {
     
     private func applyCover(_ image: UIImage) {
         let imageData = image.jpegData(compressionQuality: 0.8)
-        book.cover = imageData
-        try? CoreDataStack.shared.save()
-        onCoverChanged()
+        // Save image to a temporary file and use the URL
+        if let data = imageData {
+            let fileName = "cover_\(book.bookId).jpg"
+            if let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                let fileURL = docsDir.appendingPathComponent("covers").appendingPathComponent(fileName)
+                try? FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? data.write(to: fileURL)
+                book.customCoverUrl = fileURL.absoluteString
+                try? CoreDataStack.shared.save()
+                onCoverChanged()
+            }
+        }
     }
     
     private func clearCover() {
-        book.cover = nil
+        book.customCoverUrl = nil
         try? CoreDataStack.shared.save()
         onCoverChanged()
     }

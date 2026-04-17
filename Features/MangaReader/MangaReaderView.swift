@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct MangaReaderView: View {
     @StateObject private var viewModel = MangaReaderViewModel()
@@ -119,15 +120,33 @@ class MangaReaderViewModel: ObservableObject {
         
         do {
             let content = try await WebBook.getContent(source: source, book: book, chapter: chapter)
-            let imageURLs = content.imageURLs
+            let extractedURLs = extractImageURLs(from: content)
             
-            if !imageURLs.isEmpty {
-                images = imageURLs
+            if !extractedURLs.isEmpty {
+                images = extractedURLs
                 hasMoreImages = false
             }
         } catch {
             errorMessage = "加载失败: \(error.localizedDescription)"
         }
+    }
+    
+    private func extractImageURLs(from html: String) -> [String] {
+        var urls: [String] = []
+        let pattern = #"src\s*=\s*["']([^"']+)["']"#
+        if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+            let nsString = html as NSString
+            let matches = regex.matches(in: html, options: [], range: NSRange(location: 0, length: nsString.length))
+            for match in matches {
+                if let range = Range(match.range(at: 1), in: html) {
+                    let urlStr = String(html[range])
+                    if urlStr.hasPrefix("http") {
+                        urls.append(urlStr)
+                    }
+                }
+            }
+        }
+        return urls
     }
     
     func loadMoreImages() async {

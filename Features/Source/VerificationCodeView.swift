@@ -146,7 +146,7 @@ struct VerificationCodeWebView: UIViewRepresentable {
         webView.navigationDelegate = context.coordinator
         viewModel.webView = webView
         
-        let loginURL = viewModel.source.loginUrl.isEmpty ? viewModel.source.bookSourceUrl : viewModel.source.loginUrl
+        let loginURL = (viewModel.source.loginUrl?.isEmpty ?? true) ? viewModel.source.bookSourceUrl : viewModel.source.loginUrl!
         if let url = URL(string: loginURL) {
             webView.load(URLRequest(url: url))
         }

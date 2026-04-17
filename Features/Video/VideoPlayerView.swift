@@ -291,7 +291,7 @@ struct VideoPlayerView: View {
     }
 
     private func loadChapter(_ chapter: BookChapter) {
-        guard let urlString = chapter.chapterUrl, let url = URL(string: urlString) else { return }
+        guard !chapter.chapterUrl.isEmpty, let url = URL(string: chapter.chapterUrl) else { return }
         playerState.load(url: url)
         playerState.currentChapterIndex = Int(chapter.index)
     }
@@ -329,12 +329,16 @@ struct VideoProgressView: UIViewRepresentable {
         }
 
         @objc func onSliderChanged(_ slider: UISlider) {
-            playerState.isSeeking = true
+            Task { @MainActor in
+                playerState.isSeeking = true
+            }
         }
 
         @objc func onSliderReleased(_ slider: UISlider) {
-            playerState.seekToProgress(Double(slider.value))
-            playerState.isSeeking = false
+            Task { @MainActor in
+                playerState.seekToProgress(Double(slider.value))
+                playerState.isSeeking = false
+            }
         }
     }
 }
@@ -461,8 +465,12 @@ class VideoPlayerState: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     deinit {
-        if let observer = timeObserver {
-            player?.removeTimeObserver(observer)
+        let observer = timeObserver
+        let playerRef = player
+        Task { @MainActor in
+            if let observer = observer {
+                playerRef?.removeTimeObserver(observer)
+            }
         }
     }
 }

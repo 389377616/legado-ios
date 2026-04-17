@@ -257,7 +257,7 @@ class CodeTextView: UITextView {
         setupLineNumberView()
     }
 
-    override func keyCommands() -> [UIKeyCommand]? {
+    @objc override func keyCommands() -> [UIKeyCommand]? {
         return [
             UIKeyCommand(input: "z", modifierFlags: .command, action: #selector(handleUndo)),
             UIKeyCommand(input: "z", modifierFlags: [.command, .shift], action: #selector(handleRedo)),
