@@ -21,7 +21,7 @@ class HorizontalPageDelegate: PageDelegate {
         setBitmap()
     }
     
-    func setBitmap() {
+    override func setBitmap() {
         switch mDirection {
         case .prev:
             prevRecorder.setImage(prevPage.screenshot())
@@ -50,7 +50,7 @@ class HorizontalPageDelegate: PageDelegate {
         case .moved:
             onScroll(event: event, view: view)
         case .ended, .cancelled:
-            onAnimStart(readView?.defaultAnimationSpeed ?? 300)
+            onAnimStart(animationSpeed: readView?.defaultAnimationSpeed ?? 300)
         default:
             break
         }
@@ -107,7 +107,7 @@ class HorizontalPageDelegate: PageDelegate {
         }
     }
     
-    override func nextPageByAnim(_ animationSpeed: Int) {
+    override func nextPageByAnim(animationSpeed: Int) {
         abortAnim()
         if !hasNext() { return }
         setDirection(.next)
@@ -118,15 +118,15 @@ class HorizontalPageDelegate: PageDelegate {
             y = 1
         }
         readView?.setStartPoint(viewWidth * 0.9, y, anim: false)
-        onAnimStart(animationSpeed)
+        onAnimStart(animationSpeed: animationSpeed)
     }
     
-    override func prevPageByAnim(_ animationSpeed: Int) {
+    override func prevPageByAnim(animationSpeed: Int) {
         abortAnim()
         if !hasPrev() { return }
         setDirection(.prev)
         readView?.setStartPoint(0, viewHeight, anim: false)
-        onAnimStart(animationSpeed)
+        onAnimStart(animationSpeed: animationSpeed)
     }
     
     override func onDestroy() {

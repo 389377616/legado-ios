@@ -331,7 +331,7 @@ class EPUBParser {
         } else {
             var durIndex = 0
             
-            parseFirstPage(
+            try parseFirstPage(
                 chapters: &chapters,
                 spine: spine,
                 manifest: manifest,
@@ -638,7 +638,6 @@ class EPUBParser {
             let imgs = try combinedElements.select("img").array()
             for img in imgs {
                 let src = try img.attr("src")
-                try img.clearAttributes()
                 try img.attr("src", src)
             }
             
@@ -651,7 +650,7 @@ class EPUBParser {
             }
         } catch {}
         
-        let html = elements.map { try? $0.outerHtml() ?? "" }.joined()
+        let html = elements.compactMap { try? $0.outerHtml() }.joined()
         return HTMLToTextConverter.formatKeepImg(html: html, baseURL: book.epubDirectory)
     }
     
@@ -675,24 +674,28 @@ class EPUBParser {
     ) -> Element {
         if resource.href.contains("titlepage.xhtml") || resource.href.contains("cover") {
             do {
-                return try SwiftSoup.parseBodyFragment("<img src=\"cover.jpeg\" />").body()
-            } catch {
-                return createEmptyBody()
-            }
+                if let body = try SwiftSoup.parseBodyFragment("<img src=\"cover.jpeg\" />").body() {
+                    return body
+                }
+            } catch {}
+            return createEmptyBody()
         }
         
         guard FileManager.default.fileExists(atPath: resource.absolutePath.path) else {
             do {
-                return try SwiftSoup.parseBodyFragment("").body()
-            } catch {
-                return createEmptyBody()
-            }
+                if let body = try SwiftSoup.parseBodyFragment("").body() {
+                    return body
+                }
+            } catch {}
+            return createEmptyBody()
         }
         
         do {
             let htmlContent = try String(contentsOf: resource.absolutePath, encoding: .utf8)
             let doc = try SwiftSoup.parse(htmlContent)
-            var bodyElement = try doc.body()
+            guard var bodyElement = try doc.body() else {
+                return createEmptyBody()
+            }
             
             try bodyElement.select("script").remove()
             try bodyElement.select("style").remove()
@@ -701,8 +704,7 @@ class EPUBParser {
             let originalBodyString = bodyString
             
             if let startId = startFragmentId, !startId.isEmpty {
-                let startElement = try bodyElement.getElementById(startId)
-                if let startElement = startElement {
+                if let startElement = try bodyElement.getElementById(startId) {
                     let startOuterHtml = try startElement.outerHtml()
                     let tagStart = startOuterHtml.substringBefore("\n")
                     if let range = bodyString.range(of: tagStart) {
@@ -712,8 +714,7 @@ class EPUBParser {
             }
             
             if let endId = endFragmentId, !endId.isEmpty, endId != startFragmentId {
-                let endElement = try bodyElement.getElementById(endId)
-                if let endElement = endElement {
+                if let endElement = try bodyElement.getElementById(endId) {
                     let endOuterHtml = try endElement.outerHtml()
                     let tagStart = endOuterHtml.substringBefore("\n")
                     if let range = bodyString.range(of: tagStart) {
@@ -724,7 +725,9 @@ class EPUBParser {
             
             if bodyString != originalBodyString {
                 let newDoc = try SwiftSoup.parse(bodyString)
-                bodyElement = try newDoc.body()
+                if let newBody = try newDoc.body() {
+                    bodyElement = newBody
+                }
             }
             
             if delHTag {
@@ -757,12 +760,8 @@ class EPUBParser {
     }
     
     private static func createEmptyBody() -> Element {
-        do {
-            return try SwiftSoup.parseBodyFragment("").body()
-        } catch {
-            let doc = try! SwiftSoup.parse("<body></body>")
-            return try! doc.body()
-        }
+        let doc = try! SwiftSoup.parse("<body></body>")
+        return try! doc.body()!
     }
     
     static func getImage(book: EPUBBook, href: String) -> Data? {
@@ -814,7 +813,7 @@ class EPUBParser {
     }
 }
 
-private struct ManifestItem {
+fileprivate struct ManifestItem {
     let id: String
     let href: String
     let mediaType: String

@@ -178,4 +178,20 @@ struct TextLayoutLine {
     let baseline: CGFloat
     let glyphRange: NSRange
     let charRange: NSRange
+    
+    init(text: String, rect: CGRect, baseline: CGFloat, glyphRange: NSRange, charRange: NSRange) {
+        self.text = text
+        self.rect = rect
+        self.baseline = baseline
+        self.glyphRange = glyphRange
+        self.charRange = charRange
+    }
+    
+    init(text: String, start: Int, end: Int, width: CGFloat) {
+        self.text = text
+        self.rect = CGRect(x: 0, y: 0, width: width, height: 0)
+        self.baseline = 0
+        self.glyphRange = NSRange(location: 0, length: end - start)
+        self.charRange = NSRange(location: start, length: end - start)
+    }
 }

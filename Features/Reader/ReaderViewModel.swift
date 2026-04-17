@@ -10,7 +10,7 @@ import SwiftUI
 import CoreData
 
 @MainActor
-class ReaderViewModel: ObservableObject, ReadBookCallBack {
+class ReaderViewModel: ObservableObject, ReadViewCallBack {
     private let readBook = ReadBook.shared
     
     // MARK: - ReadBookCallBack 协议实现
@@ -31,6 +31,15 @@ class ReaderViewModel: ObservableObject, ReadBookCallBack {
     
     func upPageAnim() {
     }
+    
+    // MARK: - ReadViewCallBack 协议实现
+    func showActionMenu() {}
+    func hideActionMenu() {}
+    func addBookmark() {}
+    func showTextActionMenu() {}
+    func screenOffTimerStart() {}
+    func upSystemUiVisibility() {}
+    func autoPageStop() {}
     
     // MARK: - Published 属性
     @Published var chapterContent: String?

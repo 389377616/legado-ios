@@ -6,10 +6,10 @@ struct SearchInBookView: View {
     
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
-    @State private var searchResults: [SearchResult] = []
+    @State private var searchResults: [InBookSearchResult] = []
     @State private var isSearching = false
     
-    struct SearchResult: Identifiable {
+    struct InBookSearchResult: Identifiable {
         let id = UUID()
         let chapterIndex: Int
         let chapterTitle: String
@@ -133,7 +133,7 @@ struct SearchInBookView: View {
                 return
             }
             
-            var results: [SearchResult] = []
+            var results: [InBookSearchResult] = []
             let searchLower = searchText.lowercased()
             
             for chapter in chapters {
@@ -149,7 +149,7 @@ struct SearchInBookView: View {
                     
                     let matchedText = String(content[start..<end])
                     
-                    results.append(SearchResult(
+                    results.append(InBookSearchResult(
                         chapterIndex: Int(chapter.index),
                         chapterTitle: chapter.title ?? "",
                         lineNumber: lineNumber,
@@ -186,7 +186,7 @@ struct SearchInBookView: View {
         return result
     }
     
-    private func jumpToResult(_ result: SearchResult) {
+    private func jumpToResult(_ result: InBookSearchResult) {
         NotificationCenter.default.post(
             name: Notification.Name("JumpToChapter"),
             object: nil,

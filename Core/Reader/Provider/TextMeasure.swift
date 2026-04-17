@@ -57,7 +57,7 @@ class TextMeasure {
         
         for i in codePoints.indices {
             let codePoint = codePoints[i]
-            let width = measureCodePoint(codePoint)
+            let width = measureCodePoint(codePoint: codePoint)
             widths[i] = width
             if width == -1 {
                 if needMeasureCodePoints == nil {
@@ -73,10 +73,10 @@ class TextMeasure {
         }
         
         if let needMeasure = needMeasureCodePoints, !needMeasure.isEmpty {
-            measureCodePoints(Array(needMeasure))
+            measureCodePoints(codePoints: Array(needMeasure))
             for i in codePoints.indices {
                 if widths[i] == -1 {
-                    widths[i] = measureCodePoint(codePoints[i])
+                    widths[i] = measureCodePoint(codePoint: codePoints[i])
                 }
             }
         }
@@ -91,7 +91,7 @@ class TextMeasure {
         
         for i in codePoints.indices {
             let codePoint = codePoints[i]
-            let width = measureCodePoint(codePoint)
+            let width = measureCodePoint(codePoint: codePoint)
             if width == -1 {
                 if needMeasureCodePoints == nil {
                     needMeasureCodePoints = []
@@ -103,9 +103,9 @@ class TextMeasure {
         }
         
         if let needMeasure = needMeasureCodePoints, !needMeasure.isEmpty {
-            measureCodePoints(Array(Set(needMeasure)))
+            measureCodePoints(codePoints: Array(Set(needMeasure)))
             for i in needMeasure.indices {
-                textWidth += measureCodePoint(needMeasure[i])
+                textWidth += measureCodePoint(codePoint: needMeasure[i])
             }
         }
         

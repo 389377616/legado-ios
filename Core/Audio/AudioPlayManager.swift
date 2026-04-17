@@ -26,16 +26,12 @@ class AudioPlayManager: ObservableObject {
         setupRemoteCommandCenter()
     }
     
-    nonisolated deinit {
-        let player = self.player
-        let observer = self.timeObserver
-        Task { @MainActor in
-            if let observer = observer {
-                player?.removeTimeObserver(observer)
-            }
-            player?.pause()
-            try? AVAudioSession.sharedInstance().setActive(false)
+    deinit {
+        if let observer = timeObserver {
+            player?.removeTimeObserver(observer)
         }
+        player?.pause()
+        try? AVAudioSession.sharedInstance().setActive(false)
     }
     
     private func setupAudioSession() {
@@ -291,5 +287,11 @@ enum AudioError: LocalizedError {
         case .invalidAudioURL: return "无效的音频地址"
         case .playbackFailed: return "播放失败"
         }
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

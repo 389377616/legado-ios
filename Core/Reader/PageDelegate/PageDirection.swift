@@ -47,7 +47,7 @@ protocol ReadViewProtocol: AnyObject {
     func getCurVisiblePage() -> TextPage
     func isLongScreenShot() -> Bool
     
-    var callBack: ReadBookCallBack? { get }
+    var callBack: ReadViewCallBack? { get }
 }
 
 /// Canvas 记录器协议

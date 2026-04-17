@@ -85,15 +85,6 @@ class ScrollPageDelegate: PageDelegate {
         }
     }
     
-    override func computeScroll() {
-        if computeScrollOffset() {
-            readView?.setTouchPoint(scrollerCurrX, scrollerCurrY, anim: false)
-        } else if isStarted {
-            onAnimStop()
-            stopScroll()
-        }
-    }
-    
     override func onDestroy() {
         super.onDestroy()
     }
@@ -111,7 +102,7 @@ class ScrollPageDelegate: PageDelegate {
         }
     }
     
-    override func nextPageByAnim(_ animationSpeed: Int) {
+    override func nextPageByAnim(animationSpeed: Int) {
         if readView?.isAbortAnim == true {
             readView?.isAbortAnim = false
             return
@@ -124,7 +115,7 @@ class ScrollPageDelegate: PageDelegate {
         startScroll(startX: 0, startY: 0, dx: 0, dy: calcNextPageOffset(), animationSpeed: animationSpeed)
     }
     
-    override func prevPageByAnim(_ animationSpeed: Int) {
+    override func prevPageByAnim(animationSpeed: Int) {
         if readView?.isAbortAnim == true {
             readView?.isAbortAnim = false
             return

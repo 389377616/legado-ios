@@ -17,7 +17,7 @@ protocol ReadViewCallBack: ReadBookCallBack {
 /// 原版路径: app/src/main/java/io/legado/app/ui/book/read/page/ReadView.kt
 class ReadView: UIView, ReadViewProtocol {
     
-    weak var callBack: ReadBookCallBack?
+    weak var callBack: ReadViewCallBack?
     var pageFactory: TextPageFactory?
     var pageDelegate: PageDelegate?
     

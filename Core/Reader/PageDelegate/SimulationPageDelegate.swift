@@ -271,7 +271,7 @@ class SimulationPageDelegate: HorizontalPageDelegate {
         
         context.saveGState()
         context.addPath(mPath0.cgPath)
-        context.clip(using: .evenOddRule)
+        context.clip(using: .evenOdd)
         bitmap.draw(in: CGRect(x: 0, y: 0, width: viewWidth, height: viewHeight))
         context.restoreGState()
     }
@@ -344,7 +344,7 @@ class SimulationPageDelegate: HorizontalPageDelegate {
         
         context.saveGState()
         context.addPath(mPath0.cgPath)
-        context.clip(using: .evenOddRule)
+        context.clip(using: .evenOdd)
         context.addPath(mPath1.cgPath)
         context.clip()
         

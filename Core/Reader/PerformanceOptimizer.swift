@@ -51,7 +51,7 @@ class PerformanceOptimizer {
                 chapter: chapter,
                 position: Int(chapter.index),
                 title: chapter.title,
-                chaptersSize: book.totalChapterNum,
+                chaptersSize: Int(book.totalChapterNum),
                 sameTitleRemoved: false,
                 isVip: chapter.isVIP,
                 isPay: false,

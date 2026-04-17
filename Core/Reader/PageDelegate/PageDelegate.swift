@@ -188,9 +188,9 @@ class PageDelegate {
         if isRunning { return }
         switch direction {
         case .next:
-            nextPageByAnim(100)
+            nextPageByAnim(animationSpeed: 100)
         case .prev:
-            prevPageByAnim(100)
+            prevPageByAnim(animationSpeed: 100)
         case .none:
             return
         }
