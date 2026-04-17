@@ -47,8 +47,8 @@ class SimulationPageUIView: UIView {
     private var animationProgress: CGFloat = 0
     private var animationDirection: Bool = true
     
-    private var backgroundColor: UIColor = .white
-    private var textColor: UIColor = .black
+    private var pageBackgroundColor: UIColor = .white
+    private var pageTextColor: UIColor = .black
     private var fontSize: CGFloat = 18
     
     private var shadowLayer: CALayer?
@@ -83,8 +83,8 @@ class SimulationPageUIView: UIView {
         textView.isEditable = false
         textView.isScrollEnabled = true
         textView.showsVerticalScrollIndicator = false
-        textView.backgroundColor = backgroundColor
-        textView.textColor = textColor
+        textView.backgroundColor = pageBackgroundColor
+        textView.textColor = pageTextColor
         textView.font = UIFont.systemFont(ofSize: fontSize)
         textView.textContainerInset = UIEdgeInsets(top: 20, left: 16, bottom: 20, right: 16)
         return textView
@@ -122,12 +122,12 @@ class SimulationPageUIView: UIView {
     }
     
     func updateTheme(backgroundColor: Color, textColor: Color, fontSize: CGFloat) {
-        self.backgroundColor = UIColor(backgroundColor)
-        self.textColor = UIColor(textColor)
+        self.pageBackgroundColor = UIColor(backgroundColor)
+        self.pageTextColor = UIColor(textColor)
         self.fontSize = fontSize
         
-        currentPageView?.backgroundColor = self.backgroundColor
-        currentPageView?.textColor = self.textColor
+        currentPageView?.backgroundColor = self.pageBackgroundColor
+        currentPageView?.textColor = self.pageTextColor
         currentPageView?.font = UIFont.systemFont(ofSize: fontSize)
     }
     
@@ -219,7 +219,7 @@ class SimulationPageUIView: UIView {
         shadowLayer.frame = bounds
         shadowLayer.shadowPath = shadowPath.cgPath
         shadowLayer.shadowColor = UIColor.black.cgColor
-        shadowLayer.shadowOpacity = 0.3 * animationProgress
+        shadowLayer.shadowOpacity = Float(0.3 * animationProgress)
         shadowLayer.shadowRadius = 5
         shadowLayer.shadowOffset = CGSize(width: -3, height: 0)
         
@@ -314,8 +314,10 @@ extension SimulationPageView {
         }
         
         func updatePageIndex(_ index: Int) {
-            parent.currentPage = index
-            parent.viewModel.currentPageIndex = index
+            Task { @MainActor in
+                parent.currentPage = index
+                parent.viewModel.currentPageIndex = index
+            }
         }
     }
 }

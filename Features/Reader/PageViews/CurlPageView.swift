@@ -108,8 +108,10 @@ extension CurlPageView {
             if completed,
                let visibleVC = pageViewController.viewControllers?.first,
                let index = index(of: visibleVC) {
-                parent.currentPage = index
-                parent.viewModel.currentPageIndex = index
+                Task { @MainActor in
+                    parent.currentPage = index
+                    parent.viewModel.currentPageIndex = index
+                }
             }
         }
         

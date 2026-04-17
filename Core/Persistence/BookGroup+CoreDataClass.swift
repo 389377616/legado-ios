@@ -77,3 +77,7 @@ extension BookGroup {
         self.show = form.show
     }
 }
+
+extension BookGroup: Identifiable {
+    public var id: Int64 { groupId }
+}

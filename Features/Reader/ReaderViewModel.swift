@@ -19,7 +19,8 @@ class ReaderViewModel: ObservableObject, ReadViewCallBack {
         prevTextChapter = readBook.prevTextChapter
         nextTextChapter = readBook.nextTextChapter
         
-        if let textChapter = curTextChapter, let pages = textChapter.pages {
+        if let textChapter = curTextChapter {
+            let pages = textChapter.pages
             totalPages = pages.count
         }
     }
@@ -390,7 +391,7 @@ class ReaderViewModel: ObservableObject, ReadViewCallBack {
     
     func nextChapter() async {
         guard currentChapterIndex < totalChapters - 1 else { return }
-        readBook.moveToNextChapter(true, upContentInPlace: false)
+        readBook.moveToNextChapter(true, false)
         currentChapterIndex = readBook.durChapterIndex
         currentChapter = chapters[safe: currentChapterIndex]
         saveProgress()

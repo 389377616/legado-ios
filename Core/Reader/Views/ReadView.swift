@@ -127,7 +127,7 @@ class ReadView: UIView, ReadViewProtocol {
         callBack?.screenOffTimerStart()
         
         if isTextSelected {
-            curPage.cancelSelect()
+            curPage.cancelSelect(false)
             isTextSelected = false
             pressOnTextSelected = true
         } else {
@@ -283,9 +283,9 @@ class ReadView: UIView, ReadViewProtocol {
         case 0:
             callBack?.showActionMenu()
         case 1:
-            pageDelegate?.nextPageByAnim(defaultAnimationSpeed)
+            pageDelegate?.nextPageByAnim(animationSpeed: defaultAnimationSpeed)
         case 2:
-            pageDelegate?.prevPageByAnim(defaultAnimationSpeed)
+            pageDelegate?.prevPageByAnim(animationSpeed: defaultAnimationSpeed)
         case 3:
             ReadBook.shared.moveToNextChapter(true, false)
         case 4:
@@ -349,12 +349,12 @@ class ReadView: UIView, ReadViewProtocol {
         switch direction {
         case .prev:
             if pageFactory?.hasPrev() == true {
-                pageFactory?.moveToPrev()
+                pageFactory?.moveToPrev(upContent: true)
                 upContent()
             }
         case .next:
             if pageFactory?.hasNext() == true {
-                pageFactory?.moveToNext()
+                pageFactory?.moveToNext(upContent: true)
                 upContent()
             }
         case .none:

@@ -247,10 +247,10 @@ struct BookAPI {
     
     private static func encodeBook(_ book: Book) -> CodableValue {
         var dict: [String: CodableValue] = [:]
-        dict["bookUrl"] = .string(book.bookUrl ?? "")
-        dict["tocUrl"] = .string(book.tocUrl ?? "")
-        dict["name"] = .string(book.name ?? "")
-        dict["author"] = .string(book.author ?? "")
+        dict["bookUrl"] = .string(book.bookUrl)
+        dict["tocUrl"] = .string(book.tocUrl)
+        dict["name"] = .string(book.name)
+        dict["author"] = .string(book.author)
         dict["kind"] = .string(book.kind ?? "")
         dict["intro"] = .string(book.intro ?? "")
         dict["coverUrl"] = .string(book.coverUrl ?? "")

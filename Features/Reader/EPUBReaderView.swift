@@ -75,6 +75,8 @@ struct EPUBReaderView: UIViewRepresentable {
         context.coordinator.lineSpacing = lineSpacing
         context.coordinator.textColor = textColor
         context.coordinator.backgroundColor = backgroundColor
+        context.coordinator.delRubyTag = delRubyTag
+        context.coordinator.delHTag = delHTag
         context.coordinator.customCSS = customCSS
         
         if webView.url != htmlURL {
@@ -89,6 +91,8 @@ struct EPUBReaderView: UIViewRepresentable {
             lineSpacing: lineSpacing,
             textColor: textColor,
             backgroundColor: backgroundColor,
+            delRubyTag: delRubyTag,
+            delHTag: delHTag,
             customCSS: customCSS
         )
     }
@@ -99,6 +103,8 @@ struct EPUBReaderView: UIViewRepresentable {
         var lineSpacing: CGFloat
         var textColor: Color
         var backgroundColor: Color
+        var delRubyTag: Bool
+        var delHTag: Bool
         var customCSS: String?
         
         init(
@@ -107,6 +113,8 @@ struct EPUBReaderView: UIViewRepresentable {
             lineSpacing: CGFloat,
             textColor: Color,
             backgroundColor: Color,
+            delRubyTag: Bool,
+            delHTag: Bool,
             customCSS: String?
         ) {
             self.onTap = onTap
@@ -114,6 +122,8 @@ struct EPUBReaderView: UIViewRepresentable {
             self.lineSpacing = lineSpacing
             self.textColor = textColor
             self.backgroundColor = backgroundColor
+            self.delRubyTag = delRubyTag
+            self.delHTag = delHTag
             self.customCSS = customCSS
         }
         

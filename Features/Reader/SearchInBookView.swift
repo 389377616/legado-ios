@@ -166,8 +166,9 @@ struct SearchInBookView: View {
                 if results.count >= 100 { break }
             }
             
+            let finalResults = results
             await MainActor.run {
-                searchResults = Array(results)
+                searchResults = finalResults
                 isSearching = false
             }
         }

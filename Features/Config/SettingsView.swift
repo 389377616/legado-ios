@@ -32,7 +32,7 @@ struct SettingsLegacyView: View {
 
                 Section(header: Text("阅读")) {
                     NavigationLink("阅读设置") {
-                        ReaderSettingsFullView()
+                        ReaderSettingsFullView(viewModel: ReaderViewModel(), isPresented: .constant(false))
                     }
                     
                     NavigationLink("主题") {

@@ -13,6 +13,8 @@ import CoreData
 @MainActor
 final class ChapterCacheManager: ObservableObject {
     
+    static let shared = ChapterCacheManager()
+    
     /// 预加载前后章节数（默认前后各 3 章）
     private let preloadCount: Int = 3
     

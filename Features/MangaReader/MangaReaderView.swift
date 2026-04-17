@@ -213,3 +213,11 @@ private extension Array {
         indices.contains(index) ? self[index] : nil
     }
 }
+
+private extension String {
+    var imageURLs: [String] {
+        components(separatedBy: CharacterSet(charactersIn: "\n,\r\t "))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+}

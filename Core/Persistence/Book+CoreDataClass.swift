@@ -217,3 +217,7 @@ extension Book {
         return book
     }
 }
+
+extension Book: Identifiable {
+    public var id: UUID { bookId }
+}

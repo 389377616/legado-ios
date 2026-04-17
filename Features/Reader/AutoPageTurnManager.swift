@@ -59,6 +59,10 @@ class AutoPageTurnManager: ObservableObject {
     @Published private(set) var state: AutoPageTurnState = .stopped
     @Published private(set) var progress: Double = 0 // 0.0 - 1.0
     @Published private(set) var remainingSeconds: Int = 0
+
+    var isActive: Bool {
+        state.isRunning || state.isPaused
+    }
     
     // MARK: - 配置
     

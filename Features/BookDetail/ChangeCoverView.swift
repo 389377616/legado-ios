@@ -167,7 +167,7 @@ struct ChangeCoverView: View {
         
         Task {
             do {
-                let keyword = "\(book.name) \(book.author ?? "") 封面"
+                let keyword = "\(book.name) \(book.author) 封面"
                 let results = try await CoverSearchService.search(keyword: keyword)
                 await MainActor.run {
                     searchResults = results

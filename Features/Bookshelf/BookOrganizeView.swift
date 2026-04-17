@@ -140,7 +140,7 @@ struct BookOrganizeView: View {
     private var groupOrganizeContent: some View {
         List {
             Section {
-                ForEach(viewModel.groups) { group in
+                ForEach(viewModel.groups, id: \.groupId) { group in
                     NavigationLink {
                         GroupDetailOrganizeView(group: group, viewModel: viewModel)
                     } label: {
@@ -227,7 +227,7 @@ struct BookOrganizeView: View {
                 }
 
                 Section("已有分组") {
-                    ForEach(viewModel.groups) { group in
+                    ForEach(viewModel.groups, id: \.groupId) { group in
                         HStack {
                             Text(group.groupName)
                             Spacer()
@@ -276,7 +276,7 @@ struct BookOrganizeView: View {
                     }
                 }
 
-                ForEach(viewModel.groups) { group in
+                ForEach(viewModel.groups, id: \.groupId) { group in
                     Button(action: {
                         viewModel.moveSelectedBooks(toGroup: group.groupId)
                         showingMoveSheet = false
@@ -417,7 +417,7 @@ struct GroupDetailOrganizeView: View {
                 }
             } else {
                 Section {
-                    ForEach(books) { book in
+                    ForEach(books, id: \.bookId) { book in
                         BookOrganizeRow(
                             book: book,
                             isBatchMode: viewModel.isBatchMode,
@@ -614,7 +614,7 @@ final class BookOrganizeViewModel: ObservableObject {
     func cacheSelectedBooks() {
         let selected = books.filter { selectedBookIds.contains($0.bookId) }
         for book in selected {
-            ChapterCacheManager.shared.prefetchChapters(for: book.bookUrl, count: 10)
+            BackgroundCacheService.shared.scheduleCacheTask(for: book)
         }
     }
 
