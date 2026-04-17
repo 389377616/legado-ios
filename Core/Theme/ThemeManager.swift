@@ -22,10 +22,10 @@ class ThemeManager: ObservableObject {
         let accentColor: Color
         let secondaryBackground: Color
         
-        static let `default` = AppTheme(name: "默认白", backgroundColor: .white, textColor: .black, accentColor: .blue, secondaryBackground: Color(.systemGray6))
-        static let dark = AppTheme(name: "夜间黑", backgroundColor: Color(hex: "#1a1a1a") ?? .black, textColor: .white, accentColor: .blue, secondaryBackground: Color(hex: "#2a2a2a") ?? .gray)
-        static let sepia = AppTheme(name: "护眼黄", backgroundColor: Color(hex: "#F5F0E6") ?? .white, textColor: Color(hex: "#3D3D3D") ?? .black, accentColor: .brown, secondaryBackground: Color(hex: "#EBE6DC") ?? .gray)
-        static let green = AppTheme(name: "护眼绿", backgroundColor: Color(hex: "#D9F2D9") ?? .white, textColor: Color(hex: "#2D4A2D") ?? .black, accentColor: .green, secondaryBackground: Color(hex: "#C9E2C9") ?? .gray)
+        static let `default`: AppTheme = AppTheme(name: "默认白", backgroundColor: Color.white, textColor: Color.black, accentColor: Color.blue, secondaryBackground: Color(.systemGray6))
+        static let dark: AppTheme = AppTheme(name: "夜间黑", backgroundColor: Color(red: 0.1, green: 0.1, blue: 0.1), textColor: Color.white, accentColor: Color.blue, secondaryBackground: Color(red: 0.16, green: 0.16, blue: 0.16))
+        static let sepia: AppTheme = AppTheme(name: "护眼黄", backgroundColor: Color(red: 0.96, green: 0.94, blue: 0.9), textColor: Color(red: 0.24, green: 0.24, blue: 0.24), accentColor: Color.brown, secondaryBackground: Color(red: 0.92, green: 0.9, blue: 0.86))
+        static let green: AppTheme = AppTheme(name: "护眼绿", backgroundColor: Color(red: 0.85, green: 0.95, blue: 0.85), textColor: Color(red: 0.18, green: 0.29, blue: 0.18), accentColor: Color.green, secondaryBackground: Color(red: 0.79, green: 0.89, blue: 0.79))
     }
     
     struct CustomColors {

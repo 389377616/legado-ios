@@ -50,7 +50,7 @@ class TextMeasure {
     
     func measureTextSplit(text: String) -> (strings: [String], widths: [CGFloat]) {
         var needMeasureCodePoints: Set<Int>? = nil
-        let codePoints = textToCodePoints(text)
+        let codePoints = textToCodePoints(text: text)
         let size = codePoints.count
         var widths: [CGFloat] = Array(repeating: 0, count: size)
         var stringList: [String] = Array(repeating: "", count: size)
@@ -87,7 +87,7 @@ class TextMeasure {
     func measureText(text: String) -> CGFloat {
         var textWidth: CGFloat = 0
         var needMeasureCodePoints: [Int]? = nil
-        let codePoints = textToCodePoints(text)
+        let codePoints = textToCodePoints(text: text)
         
         for i in codePoints.indices {
             let codePoint = codePoints[i]
@@ -115,7 +115,7 @@ class TextMeasure {
     private func textToCodePoints(text: String) -> [Int] {
         var codePoints: [Int] = []
         for scalar in text.unicodeScalars {
-            codePoints.append(scalar.value)
+            codePoints.append(Int(scalar.value))
         }
         return codePoints
     }

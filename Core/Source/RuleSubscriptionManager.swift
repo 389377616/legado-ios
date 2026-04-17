@@ -185,7 +185,7 @@ class RuleSubscriptionManager: ObservableObject {
         if let array = try? JSONDecoder().decode([ReplaceRuleCodable].self, from: data) {
             for item in array {
                 let request = ReplaceRule.fetchRequest()
-                request.predicate = NSPredicate(format: "id == %lld", item.id)
+                request.predicate = NSPredicate(format: "ruleId == %@", replaceRuleUUID(from: item.id) as CVarArg)
                 if let existing = try? context.fetch(request).first {
                     updateReplaceRule(existing, item)
                 } else {
@@ -198,15 +198,21 @@ class RuleSubscriptionManager: ObservableObject {
     }
 
     private func updateReplaceRule(_ rule: ReplaceRule, _ item: ReplaceRuleCodable) {
-        rule.id = item.id
+        rule.ruleId = replaceRuleUUID(from: item.id)
         rule.name = item.name
-        rule.group = item.group
+        rule.scopeId = item.group
         rule.pattern = item.pattern
         rule.replacement = item.replacement
         rule.isRegex = item.isRegex
-        rule.scope = item.scope
-        rule.isEnabled = item.enabled
+        rule.scope = item.scope ?? "global"
+        rule.enabled = item.enabled
         rule.order = Int32(item.order)
+    }
+
+    private func replaceRuleUUID(from legacyId: Int64) -> UUID {
+        let normalized = UInt64(bitPattern: legacyId)
+        let suffix = String(format: "%012llx", normalized)
+        return UUID(uuidString: "00000000-0000-0000-0000-\(suffix)") ?? UUID()
     }
 
     private func importHttpTTS(_ data: Data) throws {
@@ -250,7 +256,7 @@ class RuleSubscriptionManager: ObservableObject {
     private func updateDictRule(_ rule: DictRule, _ item: DictRuleCodable) {
         rule.name = item.name
         rule.urlRule = item.urlRule
-        rule.showRule = item.showRule
+        rule.showRule = item.showRule ?? ""
         rule.enabled = item.enabled
     }
 

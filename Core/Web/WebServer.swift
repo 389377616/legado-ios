@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CoreData
 
 class WebServer {
     static let shared = WebServer()
@@ -35,10 +36,6 @@ class WebServer {
         
         NotificationCenter.default.post(name: .webServerStateChanged, object: nil)
     }
-}
-
-extension Notification.Name {
-    static let webServerStateChanged = Notification.Name("webServerStateChanged")
 }
 
 // 简单 HTTP 服务器实现

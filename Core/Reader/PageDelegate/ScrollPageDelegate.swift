@@ -47,7 +47,7 @@ class ScrollPageDelegate: PageDelegate {
             lastEventY = point.y
             lastEventTime = time
         case .ended, .cancelled:
-            onAnimStart(readView?.defaultAnimationSpeed ?? 300)
+            onAnimStart(animationSpeed: readView?.defaultAnimationSpeed ?? 300)
         default:
             break
         }

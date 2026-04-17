@@ -32,7 +32,7 @@ struct iPadAdaptiveReaderView: View {
     }
     
     @ViewBuilder
-    private func iPadLandscapeLayout(geometry: GeometryReader.Proxy) -> some View {
+    private func iPadLandscapeLayout(geometry: GeometryProxy) -> some View {
         HStack(spacing: 0) {
             VStack {
                 ChapterListViewCompact(viewModel: viewModel)
@@ -48,12 +48,12 @@ struct iPadAdaptiveReaderView: View {
     }
     
     @ViewBuilder
-    private func iPadSplitViewLayout(geometry: GeometryReader.Proxy) -> some View {
+    private func iPadSplitViewLayout(geometry: GeometryProxy) -> some View {
         ReaderContentArea(viewModel: viewModel, onTap: onTap)
     }
     
     @ViewBuilder
-    private func iPhoneLayout(geometry: GeometryReader.Proxy) -> some View {
+    private func iPhoneLayout(geometry: GeometryProxy) -> some View {
         ReaderContentArea(viewModel: viewModel, onTap: onTap)
     }
 }
@@ -131,9 +131,9 @@ struct iPadLandscapeBookshelf: View {
     var body: some View {
         NavigationView {
             List {
-                ForEach(viewModel.groups, id: \.self) { group in
-                    Section(header: Text(group.name)) {
-                        ForEach(viewModel.booksInGroup(group.id), id: \.bookId) { book in
+                ForEach(viewModel.groups, id: \.groupId) { group in
+                    Section(header: Text(group.groupName)) {
+                        ForEach(viewModel.books.filter { $0.group == group.groupId }, id: \.bookId) { book in
                             NavigationLink(destination: ReaderView(bookId: book.bookId)) {
                                 BookRowCompact(book: book)
                             }
@@ -144,10 +144,16 @@ struct iPadLandscapeBookshelf: View {
             .navigationTitle("书架")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { viewModel.showingAddBook = true }) {
+                    Button(action: { viewModel.showingAddUrl = true }) {
                         Image(systemName: "plus")
                     }
                 }
+            }
+            .sheet(isPresented: $viewModel.showingAddUrl) {
+                AddBookByUrlSheet(viewModel: viewModel)
+            }
+            .task {
+                await viewModel.loadBooks()
             }
             
             Text("选择一本书开始阅读")
@@ -161,25 +167,16 @@ struct BookRowCompact: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            if let cover = book.cover, let uiImage = UIImage(data: cover) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 40, height: 56)
-                    .cornerRadius(4)
-            } else {
-                Image(systemName: "book.closed")
-                    .font(.system(size: 24))
-                    .foregroundColor(.secondary)
-                    .frame(width: 40, height: 56)
-            }
+            BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
+                .frame(width: 40, height: 56)
+                .cornerRadius(4)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(book.name)
                     .font(.system(size: 14, weight: .medium))
                     .lineLimit(1)
                 
-                Text(book.author ?? "未知作者")
+                Text(book.author.isEmpty ? "未知作者" : book.author)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .lineLimit(1)

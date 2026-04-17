@@ -813,7 +813,7 @@ class EPUBParser {
     }
 }
 
-fileprivate struct ManifestItem {
+struct ManifestItem {
     let id: String
     let href: String
     let mediaType: String

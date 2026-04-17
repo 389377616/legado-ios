@@ -263,7 +263,16 @@ class PageDelegate {
 private class EmptyPageView: PageViewProtocol {
     var width: CGFloat { 0 }
     var height: CGFloat { 0 }
+    var textPage: TextPage? { nil }
     func resetPageOffset() {}
     func scroll(_ offset: Int) {}
     func screenshot() -> UIImage? { nil }
+    func onClick(_ x: CGFloat, _ y: CGFloat) -> Bool { false }
+    func longPress(_ x: CGFloat, _ y: CGFloat, callback: (TextPos) -> Void) {}
+    func cancelSelect(_ clearSearchResult: Bool) {}
+    func selectStartMoveIndex(_ pos: TextPos) {}
+    func selectEndMoveIndex(_ pos: TextPos) {}
+    func selectEndMove(x: CGFloat, y: CGFloat) {}
+    func relativePage(_ pos: Int) -> TextPage { .empty }
+    func getLine(_ index: Int) -> TextLine { .empty }
 }

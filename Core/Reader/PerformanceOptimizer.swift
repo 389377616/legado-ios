@@ -108,12 +108,14 @@ class AsyncLayoutManager {
         
         let task = Task {
             do {
-                let layout = TextChapterLayout(
-                    textChapter: textChapter,
-                    textPages: [],
-                    book: book,
-                    bookContent: bookContent
-                )
+                let layout = await MainActor.run {
+                    TextChapterLayout(
+                        textChapter: textChapter,
+                        textPages: [],
+                        book: book,
+                        bookContent: bookContent
+                    )
+                }
                 
                 await layout.startLayout()
                 

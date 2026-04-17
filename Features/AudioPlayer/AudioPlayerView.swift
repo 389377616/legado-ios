@@ -22,107 +22,37 @@ struct AudioPlayerView: View {
     
     private let speedOptions: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
     
+    private var progressBinding: Binding<Double> {
+        Binding(
+            get: { playerManager.currentTime },
+            set: { newValue in
+                Task {
+                    await playerManager.seekTo(newValue)
+                }
+            }
+        )
+    }
+    
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(hex: "#1a1a2e") ?? .black, Color(hex: "#16213e") ?? .black],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            backgroundView
             
             VStack(spacing: 0) {
-                // 顶部导航
-                HStack {
-                    Button { playerManager.stop(); dismiss() } label: {
-                        Image(systemName: "chevron.down").font(.title2).foregroundColor(.white)
-                    }
-                    Spacer()
-                    Button { showingChapterList = true } label: {
-                        Image(systemName: "list.bullet").font(.title2).foregroundColor(.white)
-                    }
-                }
-                .padding()
+                headerBar
                 
                 Spacer()
                 
-                // 封面图
-                BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
-                .frame(width: 200, height: 280)
-                .cornerRadius(12)
-                .shadow(radius: 10)
+                coverView
                 
-                // 书籍信息
-                VStack(spacing: 8) {
-                    Text(book.name).font(.title2).fontWeight(.bold).foregroundColor(.white).lineLimit(2)
-                    Text(book.author).font(.subheadline).foregroundColor(.gray)
-                    Text(playerManager.currentChapter?.title ?? "").font(.caption).foregroundColor(.white.opacity(0.7))
-                }
-                .padding(.top, 24)
+                bookInfoView
                 
                 Spacer()
                 
-                // 进度条
-                VStack(spacing: 8) {
-                    Slider(value: Binding(get: { playerManager.currentTime }, set: { Task { await playerManager.seekTo($0) } }), in: 0...max(1, playerManager.duration))
-                        .accentColor(.white).padding(.horizontal)
-                    HStack {
-                        Text(formatTime(playerManager.currentTime)).font(.caption).foregroundColor(.gray)
-                        Spacer()
-                        Text(formatTime(playerManager.duration)).font(.caption).foregroundColor(.gray)
-                    }.padding(.horizontal)
-                }.padding(.bottom)
+                progressView
                 
-                // 主控制区
-                HStack(spacing: 40) {
-                    Button { Task { await playerManager.prevChapter() } } label: {
-                        Image(systemName: "backward.end.fill").font(.title).foregroundColor(.white)
-                    }.disabled(playerManager.currentChapterIndex <= 0)
-                    
-                    Button { playerManager.seek(by: -15) } label: {
-                        Image(systemName: "gobackward.15").font(.title).foregroundColor(.white)
-                    }
-                    
-                    Button { playerManager.togglePlayPause() } label: {
-                        ZStack {
-                            Circle().fill(Color.white).frame(width: 72, height: 72)
-                            Image(systemName: playerManager.isPlaying ? "pause.fill" : "play.fill").font(.system(size: 32)).foregroundColor(.black)
-                        }
-                    }
-                    
-                    Button { playerManager.seek(by: 15) } label: {
-                        Image(systemName: "goforward.15").font(.title).foregroundColor(.white)
-                    }
-                    
-                    Button { Task { await playerManager.nextChapter() } } label: {
-                        Image(systemName: "forward.end.fill").font(.title).foregroundColor(.white)
-                    }.disabled(playerManager.currentChapterIndex >= playerManager.totalChapters - 1)
-                }
-                .padding(.vertical)
+                playbackControlsView
                 
-                // 底部控制
-                HStack(spacing: 40) {
-                    Button { showingSpeedPicker = true } label: {
-                        VStack {
-                            Image(systemName: "speedometer")
-                            Text("\(playerManager.playbackRate, specifier: "%.2f")x").font(.caption2)
-                        }
-                        .foregroundColor(.white)
-                    }
-                    
-                    Button { showingSleepTimer = true } label: {
-                        VStack {
-                            Image(systemName: "moon.zzz")
-                            if let endTime = sleepEndDate {
-                                Text(formatRemainingTime(until: endTime)).font(.caption2)
-                            } else {
-                                Text("定时").font(.caption2)
-                            }
-                        }
-                        .foregroundColor(.white)
-                    }
-                }
-                .padding(.bottom, 30)
+                bottomControlsView
             }
         }
         .sheet(isPresented: $showingChapterList) {
@@ -143,8 +73,175 @@ struct AudioPlayerView: View {
             Button("关闭定时") { clearSleepTimer() }
             Button("取消", role: .cancel) {}
         }
-        .onAppear { Task { await playerManager.loadBook(book); playerManager.play() } }
+        .onAppear {
+            Task {
+                await playerManager.loadBook(book)
+                playerManager.play()
+            }
+        }
         .onDisappear { playerManager.stop() }
+    }
+
+    private var backgroundView: some View {
+        LinearGradient(
+            colors: [Color(hex: "#1a1a2e") ?? Color.black, Color(hex: "#16213e") ?? Color.black],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
+    }
+
+    private var headerBar: some View {
+        HStack {
+            Button {
+                playerManager.stop()
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.title2)
+                    .foregroundColor(.white)
+            }
+            Spacer()
+            Button {
+                showingChapterList = true
+            } label: {
+                Image(systemName: "list.bullet")
+                    .font(.title2)
+                    .foregroundColor(.white)
+            }
+        }
+        .padding()
+    }
+
+    private var coverView: some View {
+        BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
+            .frame(width: 200, height: 280)
+            .cornerRadius(12)
+            .shadow(radius: 10)
+    }
+
+    private var bookInfoView: some View {
+        VStack(spacing: 8) {
+            Text(book.name)
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .lineLimit(2)
+            Text(book.author)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            Text(playerManager.currentChapter?.title ?? "")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.7))
+        }
+        .padding(.top, 24)
+    }
+
+    private var progressView: some View {
+        VStack(spacing: 8) {
+            Slider(value: progressBinding, in: 0...max(1, playerManager.duration))
+                .accentColor(.white)
+                .padding(.horizontal)
+            HStack {
+                Text(formatTime(playerManager.currentTime))
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                Spacer()
+                Text(formatTime(playerManager.duration))
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+            .padding(.horizontal)
+        }
+        .padding(.bottom)
+    }
+
+    private var playbackControlsView: some View {
+        HStack(spacing: 40) {
+            Button {
+                Task {
+                    await playerManager.prevChapter()
+                }
+            } label: {
+                Image(systemName: "backward.end.fill")
+                    .font(.title)
+                    .foregroundColor(.white)
+            }
+            .disabled(playerManager.currentChapterIndex <= 0)
+
+            Button {
+                playerManager.seek(by: -15)
+            } label: {
+                Image(systemName: "gobackward.15")
+                    .font(.title)
+                    .foregroundColor(.white)
+            }
+
+            Button {
+                playerManager.togglePlayPause()
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 72, height: 72)
+                    Image(systemName: playerManager.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(.black)
+                }
+            }
+
+            Button {
+                playerManager.seek(by: 15)
+            } label: {
+                Image(systemName: "goforward.15")
+                    .font(.title)
+                    .foregroundColor(.white)
+            }
+
+            Button {
+                Task {
+                    await playerManager.nextChapter()
+                }
+            } label: {
+                Image(systemName: "forward.end.fill")
+                    .font(.title)
+                    .foregroundColor(.white)
+            }
+            .disabled(playerManager.currentChapterIndex >= playerManager.totalChapters - 1)
+        }
+        .padding(.vertical)
+    }
+
+    private var bottomControlsView: some View {
+        HStack(spacing: 40) {
+            Button {
+                showingSpeedPicker = true
+            } label: {
+                VStack {
+                    Image(systemName: "speedometer")
+                    Text("\(playerManager.playbackRate, specifier: "%.2f")x")
+                        .font(.caption2)
+                }
+                .foregroundColor(.white)
+            }
+
+            Button {
+                showingSleepTimer = true
+            } label: {
+                VStack {
+                    Image(systemName: "moon.zzz")
+                    if let endTime = sleepEndDate {
+                        Text(formatRemainingTime(until: endTime))
+                            .font(.caption2)
+                    } else {
+                        Text("定时")
+                            .font(.caption2)
+                    }
+                }
+                .foregroundColor(.white)
+            }
+        }
+        .padding(.bottom, 30)
     }
     
     private func formatTime(_ time: Double) -> String {

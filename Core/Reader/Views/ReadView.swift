@@ -28,6 +28,8 @@ class ReadView: UIView, ReadViewProtocol {
     lazy var nextPage: PageViewProtocol = PageView()
     
     let defaultAnimationSpeed = 300
+    var width: CGFloat { bounds.width }
+    var height: CGFloat { bounds.height }
     
     private var pressDown = false
     private var isMove = false

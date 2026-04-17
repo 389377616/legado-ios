@@ -15,20 +15,20 @@ struct AccessibilityModifier: ViewModifier {
     }
 
     func body(content: Content) -> some View {
-        content
-            .accessibilityElement(children: .combine)
-            .applyIf(let: label) { view, label in
-                view.accessibilityLabel(label)
-            }
-            .applyIf(let: hint) { view, hint in
-                view.accessibilityHint(hint)
-            }
-            .applyIf(let: traits) { view, traits in
-                view.accessibilityAddTraits(traits)
-            }
-            .applyIf(let: value) { view, value in
-                view.accessibilityValue(value)
-            }
+        var view = AnyView(content.accessibilityElement(children: .combine))
+        if let label {
+            view = AnyView(view.accessibilityLabel(label))
+        }
+        if let hint {
+            view = AnyView(view.accessibilityHint(hint))
+        }
+        if let traits {
+            view = AnyView(view.accessibilityAddTraits(traits))
+        }
+        if let value {
+            view = AnyView(view.accessibilityValue(value))
+        }
+        return view
     }
 }
 
@@ -66,15 +66,6 @@ extension View {
         let scaledSize = UIFontMetrics.default.scaledValue(for: baseSize)
         let clampedSize = min(scaledSize, maxSize)
         return self.font(.system(size: clampedSize))
-    }
-}
-
-extension View {
-    func applyIf<T>(let value: T?, transform: (Self, T) -> Self) -> Self {
-        if let value = value {
-            return transform(self, value)
-        }
-        return self
     }
 }
 

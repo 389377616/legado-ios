@@ -13,9 +13,18 @@ enum PageDirection: Int {
 protocol PageViewProtocol: AnyObject {
     var width: CGFloat { get }
     var height: CGFloat { get }
+    var textPage: TextPage? { get }
     func resetPageOffset()
     func scroll(_ offset: Int)
     func screenshot() -> UIImage?
+    func onClick(_ x: CGFloat, _ y: CGFloat) -> Bool
+    func longPress(_ x: CGFloat, _ y: CGFloat, callback: (TextPos) -> Void)
+    func cancelSelect(_ clearSearchResult: Bool)
+    func selectStartMoveIndex(_ pos: TextPos)
+    func selectEndMoveIndex(_ pos: TextPos)
+    func selectEndMove(x: CGFloat, y: CGFloat)
+    func relativePage(_ pos: Int) -> TextPage
+    func getLine(_ index: Int) -> TextLine
 }
 
 /// 阅读视图协议
