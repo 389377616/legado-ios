@@ -73,10 +73,12 @@ class FontManager {
     }
     
     func registerCustomFont(from url: URL) -> Bool {
-        guard let fontData = try? Data(contentsOf: url) else { return false }
+        guard let fontData = try? Data(contentsOf: url),
+              let provider = CGDataProvider(data: fontData as CFData) else { return false }
         
+        let font = CGFont(provider)
         var error: Unmanaged<CFError>?
-        let success = CTFontManagerRegisterFontsForData(fontData as CFData, .process, &error)
+        let success = CTFontManagerRegisterGraphicsFont(font, &error)
         
         if success {
             registeredFonts.insert(url.lastPathComponent)
@@ -86,15 +88,18 @@ class FontManager {
         
         if let error = error?.takeRetainedValue() {
             let errorDescription = CFErrorCopyDescription(error)
-            print("Font registration error: \(errorDescription ?? "Unknown")")
+            print("Font registration error: \(errorDescription ?? "Unknown" as CFString)")
         }
         
         return false
     }
     
     func unregisterFont(from url: URL) {
+        guard let fontData = try? Data(contentsOf: url),
+              let provider = CGDataProvider(data: fontData as CFData) else { return }
+        let font = CGFont(provider)
         var error: Unmanaged<CFError>?
-        CTFontManagerUnregisterFontsForURL(url as CFURL, .process, &error)
+        CTFontManagerUnregisterGraphicsFont(font, &error)
         registeredFonts.remove(url.lastPathComponent)
         fontCache.removeAll()
     }

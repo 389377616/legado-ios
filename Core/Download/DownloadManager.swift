@@ -82,7 +82,7 @@ class DownloadManager: ObservableObject {
             try FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
             
             let fileURL = cacheDir.appendingPathComponent("\(chapter.chapterId.uuidString).txt")
-            try content.content.write(to: fileURL, atomically: true, encoding: .utf8)
+            try content.write(to: fileURL, atomically: true, encoding: .utf8)
             
             // 更新章节
             chapter.cachePath = fileURL.path

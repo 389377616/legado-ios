@@ -106,7 +106,7 @@ class CoverPageDelegate: HorizontalPageDelegate {
         }
     }
     
-    override func onAnimStart(_ animationSpeed: Int) {
+    override func onAnimStart(animationSpeed: Int) {
         var distanceX: CGFloat = 0
         
         switch mDirection {

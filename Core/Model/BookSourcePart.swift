@@ -62,7 +62,7 @@ struct BookSourcePart: Codable, Identifiable {
     }
 
     struct BookInfoRulePart: Codable {
-        var init: String?
+        var initRule: String?
         var name: String?
         var author: String?
         var intro: String?

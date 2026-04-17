@@ -339,6 +339,10 @@ class ReadView: UIView, ReadViewProtocol {
         touchY -= offset - offset.rounded()
     }
     
+    func invalidate() {
+        setNeedsDisplay()
+    }
+    
     func fillPage(_ direction: PageDirection) {
         switch direction {
         case .prev:

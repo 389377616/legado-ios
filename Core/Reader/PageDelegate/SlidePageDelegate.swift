@@ -5,7 +5,7 @@ import UIKit
 /// 原版路径: app/src/main/java/io/legado/app/ui/book/read/page/delegate/SlidePageDelegate.kt
 class SlidePageDelegate: HorizontalPageDelegate {
     
-    override func onAnimStart(_ animationSpeed: Int) {
+    override func onAnimStart(animationSpeed: Int) {
         var distanceX: CGFloat = 0
         
         switch mDirection {

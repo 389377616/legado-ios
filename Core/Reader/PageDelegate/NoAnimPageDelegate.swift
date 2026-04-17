@@ -5,7 +5,7 @@ import UIKit
 /// 原版路径: app/src/main/java/io/legado/app/ui/book/read/page/delegate/NoAnimPageDelegate.kt
 class NoAnimPageDelegate: HorizontalPageDelegate {
     
-    override func onAnimStart(_ animationSpeed: Int) {
+    override func onAnimStart(animationSpeed: Int) {
         if !isCancel {
             readView?.fillPage(mDirection)
         }

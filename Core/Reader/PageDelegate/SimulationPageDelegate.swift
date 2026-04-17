@@ -14,14 +14,14 @@ class SimulationPageDelegate: HorizontalPageDelegate {
     private let mPath0 = UIBezierPath()
     private let mPath1 = UIBezierPath()
     
-    private let mBezierStart1 = CGPoint.zero
-    private let mBezierControl1 = CGPoint.zero
-    private let mBezierVertex1 = CGPoint.zero
+    private var mBezierStart1 = CGPoint.zero
+    private var mBezierControl1 = CGPoint.zero
+    private var mBezierVertex1 = CGPoint.zero
     private var mBezierEnd1 = CGPoint.zero
     
-    private let mBezierStart2 = CGPoint.zero
-    private let mBezierControl2 = CGPoint.zero
-    private let mBezierVertex2 = CGPoint.zero
+    private var mBezierStart2 = CGPoint.zero
+    private var mBezierControl2 = CGPoint.zero
+    private var mBezierVertex2 = CGPoint.zero
     private var mBezierEnd2 = CGPoint.zero
     
     private var mMiddleX: CGFloat = 0
@@ -98,7 +98,7 @@ class SimulationPageDelegate: HorizontalPageDelegate {
         }
     }
     
-    override func onAnimStart(_ animationSpeed: Int) {
+    override func onAnimStart(animationSpeed: Int) {
         var dx: CGFloat = 0
         var dy: CGFloat = 0
         

@@ -637,8 +637,6 @@ class EPUBParser {
             
             let imgs = try combinedElements.select("img").array()
             for img in imgs {
-                let attrs = try img.attributes()
-                if attrs.size() <= 1 { continue }
                 let src = try img.attr("src")
                 try img.clearAttributes()
                 try img.attr("src", src)
@@ -677,17 +675,17 @@ class EPUBParser {
     ) -> Element {
         if resource.href.contains("titlepage.xhtml") || resource.href.contains("cover") {
             do {
-                return try SwiftSoup.parseBodyFragment("<img src=\"cover.jpeg\" />")
+                return try SwiftSoup.parseBodyFragment("<img src=\"cover.jpeg\" />").body()
             } catch {
-                return Element(Tag("body"), "")
+                return createEmptyBody()
             }
         }
         
         guard FileManager.default.fileExists(atPath: resource.absolutePath.path) else {
             do {
-                return try SwiftSoup.parseBodyFragment("")
+                return try SwiftSoup.parseBodyFragment("").body()
             } catch {
-                return Element(Tag("body"), "")
+                return createEmptyBody()
             }
         }
         
@@ -754,11 +752,16 @@ class EPUBParser {
             return bodyElement
             
         } catch {
-            do {
-                return try SwiftSoup.parseBodyFragment("")
-            } catch {
-                return Element(Tag("body"), "")
-            }
+            return createEmptyBody()
+        }
+    }
+    
+    private static func createEmptyBody() -> Element {
+        do {
+            return try SwiftSoup.parseBodyFragment("").body()
+        } catch {
+            let doc = try! SwiftSoup.parse("<body></body>")
+            return try! doc.body()
         }
     }
     

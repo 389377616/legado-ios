@@ -15,7 +15,7 @@ class ScrollPageDelegate: PageDelegate {
         super.init(readView: readView)
     }
     
-    override func onAnimStart(_ animationSpeed: Int) {
+    override func onAnimStart(animationSpeed: Int) {
         readView?.onScrollAnimStart()
         fling(
             startX: 0, startY: Int(touchY),

@@ -1,96 +1,64 @@
-//
-//  RemoteCommandHandler.swift
-//  Legado-iOS
-//
-//  媒体按钮处理 - 耳机/蓝牙设备媒体按钮
-//  统一管理 MPRemoteCommandCenter
-//
-
 import Foundation
 import MediaPlayer
 
+@MainActor
 class RemoteCommandHandler {
-    static let shared = RemoteCommandHandler()
+    private var audioManager: AudioPlayManager?
     
-    private var audioPlayManager: AudioPlayManager?
-    private var ttsManager: TTSManager?
+    init() {}
     
-    private init() {
+    func configure(with audioManager: AudioPlayManager) {
+        self.audioManager = audioManager
         setupCommands()
-    }
-    
-    func setAudioPlayManager(_ manager: AudioPlayManager?) {
-        self.audioPlayManager = manager
-    }
-    
-    func setTTSManager(_ manager: TTSManager?) {
-        self.ttsManager = manager
     }
     
     private func setupCommands() {
         let commandCenter = MPRemoteCommandCenter.shared()
         
         commandCenter.playCommand.addTarget { [weak self] _ in
-            self?.handlePlay()
+            Task { @MainActor in self?.audioManager?.play() }
             return .success
         }
         
         commandCenter.pauseCommand.addTarget { [weak self] _ in
-            self?.handlePause()
+            Task { @MainActor in self?.audioManager?.pause() }
             return .success
         }
         
         commandCenter.nextTrackCommand.addTarget { [weak self] _ in
-            self?.handleNext()
+            Task { @MainActor in await self?.audioManager?.nextChapter() }
             return .success
         }
         
         commandCenter.previousTrackCommand.addTarget { [weak self] _ in
-            self?.handlePrevious()
+            Task { @MainActor in await self?.audioManager?.prevChapter() }
             return .success
         }
         
-        commandCenter.skipForwardCommand.preferredIntervals = [15, 30]
+        commandCenter.skipForwardCommand.preferredIntervals = [15, 30, 60]
         commandCenter.skipForwardCommand.addTarget { [weak self] event in
             guard let skipEvent = event as? MPSkipIntervalCommandEvent else { return .commandFailed }
-            self?.handleSkipForward(interval: skipEvent.interval)
+            Task { @MainActor in self?.audioManager?.seek(by: skipEvent.interval) }
             return .success
         }
         
-        commandCenter.skipBackwardCommand.preferredIntervals = [15, 30]
+        commandCenter.skipBackwardCommand.preferredIntervals = [15, 30, 60]
         commandCenter.skipBackwardCommand.addTarget { [weak self] event in
             guard let skipEvent = event as? MPSkipIntervalCommandEvent else { return .commandFailed }
-            self?.handleSkipBackward(interval: skipEvent.interval)
+            Task { @MainActor in self?.audioManager?.seek(by: -skipEvent.interval) }
             return .success
         }
     }
     
-    private func handlePlay() {
-        if let audioManager = audioPlayManager, audioManager.isPlaying == false {
-            audioManager.play()
-        } else if let tts = ttsManager, tts.isPlaying == false {
-            tts.play()
-        }
-    }
-    
-    private func handlePause() {
-        audioPlayManager?.pause()
-        ttsManager?.pause()
-    }
-    
-    private func handleNext() {
-        Task { await audioPlayManager?.nextChapter() }
-    }
-    
-    private func handlePrevious() {
-        Task { await audioPlayManager?.prevChapter() }
-    }
-    
-    private func handleSkipForward(interval: TimeInterval) {
-        audioPlayManager?.seek(by: interval)
-    }
-    
-    private func handleSkipBackward(interval: TimeInterval) {
-        audioPlayManager?.seek(by: -interval)
+    func updateNowPlaying(title: String, artist: String, album: String, duration: Double, elapsedTime: Double, rate: Float) {
+        var info: [String: Any] = [
+            MPMediaItemPropertyTitle: title,
+            MPMediaItemPropertyArtist: artist,
+            MPMediaItemPropertyAlbumTitle: album,
+            MPMediaItemPropertyPlaybackDuration: duration,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: elapsedTime,
+            MPNowPlayingInfoPropertyPlaybackRate: rate
+        ]
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 }
