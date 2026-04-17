@@ -589,7 +589,7 @@ class TextChapterLayout {
         
         let textPage = pendingTextPage
         textPage.index = textPages.count
-        textPage.chapterIndex = Int(textChapter.chapter.index)
+        textPage.chapterIndex = Int(textChapter.chapter?.index ?? 0)
         textPage.chapterSize = textChapter.chaptersSize
         textPage.title = textChapter.title
         textPage.doublePage = ChapterProvider.shared.doublePage

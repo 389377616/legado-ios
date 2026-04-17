@@ -1,6 +1,6 @@
 import Foundation
 
-public enum ViewMode: String, Codable, CaseIterable {
+public enum EPUBViewMode: String, Codable, CaseIterable {
     case paged = "readium-paged-on"
     case scroll = "readium-scroll-on"
     
@@ -117,7 +117,7 @@ public enum HyphensMode: String, Codable, CaseIterable {
 
 public struct EPUBPreferences: Codable, Equatable {
     
-    public var view: ViewMode = .paged
+    public var view: EPUBViewMode = .paged
     
     public var columnCount: Int = 1
     public var lineLength: Double?

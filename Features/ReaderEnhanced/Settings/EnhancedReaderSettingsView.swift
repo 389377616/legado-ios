@@ -88,7 +88,7 @@ public struct EnhancedReaderSettingsView: View {
 }
 
 public final class ObservableEPUBPreferences: ObservableObject {
-    @Published var view: ViewMode = .paged
+    @Published var view: EPUBViewMode = .paged
     @Published var columnCount: Int = 1
     @Published var theme: Theme = .neutral
     @Published var fontFamily: FontFamily = .sans
@@ -144,7 +144,7 @@ public struct DisplaySettingsView: View {
         List {
             Section("布局") {
                 Picker("视图模式", selection: $preferences.view) {
-                    ForEach(ViewMode.allCases, id: \.self) { mode in
+                    ForEach(EPUBViewMode.allCases, id: \.self) { mode in
                         Text(mode.displayName).tag(mode)
                     }
                 }

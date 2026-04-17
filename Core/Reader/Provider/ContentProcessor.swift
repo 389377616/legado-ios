@@ -271,6 +271,15 @@ enum ChineseUtils {
 }
 
 enum AppConfig {
+    static var clickActionMC: Int = 0
+    static var clickActionBC: Int = 1
+    static var clickActionBL: Int = 2
+    static var clickActionBR: Int = 1
+    static var clickActionML: Int = 2
+    static var clickActionMR: Int = 1
+    static var clickActionTL: Int = 2
+    static var clickActionTC: Int = 0
+    static var clickActionTR: Int = 1
     static var chineseConverterType: Int {
         return UserDefaults.standard.integer(forKey: "chineseConverterType")
     }

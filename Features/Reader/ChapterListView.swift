@@ -137,5 +137,5 @@ struct ChapterListView: View {
 }
 
 #Preview {
-    ChapterListView(viewModel: ReaderViewModel(), book: Book())
+    ChapterListView(viewModel: ReaderViewModel(), book: Book.create(in: CoreDataStack.shared.viewContext))
 }

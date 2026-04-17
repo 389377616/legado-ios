@@ -12,7 +12,7 @@ import Foundation
 /// 一比一移植自 Android Legado TextChapter 数据类
 /// 用于管理一个章节的所有页面数据
 class TextChapter {
-    let chapter: BookChapter
+    let chapter: BookChapter?
     let position: Int
     let title: String
     let chaptersSize: Int
@@ -26,23 +26,19 @@ class TextChapter {
     
     var isCompleted: Bool = false
     
-    static let empty: TextChapter = {
-        let chapter = TextChapter(
-            chapter: BookChapter(),
-            position: -1,
-            title: "emptyTextChapter",
-            chaptersSize: -1,
-            sameTitleRemoved: false,
-            isVip: false,
-            isPay: false,
-            effectiveReplaceRules: nil
-        )
-        chapter.isCompleted = true
-        return chapter
-    }()
+    static let empty = TextChapter(
+        chapter: nil,
+        position: -1,
+        title: "emptyTextChapter",
+        chaptersSize: -1,
+        sameTitleRemoved: false,
+        isVip: false,
+        isPay: false,
+        effectiveReplaceRules: nil
+    )
     
     init(
-        chapter: BookChapter,
+        chapter: BookChapter?,
         position: Int,
         title: String,
         chaptersSize: Int,

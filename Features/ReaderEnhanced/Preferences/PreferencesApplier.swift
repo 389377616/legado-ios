@@ -67,7 +67,7 @@ public final class PreferencesApplier {
         webView.evaluateJavaScript(js)
     }
     
-    public static func setViewMode(_ mode: ViewMode, to webView: WKWebView) {
+    public static func setViewMode(_ mode: EPUBViewMode, to webView: WKWebView) {
         let js = "document.documentElement.style.setProperty('--USER__view', '\(mode.rawValue)');"
         webView.evaluateJavaScript(js)
     }

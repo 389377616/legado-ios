@@ -86,7 +86,7 @@ struct SearchBar: View {
     }
 }
 
-struct SearchResult: Identifiable {
+struct ContentSearchResult: Identifiable {
     let id = UUID()
     let chapterIndex: Int
     let chapterTitle: String
@@ -98,7 +98,7 @@ struct SearchResult: Identifiable {
 class SearchContentViewModel: ObservableObject {
     @Published var searchText: String = ""
     @Published var isSearching: Bool = false
-    @Published var results: [SearchResult] = []
+    @Published var results: [ContentSearchResult] = []
     @Published var searchHistory: [String] = []
     
     private let book: Book
@@ -136,7 +136,7 @@ class SearchContentViewModel: ObservableObject {
                 let end = content.index(range.upperBound, offsetBy: 30, limitedBy: content.endIndex) ?? content.endIndex
                 let preview = String(content[start..<end])
                 
-                results.append(SearchResult(
+                results.append(ContentSearchResult(
                     chapterIndex: Int(chapter.index),
                     chapterTitle: chapter.title,
                     position: content.distance(from: content.startIndex, to: range.lowerBound),

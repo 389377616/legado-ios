@@ -768,6 +768,6 @@ struct GroupSelectionSheet: View {
 
 #Preview {
     NavigationView {
-        BookDetailView(book: Book())
+        BookDetailView(book: Book.create(in: CoreDataStack.shared.viewContext))
     }
 }

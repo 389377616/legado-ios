@@ -106,23 +106,6 @@ struct BookSourcePart: Codable, Identifiable {
     }
 }
 
-struct BookImportData {
-    var name: String
-    var author: String
-    var bookUrl: String
-    var tocUrl: String
-    var origin: String
-    var originName: String
-    var coverUrl: String?
-    var kind: String?
-    var intro: String?
-    var customTag: String?
-    var type: Int = 0
-    var group: Int64 = 0
-    var charset: String?
-    var variable: String?
-}
-
 struct BookSourceCheckResult {
     let sourceUrl: String
     let sourceName: String

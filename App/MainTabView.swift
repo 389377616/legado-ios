@@ -58,112 +58,11 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - 关于视图
-struct AboutView: View {
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // 应用图标
-                    Image(systemName: "books.vertical")
-                        .font(.system(size: 80))
-                        .foregroundColor(.blue)
-                    
-                    Text("Legado iOS")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    
-                    Text("版本 1.0.0 (Alpha)")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    
-                    Divider()
-                    
-                    // 简介
-                    AboutSectionCard(title: "应用简介") {
-                        Text("""
-                        Legado iOS 是基于 Android 版 Legado（开源阅读）开发的 iOS 原生阅读应用。
-                        
-                        本应用支持自定义书源规则，可以解析网页内容，为广大网络文学爱好者提供一种方便、快捷、舒适的阅读体验。
-                        """)
-                    }
-                    
-                    // 特性
-                    AboutSectionCard(title: "主要特性") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            FeatureRow(icon: "square.grid.2x2", text: "自定义书源规则")
-                            FeatureRow(icon: "magnifyingglass", text: "多书源聚合搜索")
-                            FeatureRow(icon: "books.vertical", text: "本地 TXT/EPUB 支持")
-                            FeatureRow(icon: "text.badge.checkmark", text: "内容替换净化")
-                            FeatureRow(icon: "gearshape", text: "高度定制化阅读")
-                        }
-                    }
-                    
-                    // 技术栈
-                    AboutSectionCard(title: "技术栈") {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("• Swift 5.10+")
-                            Text("• SwiftUI")
-                            Text("• CoreData")
-                            Text("• MVVM 架构")
-                        }
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    }
-                    
-                    // 链接
-                    AboutSectionCard(title: "相关链接") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Link("GitHub 仓库", destination: URL(string: "https://github.com/chrn11/legado-ios")!)
-                                .foregroundColor(.blue)
-                            
-                            Link("Android 原版", destination: URL(string: "https://github.com/gedoor/legado")!)
-                                .foregroundColor(.blue)
-                            
-                            Link("帮助文档", destination: URL(string: "https://www.legado.top/")!)
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    
-                    // 开源协议
-                    AboutSectionCard(title: "开源协议") {
-                        Text("本项目遵循 GPL-3.0 协议。")
-                            .font(.caption)
-                    }
-                    
-                    // 免责声明
-                    AboutSectionCard(title: "免责声明") {
-                        Text("""
-                        本应用仅供学习交流使用，请勿用于商业目的。
-                        
-                        使用本应用时请遵守相关法律法规，尊重版权。
-                        应用本身不提供任何内容，所有内容由书源提供。
-                        """)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                }
-                .padding()
-            }
-            .navigationTitle("关于")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
+// MARK: - 关于视图（占位，实际实现见 Features/Config/AboutView.swift）
+// AboutView 定义在 Features/Config/AboutView.swift 中
 
 // MARK: - 辅助视图
-struct FeatureRow: View {
+struct AboutFeatureRow: View {
     let icon: String
     let text: String
     

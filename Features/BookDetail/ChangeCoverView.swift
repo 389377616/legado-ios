@@ -267,5 +267,5 @@ class CoverSearchService {
 }
 
 #Preview {
-    ChangeCoverView(book: Book(), onCoverChanged: {})
+    ChangeCoverView(book: Book.create(in: CoreDataStack.shared.viewContext), onCoverChanged: {})
 }

@@ -5,7 +5,7 @@ struct ReaderSettingsFullView: View {
     @ObservedObject var viewModel: ReaderViewModel
     @Binding var isPresented: Bool
     
-    @AppStorage("pageAnimation") private var pageAnimation: String = PageAnimationType.cover.rawValue
+    @AppStorage("pageAnimation") private var pageAnimation: Int = PageAnimationType.cover.rawValue
     @AppStorage("leftTapRatio") private var leftTapRatio: Double = 0.3
     @AppStorage("rightTapRatio") private var rightTapRatio: Double = 0.3
     @AppStorage("showHeader") private var showHeader: Bool = true
@@ -25,7 +25,7 @@ struct ReaderSettingsFullView: View {
                     ForEach(pageAnimations, id: \.self) { animation in
                         Button(action: { pageAnimation = animation.rawValue }) {
                             HStack {
-                                Text(animation.displayName)
+                                Text(animation.title)
                                     .foregroundColor(.primary)
                                 
                                 Spacer()
@@ -112,7 +112,7 @@ struct ReaderSettingsFullView: View {
                         Text("字体设置")
                     }
                     
-                    NavigationLink(destination: ThemeSettingsView(viewModel: viewModel, isPresented: $isPresented)) {
+                    NavigationLink(destination: ReaderThemeSettingsView(viewModel: viewModel, isPresented: $isPresented)) {
                         Text("主题设置")
                     }
                     
@@ -154,25 +154,7 @@ struct ReaderSettingsFullView: View {
     }
 }
 
-enum PageAnimationType: String, CaseIterable {
-    case cover = "cover"
-    case simulation = "simulation"
-    case slide = "slide"
-    case scroll = "scroll"
-    case none = "none"
-    
-    var displayName: String {
-        switch self {
-        case .cover: return "覆盖"
-        case .simulation: return "仿真"
-        case .slide: return "滑动"
-        case .scroll: return "滚动"
-        case .none: return "无动画"
-        }
-    }
-}
-
-struct ThemeSettingsView: View {
+struct ReaderThemeSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: ReaderViewModel
     @Binding var isPresented: Bool

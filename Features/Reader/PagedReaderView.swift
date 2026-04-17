@@ -10,7 +10,7 @@ import SwiftUI
 
 struct PagedReaderView: View {
     @ObservedObject var viewModel: ReaderViewModel
-    @AppStorage("pageAnimation") var pageAnimationRaw: String = PageAnimationType.cover.rawValue
+    @AppStorage("pageAnimation") var pageAnimationRaw: Int = PageAnimationType.cover.rawValue
     let onTap: () -> Void
     
     @State private var pages: [String] = []
@@ -210,18 +210,6 @@ struct PagedReaderView: View {
         PageSplitCache.shared.invalidate()
         splitPages()
     }
-}
-
-// MARK: - 翻页动画类型（与 ReaderSettingsFullView.PageAnimation 对齐）
-
-enum PageAnimationType: String, CaseIterable, Identifiable {
-    case cover = "覆盖"
-    case simulation = "仿真"
-    case slide = "滑动"
-    case scroll = "滚动"
-    case none = "无动画"
-    
-    var id: String { self.rawValue }
 }
 
 // MARK: - 无动画翻页

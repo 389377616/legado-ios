@@ -1,7 +1,7 @@
 import UIKit
 
 class TextMeasure {
-    private var font: UIFont
+    private(set) var font: UIFont
     private let chineseCommonWidth: CGFloat
     private var asciiWidths: [CGFloat] = Array(repeating: -1, count: 128)
     private var codePointWidths: [Int: CGFloat] = [:]

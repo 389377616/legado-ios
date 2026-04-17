@@ -238,12 +238,12 @@ struct AboutDetailView: View {
             }
             
             Section("功能特性") {
-                FeatureRow(icon: "books.vertical", text: "自定义书源规则")
-                FeatureRow(icon: "magnifyingglass", text: "多书源聚合搜索")
-                FeatureRow(icon: "book.fill", text: "多种翻页动画")
-                FeatureRow(icon: "speaker.wave.2.fill", text: "在线TTS朗读")
-                FeatureRow(icon: "antenna.radiowaves.left.and.right", text: "RSS订阅管理")
-                FeatureRow(icon: "doc.text.fill", text: "本地TXT/EPUB支持")
+                AboutFeatureRow(icon: "books.vertical", text: "自定义书源规则")
+                AboutFeatureRow(icon: "magnifyingglass", text: "多书源聚合搜索")
+                AboutFeatureRow(icon: "book.fill", text: "多种翻页动画")
+                AboutFeatureRow(icon: "speaker.wave.2.fill", text: "在线TTS朗读")
+                AboutFeatureRow(icon: "antenna.radiowaves.left.and.right", text: "RSS订阅管理")
+                AboutFeatureRow(icon: "doc.text.fill", text: "本地TXT/EPUB支持")
             }
             
             Section("开源协议") {
