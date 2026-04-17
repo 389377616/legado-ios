@@ -8,7 +8,9 @@ class TextMeasure {
     
     init(font: UIFont) {
         self.font = font
-        self.chineseCommonWidth = measureText("一")
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        let size = ("一" as NSString).size(withAttributes: attributes)
+        self.chineseCommonWidth = size.width
     }
     
     private func measureCodePoint(codePoint: Int) -> CGFloat {

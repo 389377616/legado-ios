@@ -502,8 +502,8 @@ final class BookOrganizeViewModel: ObservableObject {
 
     func loadData() async {
         let context = CoreDataStack.shared.viewContext
-        let fetchedBooks: [Book]
-        let fetchedGroups: [BookGroup]
+        var fetchedBooks: [Book] = []
+        var fetchedGroups: [BookGroup] = []
         do {
             fetchedBooks = try await context.perform {
                 let request: NSFetchRequest<Book> = Book.fetchRequest()
@@ -515,10 +515,7 @@ final class BookOrganizeViewModel: ObservableObject {
                 request.sortDescriptors = [NSSortDescriptor(key: "order", ascending: true)]
                 return try context.fetch(request)
             }
-        } catch {
-            fetchedBooks = []
-            fetchedGroups = []
-        }
+        } catch {}
         self.books = fetchedBooks
         self.groups = fetchedGroups
     }

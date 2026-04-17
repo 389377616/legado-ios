@@ -35,7 +35,8 @@ class ZhLayout {
     
     init(text: String, font: UIFont, width: CGFloat, words: [String], widths: [CGFloat], indentSize: Int) {
         self.font = font
-        self.cnCharWidth = measureWidth("我", font: font)
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        self.cnCharWidth = ("我" as NSString).size(withAttributes: attributes).width
         
         lineStart = Array(repeating: 0, count: 10)
         lineWidth = Array(repeating: 0, count: 10)
