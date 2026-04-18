@@ -32,7 +32,6 @@ final class RSSRefreshManager: NSObject {
 
     private override init() {
         super.init()
-        registerBackgroundTaskIfNeeded()
         setupLifecycleObservers()
     }
 
@@ -145,7 +144,7 @@ final class RSSRefreshManager: NSObject {
         timer = nil
     }
 
-    private func registerBackgroundTaskIfNeeded() {
+    func registerBackgroundTaskIfNeeded() {
         guard !hasRegisteredBackgroundTask else { return }
 
         hasRegisteredBackgroundTask = BGTaskScheduler.shared.register(

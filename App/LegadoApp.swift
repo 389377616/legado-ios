@@ -15,6 +15,10 @@ struct LegadoApp: App {
     @State private var importedFileURL: URL?
     @State private var showFileImport = false
     @State private var unsupportedFileError = false
+
+    init() {
+        RSSRefreshManager.shared.registerBackgroundTaskIfNeeded()
+    }
     
     var body: some Scene {
         WindowGroup {
