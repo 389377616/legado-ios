@@ -119,7 +119,13 @@ struct ReaderView: View {
                 ReaderSettingsView(viewModel: viewModel, isPresented: $showingSettings)
             }
             .sheet(isPresented: $showingStyleConfig) {
-                ReaderSettingsView(viewModel: viewModel, isPresented: $showingStyleConfig)
+                if #available(iOS 16.0, *) {
+                    ReadStyleDialog(viewModel: viewModel, isPresented: $showingStyleConfig)
+                        .presentationDetents([.fraction(0.7), .large])
+                        .presentationDragIndicator(.visible)
+                } else {
+                    ReadStyleDialog(viewModel: viewModel, isPresented: $showingStyleConfig)
+                }
             }
             .sheet(isPresented: $showingChapterList) {
                 if let book = book { ChapterListView(viewModel: viewModel, book: book) }
