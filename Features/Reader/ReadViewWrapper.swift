@@ -8,7 +8,7 @@ struct ReadViewWrapper: UIViewRepresentable {
     func makeUIView(context: Context) -> ReadView {
         let readView = ReadView()
         readView.callBack = context.coordinator
-        readView.pageFactory = TextPageFactory(readView: readView)
+        readView.pageFactory = TextPageFactory(dataSource: ReadBook.shared)
         updatePageDelegate(for: readView)
         return readView
     }
@@ -23,7 +23,8 @@ struct ReadViewWrapper: UIViewRepresentable {
     }
     
     private func updatePageDelegate(for readView: ReadView) {
-        let animationType = PageAnimationType(rawValue: viewModel.pageAnimation) ?? .cover
+        let pageAnimValue = viewModel.currentBook?.pageAnim ?? 0
+        let animationType = PageAnimationType(rawValue: pageAnimValue) ?? .cover
         readView.pageDelegate?.onDestroy()
         
         switch animationType {
@@ -64,31 +65,5 @@ struct ReadViewWrapper: UIViewRepresentable {
         func upContent() {}
         func upMenuView() {}
         func upPageAnim() {}
-        
-        func upContent(relativePosition: CGFloat, resetPageOffset: Bool) {}
-        func upMenu() {}
-        func upMenuAnim() {}
-        func upHidingToolbar(tools: [String]) {}
-        
-        func pageChanged() {
-            if let page = parent.viewModel.currentPage {
-                parent.viewModel.currentPageIndex = page.index
-            }
-        }
     }
-}
-
-extension ReadView: ReadViewProtocol {
-    var isScroll: Bool {
-        get { return pageDelegate is ScrollPageDelegate }
-        set { }
-    }
-    
-    func setContent() {
-        upContent()
-    }
-    
-    func clearSearchResult() {}
-    func submitRenderTask() { setContent() }
-    func submitPreRenderTask() {}
 }

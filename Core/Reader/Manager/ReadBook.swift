@@ -331,3 +331,8 @@ class ReadBook: ObservableObject {
         return durChapterIndex < chapterSize - 1
     }
 }
+
+// MARK: - PageDataSource conformance
+extension ReadBook: PageDataSource {
+    var pageIndex: Int { durChapterPos }
+}
