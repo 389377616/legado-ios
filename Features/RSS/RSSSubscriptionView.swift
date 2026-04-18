@@ -201,7 +201,7 @@ struct RSSSourceItem: View {
     
     var body: some View {
         Button(action: onTap) {
-            VStack(spacing: 8) {
+            VStack(spacing: 16) {
                 AsyncImage(url: source.sourceIcon.flatMap { URL(string: $0) }) { phase in
                     switch phase {
                     case .success(let image):
@@ -220,17 +220,12 @@ struct RSSSourceItem: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 
                 Text(source.sourceName)
-                    .font(.caption)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .multilineTextAlignment(.center)
-
-                Text(statusText)
-                    .font(.caption2)
+                    .font(.system(size: 13))
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
             }
+            .padding(16)
         }
         .buttonStyle(.plain)
     }
