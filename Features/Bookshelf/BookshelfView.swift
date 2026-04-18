@@ -405,7 +405,7 @@ struct BookGridCell: View {
                 
                 if showUnread && book.hasNewChapter {
                     Text("新")
-                        .font(.caption2)
+                        .font(.system(size: 10))
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .padding(.horizontal, 6)
@@ -438,11 +438,11 @@ struct BookGridCell: View {
             }
             
             Text(book.name)
-                .font(.caption)
+                .font(.system(size: 12))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.primary)
-                .frame(height: 32)
+                .frame(height: 28)
         }
         .contentShape(Rectangle())
     }

@@ -13,7 +13,7 @@ final class BookshelfViewModel: ObservableObject {
     @Published var viewMode: ViewMode = .grid
     @Published var sortMode: SortMode = .readTime
     @Published var groupStyle: GroupStyle = .tabs // 分组样式：分组Tab vs 统一列表
-    @Published var gridColumns: Int = 3 // 网格列数（3-6）
+    @Published var gridColumns: Int = 4 // 网格列数（3-6），安卓原版默认4列
     @Published var showUnread = true
     @Published var showUpdateTime = true
     @Published var showFastScroller = false
