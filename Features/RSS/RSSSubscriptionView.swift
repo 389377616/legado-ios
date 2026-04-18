@@ -236,6 +236,8 @@ struct RSSArticlesView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var articles: [RSSArticle] = []
     @State private var isLoading = true
+    @State private var articleStyle: Int = 0
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
         NavigationView {
@@ -251,28 +253,7 @@ struct RSSArticlesView: View {
                             .foregroundColor(.secondary)
                     }
                 } else {
-                    List(articles) { article in
-                        Link(destination: URL(string: article.link) ?? URL(string: "about:blank")!) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(article.title)
-                                    .font(.headline)
-                                    .lineLimit(2)
-                                
-                                if let desc = article.description, !desc.isEmpty {
-                                    Text(desc.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(2)
-                                }
-                                
-                                if let date = article.pubDate {
-                                    Text(date.formatted(.relative(presentation: .named)))
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                        }
-                    }
+                    articlesContent
                 }
             }
             .navigationTitle(source.sourceName)
@@ -281,9 +262,101 @@ struct RSSArticlesView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("关闭") { dismiss() }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button("列表视图") { articleStyle = 0 }
+                        Button("网格2列") { articleStyle = 2 }
+                        Button("瀑布流") { articleStyle = 3 }
+                        Button("网格3列") { articleStyle = 4 }
+                    } label: {
+                        Image(systemName: styleIcon)
+                    }
+                }
             }
             .task { await loadArticles() }
         }
+    }
+    
+    private var styleIcon: String {
+        switch articleStyle {
+        case 2: return "square.grid.2x2"
+        case 3: return "rectangle.grid.2x2"
+        case 4: return "square.grid.3x3"
+        default: return "list.bullet"
+        }
+    }
+    
+    private var articlesContent: some View {
+        Group {
+            switch articleStyle {
+            case 2:
+                gridArticlesView(columns: 2, padding: 8)
+            case 3:
+                staggeredGridView
+            case 4:
+                gridArticlesView(columns: 3, padding: 4)
+            default:
+                listArticlesView
+            }
+        }
+    }
+    
+    private var listArticlesView: some View {
+        List(articles) { article in
+            articleLink(article)
+        }
+        .listStyle(.plain)
+    }
+    
+    private func gridArticlesView(columns: Int, padding: CGFloat) -> some View {
+        ScrollView {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: padding), count: columns), spacing: padding) {
+                ForEach(articles) { article in
+                    articleLink(article)
+                        .padding(padding)
+                }
+            }
+            .padding(.horizontal, padding)
+        }
+    }
+    
+    private var staggeredGridView: some View {
+        let isLandscape = horizontalSizeClass == .regular
+        let columns = isLandscape ? 3 : 2
+        
+        return ScrollView {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 20), count: columns), spacing: 30) {
+                ForEach(articles) { article in
+                    articleLink(article)
+                        .padding(20)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private func articleLink(_ article: RSSArticle) -> some View {
+        Link(destination: URL(string: article.link) ?? URL(string: "about:blank")!) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(article.title)
+                    .font(.headline)
+                    .lineLimit(2)
+                
+                if let desc = article.description, !desc.isEmpty {
+                    Text(desc.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                
+                if let date = article.pubDate {
+                    Text(date.formatted(.relative(presentation: .named)))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
     
     private func loadArticles() async {
