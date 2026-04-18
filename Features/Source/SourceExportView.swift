@@ -11,8 +11,7 @@ struct SourceExportView: View {
     @State private var exportFileName = "book_sources"
     
     var body: some View {
-        NavigationView {
-            List {
+        List {
                 Section {
                     HStack {
                         Button("全选") {
@@ -82,7 +81,6 @@ struct SourceExportView: View {
             .task {
                 await viewModel.loadSources()
             }
-        }
     }
     
     private func exportSelected() {

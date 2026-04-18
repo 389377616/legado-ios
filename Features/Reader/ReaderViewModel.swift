@@ -211,10 +211,7 @@ class ReaderViewModel: ObservableObject, ReadViewCallBack {
                     durChapterPos = book.durChapterPos
                     currentChapter = chapters[chapterIndex]
                     
-                    readBook.loadContent(resetPageOffset: false)
-                    
-                    let restorePage = max(0, Int(book.durChapterPos))
-                    currentPageIndex = restorePage
+                    try await loadChapter(at: chapterIndex, restorePageIndex: Int(book.durChapterPos))
                 }
                 
                 isLoading = false

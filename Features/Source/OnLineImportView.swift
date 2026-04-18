@@ -8,8 +8,7 @@ struct OnLineImportView: View {
     @State private var importedCount = 0
     
     var body: some View {
-        NavigationView {
-            Form {
+        Form {
                 Section("在线导入") {
                     TextField("输入书源JSON地址", text: $urlText)
                         .textInputAutocapitalization(.never)
@@ -63,7 +62,6 @@ struct OnLineImportView: View {
                     Button("关闭") { dismiss() }
                 }
             }
-        }
     }
     
     private var commonSourceUrls: [(String, String)] {

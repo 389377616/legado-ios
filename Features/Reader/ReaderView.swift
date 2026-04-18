@@ -138,6 +138,7 @@ struct ReaderView: View {
             }
         }
         .navigationBarHidden(true)
+        .toolbar(.hidden, for: .tabBar)
         .statusBar(hidden: !showUI)
     }
     

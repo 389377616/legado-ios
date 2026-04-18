@@ -391,6 +391,9 @@ struct GroupTabButton: View {
 struct BookGridCell: View {
     let book: Book
     let showUnread: Bool
+    @AppStorage("cover.cornerRadius") private var cornerRadius = 4.0
+    @AppStorage("cover.shadowEnabled") private var shadowEnabled = true
+    @AppStorage("cover.showProgress") private var showProgress = true
     
     var body: some View {
         VStack(alignment: .center, spacing: 6) {
@@ -398,8 +401,8 @@ struct BookGridCell: View {
             ZStack(alignment: .topTrailing) {
                 // 封面
                 BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                    .shadow(color: shadowEnabled ? .black.opacity(0.15) : .clear, radius: shadowEnabled ? 2 : 0, x: 0, y: shadowEnabled ? 1 : 0)
                 
                 // 未读角标
                 if showUnread && book.hasNewChapter {
@@ -412,6 +415,19 @@ struct BookGridCell: View {
                         .background(Color.red)
                         .clipShape(Capsule())
                         .offset(x: -4, y: 4)
+                }
+                
+                // 阅读进度条
+                if showProgress && book.durChapterIndex > 0 && book.totalChapterNum > 0 {
+                    VStack {
+                        Spacer()
+                        GeometryReader { geo in
+                            Rectangle()
+                                .fill(Color.green)
+                                .frame(width: geo.size.width * min(1.0, Double(book.durChapterIndex) / Double(max(1, book.totalChapterNum))), height: 3)
+                        }
+                        .frame(height: 3)
+                    }
                 }
                 
                 // 更新中动画
@@ -442,13 +458,16 @@ struct BookListCell: View {
     let book: Book
     let showUnread: Bool
     let showUpdateTime: Bool
+    @AppStorage("cover.cornerRadius") private var cornerRadius = 4.0
+    @AppStorage("cover.showName") private var coverShowName = true
+    @AppStorage("cover.showAuthor") private var coverShowAuthor = true
     
     var body: some View {
         HStack(spacing: 10) {
             // 封面
             BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
                 .frame(width: 66, height: 90)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             
             // 书籍信息
             VStack(alignment: .leading, spacing: 4) {

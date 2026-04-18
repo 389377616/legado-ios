@@ -13,6 +13,7 @@ struct MainTabView: View {
     @AppStorage("app.defaultHomePage") private var defaultHomePage = 0
     @AppStorage("app.showDiscoveryPage") private var showDiscoveryPage = true
     @AppStorage("app.showRssPage") private var showRssPage = true
+    @AppStorage("app_theme") private var selectedTheme = "system"
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -45,6 +46,10 @@ struct MainTabView: View {
                 .tag(computeMyTabTag)
         }
         .accentColor(.blue)
+        .preferredColorScheme(
+            selectedTheme == "dark" ? .dark :
+            selectedTheme == "light" ? .light : nil
+        )
         .onAppear {
             selectedTab = defaultHomePage
         }

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 @main
 struct LegadoApp: App {
@@ -19,6 +20,7 @@ struct LegadoApp: App {
         WindowGroup {
             if hasCompletedWelcome {
                 MainTabView()
+                    .environment(\.managedObjectContext, CoreDataStack.shared.viewContext)
                     .withRouter()
                     .onOpenURL { url in
                         handleOpenURL(url)
@@ -35,6 +37,7 @@ struct LegadoApp: App {
                     }
             } else {
                 WelcomeView()
+                    .environment(\.managedObjectContext, CoreDataStack.shared.viewContext)
                     .onOpenURL { url in
                         // 欢迎页也处理，但等完成欢迎后再显示
                         handleOpenURL(url)

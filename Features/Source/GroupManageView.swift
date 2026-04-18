@@ -13,8 +13,7 @@ struct GroupManageView: View {
     }
     
     var body: some View {
-        NavigationView {
-            List {
+        List {
                 if viewModel.allGroups.isEmpty {
                     Text("暂无分组")
                         .foregroundColor(.secondary)
@@ -60,7 +59,6 @@ struct GroupManageView: View {
             } message: {
                 Text("请输入新的分组名称")
             }
-        }
     }
     
     private func deleteGroups(at offsets: IndexSet) {

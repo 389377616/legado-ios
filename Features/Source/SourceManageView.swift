@@ -143,7 +143,9 @@ struct SourceManageView: View {
                 }
             }
             .sheet(isPresented: $showingGroupManage) {
-                GroupManageView(viewModel: viewModel)
+                NavigationStack {
+                    GroupManageView(viewModel: viewModel)
+                }
             }
             .sheet(isPresented: $showingImport) {
                 SourceImportView(viewModel: viewModel)
