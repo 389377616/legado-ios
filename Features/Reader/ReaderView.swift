@@ -17,6 +17,10 @@ struct ReaderView: View {
     @State private var showingChangeSource = false
     @State private var showingEffectiveReplaces = false
     @State private var showingSearchInBook = false
+    @State private var showingClickAction = false
+    @State private var showingPageKey = false
+    @State private var showingPadding = false
+    @State private var showingTip = false
     @State private var showUI = false
     @State private var isNightMode = false
 
@@ -116,7 +120,26 @@ struct ReaderView: View {
                 Text("阅读一段时间了，休息一下眼睛。")
             }
             .sheet(isPresented: $showingSettings) {
-                ReaderSettingsView(viewModel: viewModel, isPresented: $showingSettings)
+                MoreConfigDialog(
+                    viewModel: viewModel,
+                    isPresented: $showingSettings,
+                    onClickAction: {
+                        showingSettings = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showingClickAction = true }
+                    },
+                    onPageKey: {
+                        showingSettings = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showingPageKey = true }
+                    },
+                    onPadding: {
+                        showingSettings = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showingPadding = true }
+                    },
+                    onTipConfig: {
+                        showingSettings = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showingTip = true }
+                    }
+                )
             }
             .sheet(isPresented: $showingStyleConfig) {
                 if #available(iOS 16.0, *) {
@@ -141,10 +164,62 @@ struct ReaderView: View {
                 if let book = book { BookmarkSheet(viewModel: viewModel, book: book) }
             }
             .sheet(isPresented: $showingTTSControls) {
-                TTSControlsView(ttsManager: ttsManager, viewModel: viewModel, isPresented: $showingTTSControls)
+                if #available(iOS 16.0, *) {
+                    ReadAloudDialog(
+                        ttsManager: ttsManager,
+                        viewModel: viewModel,
+                        isPresented: $showingTTSControls,
+                        onChapterList: {
+                            showingTTSControls = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showingChapterList = true }
+                        },
+                        onMainMenu: { showingTTSControls = false },
+                        onToBackstage: { showingTTSControls = false },
+                        onSettings: {
+                            showingTTSControls = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showingSettings = true }
+                        }
+                    )
+                    .presentationDetents([.fraction(0.5), .medium])
+                    .presentationDragIndicator(.visible)
+                } else {
+                    ReadAloudDialog(
+                        ttsManager: ttsManager,
+                        viewModel: viewModel,
+                        isPresented: $showingTTSControls,
+                        onChapterList: { showingTTSControls = false },
+                        onMainMenu: { showingTTSControls = false },
+                        onToBackstage: { showingTTSControls = false },
+                        onSettings: { showingTTSControls = false }
+                    )
+                }
             }
             .sheet(isPresented: $showingAutoPageTurn) {
-                AutoPageTurnControlsView(manager: autoPageTurnManager, isPresented: $showingAutoPageTurn)
+                if #available(iOS 16.0, *) {
+                    AutoReadDialog(
+                        manager: autoPageTurnManager,
+                        isPresented: $showingAutoPageTurn,
+                        onChapterList: {
+                            showingAutoPageTurn = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showingChapterList = true }
+                        },
+                        onMainMenu: { showingAutoPageTurn = false },
+                        onSettings: {
+                            showingAutoPageTurn = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showingSettings = true }
+                        }
+                    )
+                    .presentationDetents([.fraction(0.3), .medium])
+                    .presentationDragIndicator(.visible)
+                } else {
+                    AutoReadDialog(
+                        manager: autoPageTurnManager,
+                        isPresented: $showingAutoPageTurn,
+                        onChapterList: { showingAutoPageTurn = false },
+                        onMainMenu: { showingAutoPageTurn = false },
+                        onSettings: { showingAutoPageTurn = false }
+                    )
+                }
             }
             .sheet(isPresented: $showingEffectiveReplaces) {
                 ReplaceRuleView()
@@ -153,6 +228,18 @@ struct ReaderView: View {
                 if let book = book {
                     SearchInBookView(book: book)
                 }
+            }
+            .sheet(isPresented: $showingClickAction) {
+                ClickActionConfigDialog(isPresented: $showingClickAction)
+            }
+            .sheet(isPresented: $showingPageKey) {
+                PageKeyDialog(isPresented: $showingPageKey)
+            }
+            .sheet(isPresented: $showingPadding) {
+                PaddingConfigDialog(isPresented: $showingPadding)
+            }
+            .sheet(isPresented: $showingTip) {
+                TipConfigDialog(isPresented: $showingTip)
             }
         }
         .navigationBarHidden(true)
