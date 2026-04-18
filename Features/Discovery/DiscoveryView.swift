@@ -78,20 +78,11 @@ struct DiscoveryView: View {
                 }
                 
                 if viewModel.isExpanded(group.sourceId) {
-                    ForEach(group.exploreKinds, id: \.title) { kind in
-                        Button(action: {
-                            viewModel.openExplore(group: group, kind: kind)
-                        }) {
-                            HStack {
-                                Text(kind.title)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+                    ExploreKindFlexBox(group: group, kinds: group.exploreKinds) { kind in
+                        viewModel.openExplore(group: group, kind: kind)
                     }
+                    .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 8, trailing: 8))
+                    .listRowSeparator(.hidden)
                 }
             }
         }
@@ -105,9 +96,9 @@ struct ExploreGroupRow: View {
     
     var body: some View {
         Button(action: onTap) {
-            HStack {
+            HStack(spacing: 8) {
                 Text(group.sourceName)
-                    .font(.headline)
+                    .font(.system(size: 16))
                     .foregroundColor(.primary)
                 
                 Spacer()
@@ -117,14 +108,112 @@ struct ExploreGroupRow: View {
                         .scaleEffect(0.8)
                 } else {
                     Image(systemName: "chevron.right")
-                        .font(.caption)
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .rotationEffect(.degrees(group.isExpanded ? 90 : 0))
                 }
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+    }
+}
+
+struct ExploreKindFlexBox: View {
+    let group: ExploreGroup
+    let kinds: [ExploreKind]
+    let onKindTap: (ExploreKind) -> Void
+    
+    var body: some View {
+        FlowLayout(spacing: 8) {
+            ForEach(kinds, id: \.title) { kind in
+                ExploreKindChip(title: kind.title) {
+                    onKindTap(kind)
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+    }
+}
+
+struct ExploreKindChip: View {
+    let title: String
+    let action: () -> Void
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14))
+                .foregroundColor(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.systemGray6))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+                .scaleEffect(isPressed ? 0.92 : 1.0)
+                .animation(.easeOut(duration: 0.12), value: isPressed)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
+    }
+}
+
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+    
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = FlowResult(in: proposal.width ?? 0, subviews: subviews, spacing: spacing)
+        return result.size
+    }
+    
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = FlowResult(in: bounds.width, subviews: subviews, spacing: spacing)
+        for (index, subview) in subviews.enumerated() {
+            subview.place(at: CGPoint(x: bounds.minX + result.positions[index].x,
+                                      y: bounds.minY + result.positions[index].y),
+                         proposal: .unspecified)
+        }
+    }
+    
+    struct FlowResult {
+        var size: CGSize = .zero
+        var positions: [CGPoint] = []
+        
+        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
+            var x: CGFloat = 0
+            var y: CGFloat = 0
+            var rowHeight: CGFloat = 0
+            
+            for subview in subviews {
+                let size = subview.sizeThatFits(.unspecified)
+                
+                if x + size.width > maxWidth && x > 0 {
+                    x = 0
+                    y += rowHeight + spacing
+                    rowHeight = 0
+                }
+                
+                positions.append(CGPoint(x: x, y: y))
+                rowHeight = max(rowHeight, size.height)
+                x += size.width + spacing
+            }
+            
+            self.size = CGSize(width: maxWidth, height: y + rowHeight)
+        }
     }
 }
 
