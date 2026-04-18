@@ -9,14 +9,12 @@
 import Foundation
 import CoreData
 
-@MainActor
 protocol ReadBookCallBack: AnyObject {
     func upContent()
     func upMenuView()
     func upPageAnim()
 }
 
-@MainActor
 class ReadBook: ObservableObject {
     static let shared = ReadBook()
     

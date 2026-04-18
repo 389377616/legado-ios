@@ -15,7 +15,6 @@ protocol ReadViewCallBack: ReadBookCallBack {
 /// 阅读视图
 /// 一比一移植自 Android Legado ReadView.kt (758行)
 /// 原版路径: app/src/main/java/io/legado/app/ui/book/read/page/ReadView.kt
-@MainActor
 class ReadView: UIView, ReadViewProtocol {
     
     weak var callBack: ReadViewCallBack?

@@ -9,7 +9,6 @@ import Foundation
 import SwiftUI
 import CoreData
 
-@MainActor
 class ReaderViewModel: ObservableObject, ReadViewCallBack {
     private let readBook = ReadBook.shared
     

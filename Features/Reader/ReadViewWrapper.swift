@@ -41,7 +41,6 @@ struct ReadViewWrapper: UIViewRepresentable {
         }
     }
     
-    @MainActor
     class Coordinator: NSObject, ReadViewCallBack {
         let parent: ReadViewWrapper
         
