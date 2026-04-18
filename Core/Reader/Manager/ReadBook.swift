@@ -9,6 +9,7 @@
 import Foundation
 import CoreData
 
+@MainActor
 protocol ReadBookCallBack: AnyObject {
     func upContent()
     func upMenuView()
