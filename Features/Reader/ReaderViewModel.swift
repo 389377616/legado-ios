@@ -211,9 +211,9 @@ class ReaderViewModel: ObservableObject, ReadViewCallBack {
                     durChapterPos = book.durChapterPos
                     currentChapter = chapters[chapterIndex]
                     
-                    readBook.loadContent(resetPageOffset: false)
-                    
                     try await loadChapter(at: chapterIndex, restorePageIndex: Int(book.durChapterPos))
+                    
+                    readBook.loadContent(resetPageOffset: false)
                 }
                 
                 isLoading = false
@@ -230,6 +230,16 @@ class ReaderViewModel: ObservableObject, ReadViewCallBack {
     
     func loadBook(_ book: Book) {
         loadBook(byId: book.bookId)
+    }
+    
+    func cleanup() {
+        loadTask?.cancel()
+        loadTask = nil
+        if readBook.callBack === self {
+            readBook.callBack = nil
+        }
+        readBook.releaseAndCancel()
+        cacheManager.cancelPreload()
     }
     
     // MARK: - 加载目录

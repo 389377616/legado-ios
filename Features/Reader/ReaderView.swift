@@ -98,6 +98,7 @@ struct ReaderView: View {
             }
             .onDisappear {
                 viewModel.saveProgress()
+                viewModel.cleanup()
                 ttsManager.stop()
                 autoPageTurnManager.stop()
                 readingEnhancementManager.endReadingSession()

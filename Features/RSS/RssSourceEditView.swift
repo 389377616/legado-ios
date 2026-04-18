@@ -107,7 +107,7 @@ class RssSourceEditViewModel: ObservableObject {
         if let existing = source {
             entity = existing
         } else {
-            entity = RssSource(context: context)
+            entity = RssSource.create(in: context)
         }
         
         entity.sourceName = sourceName

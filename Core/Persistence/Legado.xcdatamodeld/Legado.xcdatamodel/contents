@@ -148,7 +148,7 @@
         <attribute name="lastUseTime" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
     </entity>
     <entity name="RssSource" representedClassName="RssSource" syncable="YES" codeGenerationType="none">
-        <attribute name="sourceId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="sourceId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="sourceUrl" optional="NO" attributeType="String"/>
         <attribute name="sourceName" optional="NO" attributeType="String"/>
         <attribute name="sourceIcon" optional="YES" attributeType="String"/>

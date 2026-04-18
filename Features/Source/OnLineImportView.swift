@@ -103,11 +103,13 @@ struct OnLineImportView: View {
                 
                 await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
                     URLSchemeHandler.importBookSourceJSON(jsonString) { result in
-                        switch result {
-                        case .success(let message):
-                            importResult = message
-                        case .failure(let error):
-                            importResult = "导入失败: \(error.localizedDescription)"
+                        Task { @MainActor in
+                            switch result {
+                            case .success(let message):
+                                importResult = message
+                            case .failure(let error):
+                                importResult = "导入失败: \(error.localizedDescription)"
+                            }
                         }
                         continuation.resume()
                     }
