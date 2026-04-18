@@ -3,16 +3,12 @@ import CoreData
 
 struct RSSSubscriptionView: View {
     @StateObject private var viewModel = RSSViewModel()
-    @FetchRequest(
-        fetchRequest: {
-            let request = NSFetchRequest<RssSource>(entityName: "RssSource")
-            request.sortDescriptors = [NSSortDescriptor(key: "customOrder", ascending: true)]
-            return request
-        }()
-    ) private var sources: FetchedResults<RssSource>
+    @Environment(\.managedObjectContext) private var context
     
+    @State private var sources: [RssSource] = []
     @State private var showingAddSource = false
     @State private var selectedSource: RssSource?
+    @State private var loadError: Error?
     
     private let columns = [
         GridItem(.flexible()),
@@ -26,7 +22,11 @@ struct RSSSubscriptionView: View {
             searchBar
             refreshControls
             
-            if filteredSources.isEmpty {
+            if let error = loadError {
+                Text("加载失败: \(error.localizedDescription)")
+                    .foregroundColor(.red)
+                    .padding()
+            } else if filteredSources.isEmpty {
                 emptyView
             } else {
                 sourceGrid
@@ -64,6 +64,20 @@ struct RSSSubscriptionView: View {
         }
         .onAppear {
             viewModel.onAppear()
+            loadSources()
+        }
+    }
+    
+    private func loadSources() {
+        let request = NSFetchRequest<RssSource>(entityName: "RssSource")
+        request.sortDescriptors = [NSSortDescriptor(key: "customOrder", ascending: true)]
+        
+        do {
+            sources = try context.fetch(request)
+            loadError = nil
+        } catch {
+            loadError = error
+            print("RSS sources fetch error: \(error)")
         }
     }
     
