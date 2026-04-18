@@ -459,8 +459,6 @@ struct BookListCell: View {
     let showUnread: Bool
     let showUpdateTime: Bool
     @AppStorage("cover.cornerRadius") private var cornerRadius = 4.0
-    @AppStorage("cover.showName") private var coverShowName = true
-    @AppStorage("cover.showAuthor") private var coverShowAuthor = true
     
     var body: some View {
         HStack(spacing: 10) {
