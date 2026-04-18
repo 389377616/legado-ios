@@ -100,7 +100,7 @@ class ReaderViewModel: ObservableObject, ReadViewCallBack {
     // MARK: - 私有属性
     private var ruleEngine: RuleEngine = RuleEngine()
     private var loadTask: Task<Void, Never>?
-    let cacheManager = ChapterCacheManager()
+    var cacheManager: ChapterCacheManager { ChapterCacheManager.shared }
 
     init() {
         loadReaderPreferences()
@@ -238,7 +238,9 @@ class ReaderViewModel: ObservableObject, ReadViewCallBack {
             readBook.callBack = nil
         }
         readBook.releaseAndCancel()
-        cacheManager.cancelPreload()
+        Task { @MainActor in
+            cacheManager.cancelPreload()
+        }
     }
     
     // MARK: - 加载目录
@@ -375,7 +377,7 @@ class ReaderViewModel: ObservableObject, ReadViewCallBack {
             
             // 预加载前后章节
             if let book = currentBook {
-                cacheManager.preloadAroundChapter(
+                await cacheManager.preloadAroundChapter(
                     index: index,
                     chapters: chapters,
                     book: book

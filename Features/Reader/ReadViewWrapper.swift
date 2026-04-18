@@ -15,8 +15,7 @@ struct ReadViewWrapper: UIViewRepresentable {
     
     func updateUIView(_ uiView: ReadView, context: Context) {
         updatePageDelegate(for: uiView)
-        uiView.pageFactory?.refreshPages()
-        uiView.setContent()
+        uiView.upContent()
     }
     
     func makeCoordinator() -> Coordinator {
@@ -86,8 +85,7 @@ extension ReadView: ReadViewProtocol {
     }
     
     func setContent() {
-        pageFactory?.refreshPages()
-        setContentDescription()
+        upContent()
     }
     
     func clearSearchResult() {}
