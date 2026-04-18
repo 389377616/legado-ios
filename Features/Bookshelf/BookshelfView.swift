@@ -166,11 +166,13 @@ struct BookshelfView: View {
         return result
     }
     
-    // 统一网格视图（Fragment2）
     private func unifiedGridView(_ groupedBooks: [(group: BookGroup?, books: [Book])]) -> some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
-                ForEach(groupedBooks, id: \.group?.groupId) { item in
+            LazyVStack(spacing: 0) {
+                ForEach(Array(groupedBooks.enumerated()), id: \.element.group?.groupId) { index, item in
+                    let isFirstGroup = index == 0
+                    let isLastGroup = index == groupedBooks.count - 1
+                    
                     VStack(spacing: 8) {
                         // 分组标题
                         if let group = item.group {
@@ -181,11 +183,18 @@ struct BookshelfView: View {
                                 .padding(.horizontal, 12)
                         }
                         
-                        // 书籍网格
+                        let rowCount = (item.books.count + viewModel.gridColumns - 1) / viewModel.gridColumns
+                        
                         LazyVGrid(columns: gridColumnsArray, spacing: 12) {
-                            ForEach(item.books, id: \.bookId) { book in
+                            ForEach(Array(item.books.enumerated()), id: \.element.bookId) { bookIndex, book in
+                                let rowIndex = bookIndex / viewModel.gridColumns
+                                let isFirstRow = rowIndex == 0
+                                let isLastRow = rowIndex == rowCount - 1
+                                
                                 NavigationLink(value: book.bookId) {
                                     BookGridCell(book: book, showUnread: viewModel.showUnread)
+                                        .padding(.top, isFirstRow ? 12 : 0)
+                                        .padding(.bottom, isLastRow ? 36 : 12)
                                 }
                                 .buttonStyle(.plain)
                                 .contextMenu {
@@ -195,6 +204,8 @@ struct BookshelfView: View {
                         }
                         .padding(.horizontal, 12)
                     }
+                    .padding(.top, isFirstGroup ? 12 : 0)
+                    .padding(.bottom, isLastGroup ? 24 : 12)
                 }
             }
         }
@@ -267,13 +278,20 @@ struct BookshelfView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    // MARK: - 网格视图（参考 Android item_bookshelf_grid）
     private func gridView(_ books: [Book]) -> some View {
-        ScrollView {
-            LazyVGrid(columns: gridColumnsArray, spacing: 16) {
-                ForEach(books, id: \.bookId) { book in
+        let rowCount = (books.count + viewModel.gridColumns - 1) / viewModel.gridColumns
+        
+        return ScrollView {
+            LazyVGrid(columns: gridColumnsArray, spacing: 12) {
+                ForEach(Array(books.enumerated()), id: \.element.bookId) { index, book in
+                    let rowIndex = index / viewModel.gridColumns
+                    let isFirstRow = rowIndex == 0
+                    let isLastRow = rowIndex == rowCount - 1
+                    
                     NavigationLink(value: book.bookId) {
                         BookGridCell(book: book, showUnread: viewModel.showUnread)
+                            .padding(.top, isFirstRow ? 12 : 0)
+                            .padding(.bottom, isLastRow ? 36 : 12)
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
@@ -281,7 +299,7 @@ struct BookshelfView: View {
                     }
                 }
             }
-            .padding(12)
+            .padding(.horizontal, 12)
         }
         .navigationDestination(for: UUID.self) { bookId in
             ReaderView(bookId: bookId)
@@ -291,13 +309,18 @@ struct BookshelfView: View {
     // MARK: - 列表视图（参考 Android item_bookshelf_list）
     private func listView(_ books: [Book]) -> some View {
         List {
-            ForEach(books, id: \.bookId) { book in
+            ForEach(Array(books.enumerated()), id: \.element.bookId) { index, book in
+                let isFirst = index == 0
+                let isLast = index == books.count - 1
+                
                 NavigationLink(value: book.bookId) {
                     BookListCell(
                         book: book,
                         showUnread: viewModel.showUnread,
                         showUpdateTime: viewModel.showUpdateTime
                     )
+                    .padding(.top, isFirst ? 12 : 0)
+                    .padding(.bottom, isLast ? 36 : 12)
                 }
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
@@ -306,6 +329,8 @@ struct BookshelfView: View {
                         Label("删除", systemImage: "trash")
                     }
                 }
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
             }
         }
         .listStyle(.plain)
@@ -391,7 +416,7 @@ struct GroupTabButton: View {
 struct BookGridCell: View {
     let book: Book
     let showUnread: Bool
-    @AppStorage("cover.cornerRadius") private var cornerRadius = 4.0
+    @AppStorage("cover.cornerRadius") private var cornerRadius = 12.0
     @AppStorage("cover.shadowEnabled") private var shadowEnabled = true
     @AppStorage("cover.showProgress") private var showProgress = true
     
@@ -453,7 +478,7 @@ struct BookListCell: View {
     let book: Book
     let showUnread: Bool
     let showUpdateTime: Bool
-    @AppStorage("cover.cornerRadius") private var cornerRadius = 4.0
+    @AppStorage("cover.cornerRadius") private var cornerRadius = 12.0
     
     var body: some View {
         HStack(spacing: 10) {
