@@ -157,6 +157,12 @@ final class RSSRefreshManager: NSObject {
             }
             self.handleBackgroundRefreshTask(refreshTask)
         }
+        
+        if hasRegisteredBackgroundTask {
+            DebugLogger.shared.log("RSS 后台任务注册成功")
+        } else {
+            DebugLogger.shared.log("RSS 后台任务注册失败")
+        }
     }
 
     private func scheduleBackgroundRefresh() {
