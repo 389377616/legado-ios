@@ -16,6 +16,7 @@ protocol ReadBookCallBack: AnyObject {
     func upPageAnim()
 }
 
+@MainActor
 class ReadBook: ObservableObject {
     static let shared = ReadBook()
     
