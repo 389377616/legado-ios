@@ -62,6 +62,10 @@ struct ReadViewWrapper: UIViewRepresentable {
         func upSystemUiVisibility() {}
         func autoPageStop() {}
         
+        func upContent() {}
+        func upMenuView() {}
+        func upPageAnim() {}
+        
         func upContent(relativePosition: CGFloat, resetPageOffset: Bool) {}
         func upMenu() {}
         func upMenuAnim() {}
