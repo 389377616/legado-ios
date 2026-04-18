@@ -2,257 +2,196 @@ import SwiftUI
 import CoreData
 
 struct MyView: View {
-    @StateObject private var statistics = ReadingStatisticsManager()
-    
     var body: some View {
         List {
-            Section("阅读统计") {
-                HStack {
-                    Image(systemName: "book.fill")
-                        .foregroundColor(.blue)
-                    Text("今日阅读")
-                    Spacer()
-                    Text(formatDuration(statistics.todayStats?.readingTime ?? 0))
-                        .foregroundColor(.secondary)
-                }
-                
-                HStack {
-                    Image(systemName: "books.vertical.fill")
-                        .foregroundColor(.green)
-                    Text("总计时长")
-                    Spacer()
-                    Text(formatDuration(statistics.statistics.totalReadingTime))
-                        .foregroundColor(.secondary)
-                }
-                
-                HStack {
-                    Image(systemName: "character.book.closed.fill")
-                        .foregroundColor(.orange)
-                    Text("阅读字数")
-                    Spacer()
-                    Text("\(statistics.statistics.totalWords) 字")
-                        .foregroundColor(.secondary)
-                }
+            PreferenceItem(icon: "doc.text.magnifyingglass", title: "书源管理", summary: "管理书籍来源") {
+                SourceManageView()
             }
             
-            Section("书源管理") {
-                NavigationLink("书源管理") {
-                    SourceManageView()
-                }
-                
-                NavigationLink("在线导入") {
-                    OnLineImportView()
-                }
-                
-                NavigationLink("导出书源") {
-                    SourceExportView()
-                }
-                
-                NavigationLink("书源订阅") {
-                    SourceSubscriptionView()
-                }
-                
-                NavigationLink("分组管理") {
-                    GroupManageView(viewModel: SourceViewModel())
-                }
+            PreferenceItem(icon: "list.bullet.indent", title: "TXT目录规则", summary: "TXT文件目录识别规则") {
+                TxtTocRuleView()
             }
             
-            Section("RSS订阅") {
-                NavigationLink("RSS源管理") {
-                    RSSSubscriptionView()
-                }
-                
-                NavigationLink("RSS排序") {
-                    RssSortView()
-                }
-                
-                NavigationLink("RSS收藏") {
-                    RssFavoritesView()
-                }
+            PreferenceItem(icon: "arrow.left.arrow.right", title: "替换净化", summary: "内容替换规则") {
+                ReplaceRuleView()
             }
             
-            Section("规则管理") {
-                NavigationLink("替换规则") {
-                    ReplaceRuleView()
-                }
-                
-                NavigationLink("词典规则") {
-                    DictRuleView()
-                }
-                
-                NavigationLink("TXT目录规则") {
-                    TxtTocRuleView()
-                }
+            PreferenceItem(icon: "character.book.closed", title: "词典规则", summary: "词典管理") {
+                DictRuleView()
             }
             
-            Section("规则订阅") {
-                NavigationLink("规则订阅管理") {
-                    RuleSubscriptionView()
-                }
+            PreferenceItem(icon: "paintbrush", title: "主题模式", summary: "切换应用主题") {
+                AppThemeSettingsView()
             }
-
-            Section("主题与外观") {
-                NavigationLink("主题设置") {
+            
+            WebServicePreferenceItem()
+            
+            PreferenceCategory(title: "设置") {
+                PreferenceItem(icon: "arrow.clockwise", title: "备份与恢复", summary: "WebDAV备份设置") {
+                    BackupRestoreView()
+                }
+                
+                PreferenceItem(icon: "paintpalette", title: "主题设置", summary: "界面主题详细设置") {
                     AppThemeSettingsView()
                 }
                 
-                NavigationLink("封面设置") {
-                    CoverConfigView()
-                }
-
-                NavigationLink("无障碍设置") {
-                    AccessibilitySettingsView()
-                }
-            }
-
-            Section("应用配置") {
-                NavigationLink("全部配置") {
+                PreferenceItem(icon: "gearshape", title: "其他设置", summary: "应用其他配置") {
                     AppConfigView()
                 }
             }
             
-            Section("数据") {
-                NavigationLink("备份与恢复") {
-                    BackupRestoreView()
-                }
-                
-                NavigationLink("清理缓存") {
-                    CacheCleanView()
-                }
-                
-                NavigationLink("文件管理") {
-                    FileManageView()
-                }
-            }
-            
-            Section("朗读") {
-                NavigationLink("在线TTS引擎") {
-                    HttpTTSConfigView()
-                }
-                
-                NavigationLink("朗读设置") {
-                    TTSSettingsView()
-                }
-            }
-            
-            Section("Web服务") {
-                WebServerSectionView()
-            }
-            
-            Section("关于") {
-                NavigationLink("阅读统计") {
-                    ReadingStatisticsView()
-                }
-                
-                NavigationLink("全部书签") {
+            PreferenceCategory(title: "其他") {
+                PreferenceItem(icon: "bookmark", title: "书签", summary: "所有书签") {
                     AllBookmarksView()
                 }
                 
-                NavigationLink("关于") {
-                    AboutDetailView()
+                PreferenceItem(icon: "clock", title: "阅读记录", summary: "阅读历史记录") {
+                    ReadingStatisticsView()
                 }
                 
-                HStack {
-                    Text("版本")
-                    Spacer()
-                    Text("1.0.0")
-                        .foregroundColor(.secondary)
+                PreferenceItem(icon: "chart.bar", title: "阅读统计", summary: "阅读数据统计") {
+                    ReadingStatisticsView()
                 }
                 
-                Link("开源地址", destination: URL(string: "https://github.com/gedoor/legado")!)
+                PreferenceItem(icon: "doc.text", title: "日志", summary: "应用日志") {
+                    Text("日志页面")
+                }
                 
-                Link("帮助文档", destination: URL(string: "https://www.legado.top/")!)
+                PreferenceItem(icon: "questionmark.circle", title: "帮助", summary: "使用帮助") {
+                    Text("帮助页面")
+                }
+                
+                AboutPreferenceItem()
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
         .navigationTitle("我的")
     }
-    
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let totalMinutes = Int(duration) / 60
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        if hours > 0 {
-            return "\(hours)小时\(minutes)分钟"
-        }
-        return "\(minutes)分钟"
-    }
 }
 
-struct WebServerSectionView: View {
-    @AppStorage("webServer.enabled") private var webServerEnabled = false
-    @AppStorage("webServer.port") private var webServerPort = 1122
-    @StateObject private var coordinator = WebServerCoordinator.shared
+struct PreferenceItem<Destination: View>: View {
+    let icon: String
+    let title: String
+    let summary: String
+    @ViewBuilder let destination: () -> Destination
     
     var body: some View {
-        Toggle("启用 Web 服务", isOn: $webServerEnabled)
-        
-        Stepper(value: $webServerPort, in: 1024...65535) {
-            Text("端口: \(webServerPort)")
-        }
-        .disabled(!webServerEnabled)
-        
-        HStack {
-            Text("状态")
-            Spacer()
-            Text(coordinator.isRunning ? "运行中" : "已停止")
-                .foregroundColor(coordinator.isRunning ? .green : .secondary)
-        }
-        
-        if let error = coordinator.lastErrorMessage, !error.isEmpty {
-            Text(error)
-                .font(.caption)
-                .foregroundColor(.red)
-        }
-        
-        Text("局域网访问: http://<本机IP>:\(webServerPort)/health")
-            .font(.caption)
-            .foregroundColor(.secondary)
-    }
-}
-
-struct AboutDetailView: View {
-    var body: some View {
-        List {
-            Section {
-                VStack(spacing: 16) {
-                    Image(systemName: "books.vertical.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.blue)
+        NavigationLink(destination: destination) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(.accentColor)
+                    .frame(width: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
                     
-                    Text("Legado iOS")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    
-                    Text("版本 1.0.0")
+                    Text(summary)
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
+                
+                Spacer()
             }
-            
-            Section("关于") {
-                Text("Legado iOS 是基于 Android 开源阅读器的 iOS 原生移植版本，支持自定义书源、本地阅读、RSS订阅等功能。")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            Section("功能特性") {
-                AboutFeatureRow(icon: "books.vertical", text: "自定义书源规则")
-                AboutFeatureRow(icon: "magnifyingglass", text: "多书源聚合搜索")
-                AboutFeatureRow(icon: "book.fill", text: "多种翻页动画")
-                AboutFeatureRow(icon: "speaker.wave.2.fill", text: "在线TTS朗读")
-                AboutFeatureRow(icon: "antenna.radiowaves.left.and.right", text: "RSS订阅管理")
-                AboutFeatureRow(icon: "doc.text.fill", text: "本地TXT/EPUB支持")
-            }
-            
-            Section("开源协议") {
-                Text("本项目基于 GPL-3.0 协议开源")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            .padding(.vertical, 4)
         }
-        .navigationTitle("关于")
-        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct PreferenceCategory<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Divider()
+                .padding(.top, 8)
+            
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 8)
+            
+            content()
+            
+            Divider()
+                .padding(.bottom, 8)
+        }
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .background(Color(.systemGroupedBackground))
+    }
+}
+
+struct WebServicePreferenceItem: View {
+    @State private var isEnabled = false
+    @State private var hostAddress = ""
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "network")
+                .font(.system(size: 20))
+                .foregroundColor(.accentColor)
+                .frame(width: 24)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Web服务")
+                    .font(.system(size: 16))
+                    .foregroundColor(.primary)
+                
+                Text(isEnabled ? hostAddress : "在电脑上管理书源和书籍")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            Toggle("", isOn: $isEnabled)
+                .labelsHidden()
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct AboutPreferenceItem: View {
+    var body: some View {
+        NavigationLink(destination: Text("关于页面")) {
+            HStack(spacing: 12) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 20))
+                    .foregroundColor(.accentColor)
+                    .frame(width: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("关于")
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                    
+                    Text("版本信息")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+            }
+            .padding(.vertical, 4)
+        }
+    }
+}
+
+func formatDuration(_ seconds: TimeInterval) -> String {
+    let hours = Int(seconds) / 3600
+    let minutes = (Int(seconds) % 3600) / 60
+    if hours > 0 {
+        return "\(hours)小时\(minutes)分钟"
+    } else {
+        return "\(minutes)分钟"
     }
 }
