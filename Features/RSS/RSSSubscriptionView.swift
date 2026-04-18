@@ -151,7 +151,7 @@ struct RSSSubscriptionView: View {
     private var sourceGrid: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(filteredSources, id: \.sourceId) { source in
+                ForEach(filteredSources, id: \.objectID) { source in
                     RSSSourceItem(source: source, statusText: viewModel.statusText(for: source)) {
                         selectedSource = source
                     }

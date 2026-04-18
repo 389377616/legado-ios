@@ -197,24 +197,19 @@ private struct PageContent: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // 背景
                 viewModel.backgroundColor.ignoresSafeArea()
                 
-                // 文本内容
-                ScrollView(.vertical, showsIndicators: false) {
-                    FormattedPageText(
-                        text: text,
-                        fontSize: viewModel.fontSize,
-                        lineSpacing: viewModel.lineSpacing,
-                        textColor: viewModel.textColor,
-                        paragraphSpacing: viewModel.paragraphSpacing
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(viewModel.pagePadding)
-                    .textSelection(.enabled)
-                }
+                FormattedPageText(
+                    text: text,
+                    fontSize: viewModel.fontSize,
+                    lineSpacing: viewModel.lineSpacing,
+                    textColor: viewModel.textColor,
+                    paragraphSpacing: viewModel.paragraphSpacing
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(viewModel.pagePadding)
+                .textSelection(.enabled)
                 
-                // 点击区域覆盖层
                 tapZonesOverlay(width: geometry.size.width)
             }
         }

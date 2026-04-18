@@ -53,17 +53,15 @@ private struct SinglePageContent: View {
             ZStack {
                 viewModel.backgroundColor
                 
-                ScrollView(.vertical, showsIndicators: false) {
-                    FormattedPageText(
-                        text: text,
-                        fontSize: viewModel.fontSize,
-                        lineSpacing: viewModel.lineSpacing,
-                        textColor: viewModel.textColor,
-                        paragraphSpacing: viewModel.paragraphSpacing
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(viewModel.pagePadding)
-                }
+                FormattedPageText(
+                    text: text,
+                    fontSize: viewModel.fontSize,
+                    lineSpacing: viewModel.lineSpacing,
+                    textColor: viewModel.textColor,
+                    paragraphSpacing: viewModel.paragraphSpacing
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(viewModel.pagePadding)
             }
             .contentShape(Rectangle())
             .onTapGesture { location in

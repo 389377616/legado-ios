@@ -228,17 +228,15 @@ struct InstantPageView: View {
                 viewModel.backgroundColor
                 
                 if currentPage >= 0 && currentPage < pages.count {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        FormattedPageText(
-                            text: pages[currentPage],
-                            fontSize: viewModel.fontSize,
-                            lineSpacing: viewModel.lineSpacing,
-                            textColor: viewModel.textColor,
-                            paragraphSpacing: viewModel.paragraphSpacing
-                        )
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(viewModel.pagePadding)
-                    }
+                    FormattedPageText(
+                        text: pages[currentPage],
+                        fontSize: viewModel.fontSize,
+                        lineSpacing: viewModel.lineSpacing,
+                        textColor: viewModel.textColor,
+                        paragraphSpacing: viewModel.paragraphSpacing
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(viewModel.pagePadding)
                 }
             }
             .contentShape(Rectangle())

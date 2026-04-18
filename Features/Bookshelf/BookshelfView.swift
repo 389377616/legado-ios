@@ -395,51 +395,57 @@ struct BookGridCell: View {
     @AppStorage("cover.shadowEnabled") private var shadowEnabled = true
     @AppStorage("cover.showProgress") private var showProgress = true
     
+    private let coverAspectRatio: CGFloat = 0.75  // 封面宽高比 3:4
+    
     var body: some View {
         VStack(alignment: .center, spacing: 6) {
-            // 封面容器
-            ZStack(alignment: .topTrailing) {
-                // 封面
-                BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
-                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                    .shadow(color: shadowEnabled ? .black.opacity(0.15) : .clear, radius: shadowEnabled ? 2 : 0, x: 0, y: shadowEnabled ? 1 : 0)
-                
-                // 未读角标
-                if showUnread && book.hasNewChapter {
-                    Text("新")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.red)
-                        .clipShape(Capsule())
-                        .offset(x: -4, y: 4)
-                }
-                
-                // 阅读进度条
-                if showProgress && book.durChapterIndex > 0 && book.totalChapterNum > 0 {
-                    VStack {
-                        Spacer()
-                        GeometryReader { geo in
-                            Rectangle()
-                                .fill(Color.green)
-                                .frame(width: geo.size.width * min(1.0, Double(book.durChapterIndex) / Double(max(1, book.totalChapterNum))), height: 3)
+            // 封面容器 - 固定高度
+            GeometryReader { geo in
+                let coverHeight = geo.size.width * coverAspectRatio
+                ZStack(alignment: .topTrailing) {
+                    BookCoverView(url: book.displayCoverUrl, sourceId: book.customCoverUrl == nil ? book.source?.sourceId : nil)
+                        .frame(height: coverHeight)
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                        .shadow(color: shadowEnabled ? .black.opacity(0.15) : .clear, radius: shadowEnabled ? 2 : 0, x: 0, y: shadowEnabled ? 1 : 0)
+                    
+                    // 未读角标
+                    if showUnread && book.hasNewChapter {
+                        Text("新")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.red)
+                            .clipShape(Capsule())
+                            .offset(x: -4, y: 4)
+                    }
+                    
+                    // 阅读进度条
+                    if showProgress && book.durChapterIndex > 0 && book.totalChapterNum > 0 {
+                        VStack {
+                            Spacer()
+                            GeometryReader { progGeo in
+                                Rectangle()
+                                    .fill(Color.green)
+                                    .frame(width: progGeo.size.width * min(1.0, Double(book.durChapterIndex) / Double(max(1, book.totalChapterNum))), height: 3)
+                            }
+                            .frame(height: 3)
                         }
-                        .frame(height: 3)
+                    }
+                    
+                    // 更新中动画
+                    if book.isUpdating {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .padding(4)
+                            .background(Color.black.opacity(0.5))
+                            .clipShape(Circle())
+                            .offset(x: -4, y: 4)
                     }
                 }
-                
-                // 更新中动画
-                if book.isUpdating {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                        .padding(4)
-                        .background(Color.black.opacity(0.5))
-                        .clipShape(Circle())
-                        .offset(x: -4, y: 4)
-                }
             }
+            .frame(height: 100) // 给 GeometryReader 一个初始高度
             
             // 书名（2行居中）
             Text(book.name)
@@ -668,11 +674,11 @@ struct BookCoverView: View {
     var body: some View {
         GeometryReader { geo in
             let targetSize = geo.size
-            Group {
+            ZStack {
                 if let image = image {
                     Image(uiImage: image)
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
+                        .aspectRatio(contentMode: .fill)
                         .frame(width: targetSize.width, height: targetSize.height)
                         .clipped()
                 } else {
@@ -682,11 +688,9 @@ struct BookCoverView: View {
                             .font(.title2)
                             .foregroundColor(.gray.opacity(0.5))
                     }
-                    .frame(width: targetSize.width, height: targetSize.height)
                 }
             }
         }
-        .aspectRatio(3/4, contentMode: .fit)
         .task(id: loadIdentity) {
             let identity = loadIdentity
             requestIdentity = identity
