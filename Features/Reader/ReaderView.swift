@@ -35,7 +35,7 @@ struct ReaderView: View {
             ZStack {
                 viewModel.backgroundColor.ignoresSafeArea()
                 
-                PagedReaderView(viewModel: viewModel) {
+                ReadViewWrapper(viewModel: viewModel) {
                     autoPageTurnManager.handleTouch()
                     withAnimation { showUI.toggle() }
                 }
