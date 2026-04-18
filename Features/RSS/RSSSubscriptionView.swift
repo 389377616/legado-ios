@@ -4,6 +4,7 @@ import CoreData
 struct RSSSubscriptionView: View {
     @StateObject private var viewModel = RSSViewModel()
     @FetchRequest(
+        entity: RssSource.entity(),
         sortDescriptors: [NSSortDescriptor(key: "customOrder", ascending: true)],
         animation: .default
     ) private var sources: FetchedResults<RssSource>
