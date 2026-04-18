@@ -120,13 +120,24 @@ struct PagedReaderView: View {
     
     private var scrollView: some View {
         Group {
-            if let htmlContent = viewModel.chapterContentHTML {
+            if let htmlURL = viewModel.chapterHTMLURL, let epubBaseURL = viewModel.epubBaseURL {
+                HTMLContentView(
+                    htmlContent: "",
+                    htmlURL: htmlURL,
+                    baseURL: epubBaseURL,
+                    fontSize: viewModel.fontSize,
+                    textColor: viewModel.textColor,
+                    backgroundColor: viewModel.backgroundColor,
+                    preserveOriginalStyles: true,
+                    onTap: onTap
+                )
+            } else if let htmlContent = viewModel.chapterContentHTML {
                 HTMLContentView(
                     htmlContent: htmlContent,
                     fontSize: viewModel.fontSize,
                     textColor: viewModel.textColor,
                     backgroundColor: viewModel.backgroundColor,
-                    imageStyle: viewModel.imageStyle,
+                    preserveOriginalStyles: false,
                     onTap: onTap
                 )
             } else if let content = viewModel.chapterContent {

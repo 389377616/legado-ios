@@ -3,11 +3,36 @@ import WebKit
 
 struct HTMLContentView: UIViewRepresentable {
     let htmlContent: String
+    let htmlURL: URL?
+    let baseURL: URL?
     let fontSize: CGFloat
     let textColor: Color
     let backgroundColor: Color
     let imageStyle: ImageStyle
+    let preserveOriginalStyles: Bool
     let onTap: (() -> Void)?
+    
+    init(
+        htmlContent: String,
+        htmlURL: URL? = nil,
+        baseURL: URL? = nil,
+        fontSize: CGFloat = 18,
+        textColor: Color = .black,
+        backgroundColor: Color = .white,
+        imageStyle: ImageStyle = .full,
+        preserveOriginalStyles: Bool = true,
+        onTap: (() -> Void)? = nil
+    ) {
+        self.htmlContent = htmlContent
+        self.htmlURL = htmlURL
+        self.baseURL = baseURL
+        self.fontSize = fontSize
+        self.textColor = textColor
+        self.backgroundColor = backgroundColor
+        self.imageStyle = imageStyle
+        self.preserveOriginalStyles = preserveOriginalStyles
+        self.onTap = onTap
+    }
     
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -32,39 +57,43 @@ struct HTMLContentView: UIViewRepresentable {
     }
     
     func updateUIView(_ webView: WKWebView, context: Context) {
-        let css = generateCSS()
-        let wrappedHTML = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <style>\(css)</style>
-        </head>
-        <body>\(htmlContent)</body>
-        </html>
-        """
+        context.coordinator.fontSize = fontSize
+        context.coordinator.textColor = textColor
+        context.coordinator.backgroundColor = backgroundColor
+        context.coordinator.preserveOriginalStyles = preserveOriginalStyles
         
-        webView.loadHTMLString(wrappedHTML, baseURL: nil)
+        if let htmlURL = htmlURL, let baseURL = baseURL {
+            webView.loadFileURL(htmlURL, allowingReadAccessTo: baseURL)
+        } else {
+            let css = generateCSS()
+            let wrappedHTML = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <style>\(css)</style>
+            </head>
+            <body>\(htmlContent)</body>
+            </html>
+            """
+            webView.loadHTMLString(wrappedHTML, baseURL: baseURL)
+        }
     }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(onTap: onTap)
+        Coordinator(
+            onTap: onTap,
+            fontSize: fontSize,
+            textColor: textColor,
+            backgroundColor: backgroundColor,
+            preserveOriginalStyles: preserveOriginalStyles
+        )
     }
     
     private func generateCSS() -> String {
         let textColorHex = UIColor(textColor).hexString
         let bgColorHex = UIColor(backgroundColor).hexString
-        
-        let imgStyle: String
-        switch imageStyle {
-        case .full:
-            imgStyle = "width: 100% !important; height: auto !important; object-fit: contain;"
-        case .original:
-            imgStyle = "max-width: 100%; max-height: 100vh; object-fit: contain; margin: auto;"
-        case .none:
-            imgStyle = "display: none;"
-        }
         
         return """
         html {
@@ -82,28 +111,34 @@ struct HTMLContentView: UIViewRepresentable {
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
-        p {
-            margin: 0 0 1em 0;
-            text-indent: 2em;
-        }
         img {
-            \(imgStyle)
+            max-width: 100%;
+            height: auto;
             display: block;
             margin: 16px auto;
-            border-radius: 4px;
-        }
-        a {
-            color: \(textColorHex);
-            text-decoration: none;
         }
         """
     }
     
     class Coordinator: NSObject, WKNavigationDelegate, UIGestureRecognizerDelegate {
-        let onTap: (() -> Void)?
+        var onTap: (() -> Void)?
+        var fontSize: CGFloat
+        var textColor: Color
+        var backgroundColor: Color
+        var preserveOriginalStyles: Bool
         
-        init(onTap: (() -> Void)?) {
+        init(
+            onTap: (() -> Void)?,
+            fontSize: CGFloat,
+            textColor: Color,
+            backgroundColor: Color,
+            preserveOriginalStyles: Bool
+        ) {
             self.onTap = onTap
+            self.fontSize = fontSize
+            self.textColor = textColor
+            self.backgroundColor = backgroundColor
+            self.preserveOriginalStyles = preserveOriginalStyles
         }
         
         @objc func handleTap() {
@@ -112,6 +147,28 @@ struct HTMLContentView: UIViewRepresentable {
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             return true
+        }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            if preserveOriginalStyles {
+                return
+            }
+            
+            let textColorHex = UIColor(textColor).hexString
+            let bgColorHex = UIColor(backgroundColor).hexString
+            
+            let js = """
+            (function() {
+                var style = document.createElement('style');
+                style.innerHTML = `
+                    html, body { background-color: \(bgColorHex); color: \(textColorHex); }
+                    body { font-size: \(fontSize)px; }
+                    img { max-width: 100%; height: auto; }
+                `;
+                document.head.appendChild(style);
+            })();
+            """
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
     }
 }
