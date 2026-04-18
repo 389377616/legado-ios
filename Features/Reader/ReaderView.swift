@@ -70,6 +70,17 @@ struct ReaderView: View {
                     )
                 }
 
+                if showingChapterList, let currentBook = book {
+                    ChapterDrawer(
+                        isPresented: $showingChapterList,
+                        viewModel: viewModel,
+                        book: currentBook,
+                        onChangeSource: { showingChangeSource = true },
+                        onSearchInBook: { showingSearchInBook = true }
+                    )
+                    .zIndex(10)
+                }
+
                 AutoPageTurnOverlay(manager: autoPageTurnManager)
 
                 if viewModel.isLoading {
@@ -149,9 +160,6 @@ struct ReaderView: View {
                 } else {
                     ReadStyleDialog(viewModel: viewModel, isPresented: $showingStyleConfig)
                 }
-            }
-            .sheet(isPresented: $showingChapterList) {
-                if let book = book { ChapterListView(viewModel: viewModel, book: book) }
             }
             .sheet(isPresented: $showingChangeSource) {
                 if let book = book {
