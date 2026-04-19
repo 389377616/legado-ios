@@ -30,6 +30,22 @@ struct TextActionMenu: View {
             Divider()
                 .frame(height: 24)
             
+            MenuButton(icon: "square.and.arrow.up", title: "分享", action: {
+                share(text: selectedText)
+                onDismiss()
+            })
+            
+            Divider()
+                .frame(height: 24)
+            
+            MenuButton(icon: "safari", title: "浏览器", action: {
+                openInBrowser(text: selectedText)
+                onDismiss()
+            })
+            
+            Divider()
+                .frame(height: 24)
+            
             MenuButton(icon: "bookmark", title: "书签", action: {
                 onBookmark()
                 onDismiss()
@@ -56,6 +72,36 @@ struct TextActionMenu: View {
         .background(Color(.systemGray6))
         .cornerRadius(12)
         .shadow(radius: 4)
+    }
+    
+    private func share(text: String) {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first,
+              let rootVC = window.rootViewController else { return }
+        
+        let activityVC = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = window
+            popover.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        
+        var topController = rootVC
+        while let presentedViewController = topController.presentedViewController {
+            topController = presentedViewController
+        }
+        
+        topController.present(activityVC, animated: true)
+    }
+    
+    private func openInBrowser(text: String) {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let url = URL(string: trimmedText), let scheme = url.scheme, ["http", "https"].contains(scheme.lowercased()) {
+            UIApplication.shared.open(url)
+        } else if let encodedText = trimmedText.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let searchURL = URL(string: "https://www.google.com/search?q=\(encodedText)") {
+            UIApplication.shared.open(searchURL)
+        }
     }
 }
 
