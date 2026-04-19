@@ -39,9 +39,16 @@ struct ReaderView: View {
             ZStack {
                 viewModel.backgroundColor.ignoresSafeArea()
 
-                ReadViewWrapper(viewModel: viewModel) {
-                    autoPageTurnManager.handleTouch()
-                    withAnimation { showUI.toggle() }
+                if let currentBook = book, currentBook.isHardcover {
+                    EPUBWebPagedView(viewModel: viewModel) {
+                        autoPageTurnManager.handleTouch()
+                        withAnimation { showUI.toggle() }
+                    }
+                } else {
+                    ReadViewWrapper(viewModel: viewModel) {
+                        autoPageTurnManager.handleTouch()
+                        withAnimation { showUI.toggle() }
+                    }
                 }
 
                 if showUI {

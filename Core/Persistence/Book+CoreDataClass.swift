@@ -135,6 +135,13 @@ extension Book {
         guard isLocal else { return false }
         return type == 1 || localFileURL?.pathExtension.lowercased() == "epub"
     }
+
+    /// 精装书：富样式 EPUB，走 WebView 渲染路径保持原书 CSS/字体
+    /// 当前简化为 isLocalEPUB（EPUB 自带 CSS/字体时 WebView 天然保真；
+    /// 无 CSS 也不影响 — WebView 仍以默认样式渲染，优于自绘退化）
+    var isHardcover: Bool {
+        isLocalEPUB
+    }
     
     var unreadChapterNum: Int {
         max(0, Int(totalChapterNum) - Int(durChapterIndex) - 1)
