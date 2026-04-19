@@ -30,6 +30,10 @@ class EPUBParser {
         let rights: String?
         let date: String?
         let identifier: String?
+        let translator: String?
+        let isbn: String?
+        let series: String?
+        let subjects: [String]
     }
     
     struct EPUBChapter {
@@ -157,7 +161,11 @@ class EPUBParser {
             description: extractMetadata(content: content, tag: "dc:description"),
             rights: extractMetadata(content: content, tag: "dc:rights"),
             date: extractMetadata(content: content, tag: "dc:date"),
-            identifier: extractMetadata(content: content, tag: "dc:identifier")
+            identifier: extractMetadata(content: content, tag: "dc:identifier"),
+            translator: extractTranslator(content: content),
+            isbn: extractISBN(content: content),
+            series: extractSeries(content: content),
+            subjects: extractSubjects(content: content)
         )
         
         var manifest: [String: ManifestItem] = [:]
@@ -806,6 +814,73 @@ class EPUBParser {
     
     private static func extractMetadata(content: String, tag: String) -> String? {
         return extractFirstMatch(in: content, pattern: "<\(tag)[^>]*>([^<]+)</\(tag)>")
+    }
+
+    // 译者：常见 <dc:contributor opf:role="trl">...</dc:contributor>
+    // 或 <meta property="role" refines="#creator1">trl</meta> + <dc:creator id="creator1">...</dc:creator>
+    // 兼容写法：<meta name="calibre:translator" content="..."/>
+    private static func extractTranslator(content: String) -> String? {
+        if let v = extractFirstMatch(
+            in: content,
+            pattern: "<dc:contributor[^>]*opf:role=\"trl\"[^>]*>([^<]+)</dc:contributor>"
+        ) { return v }
+        if let v = extractFirstMatch(
+            in: content,
+            pattern: "<dc:contributor[^>]*role=\"trl\"[^>]*>([^<]+)</dc:contributor>"
+        ) { return v }
+        if let v = extractFirstMatch(
+            in: content,
+            pattern: "<meta[^>]*name=\"calibre:translator\"[^>]*content=\"([^\"]+)\""
+        ) { return v }
+        return nil
+    }
+
+    // ISBN：优先 <dc:identifier opf:scheme="ISBN">...</dc:identifier>
+    // 或 <dc:identifier scheme="ISBN">...</dc:identifier>
+    private static func extractISBN(content: String) -> String? {
+        if let v = extractFirstMatch(
+            in: content,
+            pattern: "<dc:identifier[^>]*opf:scheme=\"ISBN\"[^>]*>([^<]+)</dc:identifier>"
+        ) { return v }
+        if let v = extractFirstMatch(
+            in: content,
+            pattern: "<dc:identifier[^>]*scheme=\"ISBN\"[^>]*>([^<]+)</dc:identifier>"
+        ) { return v }
+        // identifier 正文含 urn:isbn: 前缀
+        if let v = extractFirstMatch(
+            in: content,
+            pattern: "<dc:identifier[^>]*>(?:urn:isbn:)?(97[89][-0-9]{10,17})</dc:identifier>"
+        ) { return v }
+        return nil
+    }
+
+    // 丛书：EPUB3 <meta property="belongs-to-collection">...</meta>
+    // Calibre: <meta name="calibre:series" content="..."/>
+    private static func extractSeries(content: String) -> String? {
+        if let v = extractFirstMatch(
+            in: content,
+            pattern: "<meta[^>]*property=\"belongs-to-collection\"[^>]*>([^<]+)</meta>"
+        ) { return v }
+        if let v = extractFirstMatch(
+            in: content,
+            pattern: "<meta[^>]*name=\"calibre:series\"[^>]*content=\"([^\"]+)\""
+        ) { return v }
+        return nil
+    }
+
+    // 主题/分类：<dc:subject>...</dc:subject> 可多个
+    private static func extractSubjects(content: String) -> [String] {
+        var subjects: [String] = []
+        let pattern = "<dc:subject[^>]*>([^<]+)</dc:subject>"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let matches = regex.matches(in: content, range: NSRange(content.startIndex..., in: content))
+        for m in matches {
+            if let r = Range(m.range(at: 1), in: content) {
+                let s = String(content[r]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !s.isEmpty { subjects.append(s) }
+            }
+        }
+        return subjects
     }
     
     private static func extractAttribute(_ text: String, name: String) -> String? {

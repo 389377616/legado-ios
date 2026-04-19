@@ -35,6 +35,7 @@
         <attribute name="infoHtml" optional="YES" attributeType="String"/>
         <attribute name="tocHtml" optional="YES" attributeType="String"/>
         <attribute name="downloadUrls" optional="YES" attributeType="String"/>
+        <attribute name="extraMetadataJson" optional="YES" attributeType="String"/>
         <attribute name="folderName" optional="YES" attributeType="String"/>
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>

@@ -725,6 +725,21 @@ class ReaderViewModel: ObservableObject, ReadViewCallBack {
                 book.intro = description
             }
 
+            // 将扩展元数据落到 Book.extraMetadata 供详情页展示
+            let md = epubBook.metadata
+            var extra = ExtraBookMetadata()
+            extra.translator = md.translator
+            extra.publisher = md.publisher
+            extra.publishDate = md.date
+            extra.language = md.language
+            extra.isbn = md.isbn ?? md.identifier
+            extra.series = md.series
+            extra.subjects = md.subjects.isEmpty ? nil : md.subjects
+            extra.rights = md.rights
+            if extra.hasAnyField {
+                book.extraMetadata = extra
+            }
+
             if book.durChapterTitle?.isEmpty ?? true {
                 book.durChapterTitle = epubBook.chapters.first?.title
             }

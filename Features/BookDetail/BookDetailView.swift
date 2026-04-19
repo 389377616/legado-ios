@@ -171,6 +171,7 @@ struct BookDetailView: View {
         VStack(alignment: .leading, spacing: 0) {
             nameAndLabels
             infoRows
+            extraMetadataRows
             introView
         }
         .background(Color.primary.colorInvert())
@@ -272,12 +273,12 @@ struct BookDetailView: View {
     private var introView: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let intro = book.displayIntro, !intro.isEmpty {
-                Text(intro)
+                Text(HTMLAttributedString.make(from: intro, baseFontSize: 14))
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
                     .lineLimit(viewModel.isIntroExpanded ? nil : 4)
                     .lineSpacing(4)
-                
+
                 if intro.count > 100 {
                     Button(action: { viewModel.isIntroExpanded.toggle() }) {
                         Text(viewModel.isIntroExpanded ? "收起" : "展开")
@@ -289,6 +290,84 @@ struct BookDetailView: View {
             }
         }
         .padding(16)
+    }
+
+    // MARK: - 精装书扩展元数据（译者/出版社/出版日期/语言/ISBN/丛书/主题）
+
+    private var extraMetadataRows: some View {
+        let extra = book.extraMetadata
+        return Group {
+            if extra.hasAnyField {
+                VStack(alignment: .leading, spacing: 0) {
+                    if let v = nonEmpty(extra.translator) {
+                        metaRow(icon: "person.2.fill", label: "译者", value: v)
+                    }
+                    if let v = nonEmpty(extra.publisher) {
+                        metaRow(icon: "building.2", label: "出版社", value: v)
+                    }
+                    if let v = nonEmpty(extra.publishDate) {
+                        metaRow(icon: "calendar", label: "出版日期", value: v)
+                    }
+                    if let v = nonEmpty(extra.series) {
+                        metaRow(icon: "square.stack.3d.up", label: "丛书", value: v)
+                    }
+                    if let v = nonEmpty(extra.language) {
+                        metaRow(icon: "character.book.closed", label: "语言", value: v)
+                    }
+                    if let v = nonEmpty(extra.isbn) {
+                        metaRow(icon: "barcode", label: "ISBN", value: v)
+                    }
+                    if let subjects = extra.subjects, !subjects.isEmpty {
+                        subjectsRow(subjects)
+                    }
+                    if let v = nonEmpty(extra.rights) {
+                        metaRow(icon: "c.circle", label: "版权", value: v)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    private func metaRow(icon: String, label: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+                .frame(width: 18)
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .frame(width: 48, alignment: .leading)
+            Text(value)
+                .font(.system(size: 13))
+                .foregroundColor(.primary)
+                .lineLimit(2)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func subjectsRow(_ subjects: [String]) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "tag")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+                .frame(width: 18)
+            Text("主题")
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .frame(width: 48, alignment: .leading)
+            FlowSubjects(subjects: subjects)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func nonEmpty(_ value: String?) -> String? {
+        guard let v = value?.trimmingCharacters(in: .whitespaces), !v.isEmpty else { return nil }
+        return v
     }
     
     private var bottomActionBar: some View {
@@ -318,6 +397,38 @@ struct BookDetailView: View {
             }
         }
         .background(Color.primary.colorInvert())
+    }
+}
+
+// MARK: - 主题标签流式布局
+
+private struct FlowSubjects: View {
+    let subjects: [String]
+
+    var body: some View {
+        if #available(iOS 16.0, *) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 60), spacing: 4)], alignment: .leading, spacing: 4) {
+                ForEach(subjects, id: \.self) { subject in
+                    subjectChip(subject)
+                }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(subjects, id: \.self) { subject in
+                    subjectChip(subject)
+                }
+            }
+        }
+    }
+
+    private func subjectChip(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.accentColor.opacity(0.15))
+            .foregroundColor(.accentColor)
+            .cornerRadius(3)
     }
 }
 

@@ -64,6 +64,7 @@ public class Book: NSManagedObject {
     @NSManaged public var tocHtml: String?
     @NSManaged public var downloadUrls: String?
     @NSManaged public var folderName: String?
+    @NSManaged public var extraMetadataJson: String?
     
     // MARK: - 系统字段
     @NSManaged public var createdAt: Date
