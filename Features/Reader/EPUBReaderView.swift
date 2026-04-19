@@ -13,7 +13,8 @@ struct EPUBReaderView: UIViewRepresentable {
     let delRubyTag: Bool
     let delHTag: Bool
     let customCSS: String?
-    
+    let preserveBookTypography: Bool
+
     init(
         htmlURL: URL,
         baseURL: URL,
@@ -25,7 +26,8 @@ struct EPUBReaderView: UIViewRepresentable {
         backgroundColor: Color = .white,
         delRubyTag: Bool = false,
         delHTag: Bool = false,
-        customCSS: String? = nil
+        customCSS: String? = nil,
+        preserveBookTypography: Bool = false
     ) {
         self.htmlURL = htmlURL
         self.baseURL = baseURL
@@ -38,6 +40,7 @@ struct EPUBReaderView: UIViewRepresentable {
         self.delRubyTag = delRubyTag
         self.delHTag = delHTag
         self.customCSS = customCSS
+        self.preserveBookTypography = preserveBookTypography
     }
     
     func makeUIView(context: Context) -> WKWebView {
@@ -71,16 +74,38 @@ struct EPUBReaderView: UIViewRepresentable {
     }
     
     func updateUIView(_ webView: WKWebView, context: Context) {
-        context.coordinator.fontSize = fontSize
-        context.coordinator.lineSpacing = lineSpacing
-        context.coordinator.textColor = textColor
-        context.coordinator.backgroundColor = backgroundColor
-        context.coordinator.delRubyTag = delRubyTag
-        context.coordinator.delHTag = delHTag
-        context.coordinator.customCSS = customCSS
-        
+        let coord = context.coordinator
+        let fontChanged = coord.fontSize != fontSize
+        let lineChanged = coord.lineSpacing != lineSpacing
+        let themeChanged = coord.textColor != textColor || coord.backgroundColor != backgroundColor
+        let processingChanged = coord.delRubyTag != delRubyTag || coord.delHTag != delHTag
+        let customChanged = coord.customCSS != customCSS
+
+        coord.fontSize = fontSize
+        coord.lineSpacing = lineSpacing
+        coord.textColor = textColor
+        coord.backgroundColor = backgroundColor
+        coord.delRubyTag = delRubyTag
+        coord.delHTag = delHTag
+        coord.customCSS = customCSS
+        coord.webView = webView
+
+        if themeChanged {
+            webView.backgroundColor = UIColor(backgroundColor)
+            webView.scrollView.backgroundColor = UIColor(backgroundColor)
+        }
+
         if webView.url != htmlURL {
             webView.loadFileURL(htmlURL, allowingReadAccessTo: baseURL)
+            return
+        }
+
+        if fontChanged || lineChanged || themeChanged || customChanged {
+            coord.reapplyStyle()
+        }
+
+        if processingChanged {
+            coord.applyContentProcessing()
         }
     }
     
@@ -93,7 +118,8 @@ struct EPUBReaderView: UIViewRepresentable {
             backgroundColor: backgroundColor,
             delRubyTag: delRubyTag,
             delHTag: delHTag,
-            customCSS: customCSS
+            customCSS: customCSS,
+            preserveBookTypography: preserveBookTypography
         )
     }
     
@@ -106,7 +132,9 @@ struct EPUBReaderView: UIViewRepresentable {
         var delRubyTag: Bool
         var delHTag: Bool
         var customCSS: String?
-        
+        var preserveBookTypography: Bool
+        weak var webView: WKWebView?
+
         init(
             onTap: (() -> Void)?,
             fontSize: CGFloat,
@@ -115,7 +143,8 @@ struct EPUBReaderView: UIViewRepresentable {
             backgroundColor: Color,
             delRubyTag: Bool,
             delHTag: Bool,
-            customCSS: String?
+            customCSS: String?,
+            preserveBookTypography: Bool
         ) {
             self.onTap = onTap
             self.fontSize = fontSize
@@ -125,22 +154,26 @@ struct EPUBReaderView: UIViewRepresentable {
             self.delRubyTag = delRubyTag
             self.delHTag = delHTag
             self.customCSS = customCSS
+            self.preserveBookTypography = preserveBookTypography
         }
-        
+
         @objc func handleTap() {
             onTap?()
         }
-        
+
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             return true
         }
-        
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            let width = webView.bounds.width
-            let height = webView.bounds.height
+
+        // 重注入 CSS 到 id="legado-style" 的 <style> 标签；不存在则创建
+        func reapplyStyle() {
+            guard let wv = webView else { return }
+            let width = wv.bounds.width
+            let height = wv.bounds.height
+            guard width > 0, height > 0 else { return }
+
             let textColorHex = UIColor(textColor).hexString
             let bgColorHex = UIColor(backgroundColor).hexString
-            
             let css = EPUBStyleMapper.generateCSS(
                 fontSize: fontSize,
                 lineSpacing: lineSpacing,
@@ -148,27 +181,84 @@ struct EPUBReaderView: UIViewRepresentable {
                 backgroundColor: bgColorHex,
                 width: width,
                 height: height,
-                customCSS: customCSS
+                customCSS: customCSS,
+                preserveBookTypography: preserveBookTypography
             )
-            
+            let escaped = css
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "`", with: "\\`")
+                .replacingOccurrences(of: "$", with: "\\$")
+
+            let js = """
+            (function(){
+              var id='legado-style';
+              var s=document.getElementById(id);
+              if(!s){s=document.createElement('style');s.id=id;document.head.appendChild(s);}
+              s.innerHTML=`\(escaped)`;
+              document.body.style.backgroundColor='\(bgColorHex)';
+              document.body.style.color='\(textColorHex)';
+            })();
+            """
+            wv.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        // 应用 Ruby/H 标签移除；image -> img 转换在 didFinish 一次即可
+        func applyContentProcessing() {
+            guard let wv = webView else { return }
+            let js = """
+            (function(){
+              if (\(delRubyTag)) {
+                document.querySelectorAll('rp, rt').forEach(function(el){el.remove();});
+              }
+              if (\(delHTag)) {
+                document.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(function(el){el.remove();});
+              }
+            })();
+            """
+            wv.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            self.webView = webView
+            let width = webView.bounds.width
+            let height = webView.bounds.height
+            let textColorHex = UIColor(textColor).hexString
+            let bgColorHex = UIColor(backgroundColor).hexString
+
+            let css = EPUBStyleMapper.generateCSS(
+                fontSize: fontSize,
+                lineSpacing: lineSpacing,
+                textColor: textColorHex,
+                backgroundColor: bgColorHex,
+                width: width,
+                height: height,
+                customCSS: customCSS,
+                preserveBookTypography: preserveBookTypography
+            )
+            let escaped = css
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "`", with: "\\`")
+                .replacingOccurrences(of: "$", with: "\\$")
+
             let js = """
             (function() {
-                var style = document.createElement('style');
-                style.innerHTML = `\(css)`;
-                document.head.appendChild(style);
-                
+                var id = 'legado-style';
+                var style = document.getElementById(id);
+                if (!style) {
+                    style = document.createElement('style');
+                    style.id = id;
+                    document.head.appendChild(style);
+                }
+                style.innerHTML = `\(escaped)`;
+
                 if (\(delRubyTag)) {
-                    var ruby = document.querySelectorAll('rp, rt');
-                    ruby.forEach(function(el) { el.remove(); });
+                    document.querySelectorAll('rp, rt').forEach(function(el){el.remove();});
                 }
-                
                 if (\(delHTag)) {
-                    var headers = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
-                    headers.forEach(function(el) { el.remove(); });
+                    document.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(function(el){el.remove();});
                 }
-                
-                var images = document.querySelectorAll('image');
-                images.forEach(function(img) {
+
+                document.querySelectorAll('image').forEach(function(img) {
                     var xlinkHref = img.getAttribute('xlink:href');
                     if (xlinkHref) {
                         img.outerHTML = '<img src="' + xlinkHref + '">';
@@ -176,10 +266,10 @@ struct EPUBReaderView: UIViewRepresentable {
                 });
             })();
             """
-            
+
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
-        
+
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if let url = navigationAction.request.url {
                 if url.scheme == "legado-epub" {
@@ -268,7 +358,8 @@ class EPUBStyleMapper {
         backgroundColor: String,
         width: CGFloat,
         height: CGFloat,
-        customCSS: String?
+        customCSS: String?,
+        preserveBookTypography: Bool = false
     ) -> String {
         let baseCSS = """
         html {
@@ -287,8 +378,39 @@ class EPUBStyleMapper {
             background-color: \(backgroundColor);
             color: \(textColor);
             font-size: \(fontSize)px;
-            font-family: "Songti SC", "SimSun", "STSong", serif;
             line-height: \(lineSpacing);
+        }
+        """
+
+        // 精装书：保留原书 CSS（h1.head / p.kaiti / span.xinli / .booktitle 等特殊排版），
+        // 只覆盖基础背景色/文字色/字号/行距。
+        if preserveBookTypography {
+            let override = """
+            /* legado minimal override for hardcover EPUB */
+            body, body * {
+                background-color: transparent !important;
+            }
+            body {
+                background-color: \(backgroundColor) !important;
+                color: \(textColor);
+                font-size: \(fontSize)px;
+                line-height: \(lineSpacing);
+            }
+            img, svg, image {
+                max-width: 100%;
+                height: auto;
+            }
+            """
+            if let custom = customCSS {
+                return baseCSS + "\n" + override + "\n" + custom
+            }
+            return baseCSS + "\n" + override
+        }
+
+        // 普通 EPUB 或无 CSS 的简单 EPUB：应用完整排版/图片样式
+        let typographyCSS = """
+        body {
+            font-family: "Songti SC", "SimSun", "STSong", serif;
             text-align: justify;
             text-indent: 2em;
         }
@@ -296,9 +418,6 @@ class EPUBStyleMapper {
             display: block;
             padding: 16px 12px;
         }
-        """
-        
-        let typographyCSS = """
         h1, h2, h3, h4, h5, h6 {
             text-indent: 0;
             margin: 0.5em 0;
@@ -369,7 +488,7 @@ class EPUBStyleMapper {
             font-size: 0.8em;
         }
         """
-        
+
         let imageCSS = """
         img {
             max-width: 100%;
@@ -389,13 +508,13 @@ class EPUBStyleMapper {
             width: 80%;
         }
         """
-        
+
         let combinedCSS = baseCSS + "\n" + typographyCSS + "\n" + imageCSS
-        
+
         if let custom = customCSS {
             return combinedCSS + "\n" + custom
         }
-        
+
         return combinedCSS
     }
     

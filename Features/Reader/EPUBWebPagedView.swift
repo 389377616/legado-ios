@@ -39,7 +39,8 @@ struct EPUBWebPagedView: View {
                         backgroundColor: viewModel.backgroundColor,
                         delRubyTag: delRubyTag,
                         delHTag: delHTag,
-                        customCSS: nil
+                        customCSS: nil,
+                        preserveBookTypography: true
                     )
                     .gesture(
                         DragGesture(minimumDistance: 30)
