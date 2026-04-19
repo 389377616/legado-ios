@@ -181,6 +181,8 @@ private struct TOCPane: View {
         return ordered.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
     }
 
+    private var useHierarchy: Bool { book.isHardcover }
+
     private var chapterList: some View {
         List {
             ForEach(filtered, id: \.chapterId) { chapter in
@@ -188,45 +190,84 @@ private struct TOCPane: View {
                     viewModel.jumpToChapter(Int(chapter.index))
                     onSelect()
                 }) {
-                    HStack(spacing: 8) {
-                        Text(chapter.title)
-                            .font(.system(size: 14))
-                            .foregroundColor(chapter.index == book.durChapterIndex ? .accentColor : .primary)
-                            .lineLimit(1)
-
-                        Spacer()
-
-                        if chapter.isVIP {
-                            Text("VIP")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.orange)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .stroke(Color.orange, lineWidth: 1)
-                                )
-                        }
-
-                        if chapter.isCached {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.caption)
-                                .foregroundColor(.green)
-                        }
-
-                        if chapter.index == book.durChapterIndex {
-                            Image(systemName: "bookmark.fill")
-                                .font(.caption)
-                                .foregroundColor(.accentColor)
-                        }
-                    }
-                    .contentShape(Rectangle())
+                    row(for: chapter)
                 }
                 .buttonStyle(.plain)
-                .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
+                .listRowInsets(EdgeInsets(
+                    top: 6,
+                    leading: 12 + indent(for: chapter),
+                    bottom: 6,
+                    trailing: 12
+                ))
             }
         }
         .listStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func row(for chapter: BookChapter) -> some View {
+        HStack(spacing: 8) {
+            if useHierarchy, isVolume(chapter) {
+                Image(systemName: "square.stack.3d.up")
+                    .font(.system(size: 12))
+                    .foregroundColor(.accentColor)
+            }
+            Text(chapter.title)
+                .font(.system(size: useHierarchy && isVolume(chapter) ? 15 : 14,
+                              weight: useHierarchy && isVolume(chapter) ? .semibold : .regular))
+                .foregroundColor(chapter.index == book.durChapterIndex ? .accentColor : .primary)
+                .lineLimit(1)
+
+            Spacer()
+
+            if chapter.isVIP {
+                Text("VIP")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 2)
+                            .stroke(Color.orange, lineWidth: 1)
+                    )
+            }
+
+            if chapter.isCached {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundColor(.green)
+            }
+
+            if chapter.index == book.durChapterIndex {
+                Image(systemName: "bookmark.fill")
+                    .font(.caption)
+                    .foregroundColor(.accentColor)
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func indent(for chapter: BookChapter) -> CGFloat {
+        guard useHierarchy else { return 0 }
+        return isVolume(chapter) ? 0 : 16
+    }
+
+    // 启发式：标题以 "卷"/"第X卷"/"第X部"/"Part"/"Book" 开头视为卷级
+    private func isVolume(_ chapter: BookChapter) -> Bool {
+        let title = chapter.title.trimmingCharacters(in: .whitespaces)
+        let patterns = [
+            #"^第[零一二三四五六七八九十百千0-9]+[卷部]"#,
+            #"^卷[零一二三四五六七八九十百千0-9]+"#,
+            #"(?i)^(part|book)\s+[ivxlcdm0-9]+"#,
+            #"^上[册卷部]$|^中[册卷部]$|^下[册卷部]$"#
+        ]
+        for p in patterns {
+            if let re = try? NSRegularExpression(pattern: p),
+               re.firstMatch(in: title, range: NSRange(title.startIndex..., in: title)) != nil {
+                return true
+            }
+        }
+        return false
     }
 
     private func loadChapters() async {
