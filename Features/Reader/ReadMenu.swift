@@ -37,7 +37,9 @@ struct ReadMenu: View {
     @State private var brightness: Double = Double(UIScreen.main.brightness)
 
     private var primaryText: Color { isNightMode ? .white : .primary }
-    private var menuBg: some ShapeStyle { .ultraThinMaterial }
+    private var menuBgColor: Color {
+        isNightMode ? Color(red: 0.1, green: 0.1, blue: 0.1) : Color(red: 0.95, green: 0.95, blue: 0.95)
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -50,14 +52,20 @@ struct ReadMenu: View {
                 VStack(spacing: 0) {
                     topTitleBar
                         .padding(.top, geo.safeAreaInsets.top)
-                        .background(menuBg)
+                        .background(menuBgColor)
+                        .overlay(
+                            Rectangle()
+                                .frame(height: 1)
+                                .foregroundColor(Color.primary.opacity(0.1)),
+                            alignment: .bottom
+                        )
                         .transition(.move(edge: .top))
 
                     Spacer()
 
                     bottomSection
                         .padding(.bottom, geo.safeAreaInsets.bottom)
-                        .background(menuBg)
+                        .background(menuBgColor)
                         .transition(.move(edge: .bottom))
                 }
                 .ignoresSafeArea(.container, edges: [.top, .bottom])
@@ -176,56 +184,54 @@ struct ReadMenu: View {
             }
         }
         .padding(.vertical, 10)
-        .background(Color.black.opacity(0.3))
-        .cornerRadius(20)
+        .background(menuBgColor.opacity(0.5))
+        .cornerRadius(5)
     }
 
     // MARK: - Bottom Section (FAB 行 + 章节控制 + 4 图文按钮)
 
     private var bottomSection: some View {
-        VStack(spacing: 0) {
-            floatingFabs
+        ZStack(alignment: .bottom) {
             bottomControlPanel
+            floatingFabs
+                .offset(y: -56)
         }
     }
 
     private var floatingFabs: some View {
         HStack(spacing: 0) {
             Spacer()
-            fabButton(icon: "magnifyingglass", label: "搜索", action: onSearch)
+            fabButton(icon: "magnifyingglass", action: onSearch)
             Spacer()
             fabButton(
                 icon: isAutoPageActive ? "pause.fill" : "play.fill",
-                label: "自动翻页",
                 action: onAutoPage
             )
             Spacer()
-            fabButton(icon: "arrow.left.arrow.right", label: "替换规则", action: onReplaceRule)
+            fabButton(icon: "arrow.left.arrow.right", action: onReplaceRule)
             Spacer()
             fabButton(
                 icon: isNightMode ? "sun.max.fill" : "moon.fill",
-                label: "夜间",
                 action: onToggleNight
             )
             Spacer()
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 16)
     }
 
-    private func fabButton(icon: String, label: String, action: @escaping () -> Void) -> some View {
+    private func fabButton(icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(primaryText)
-                .frame(width: 44, height: 44)
+                .frame(width: 40, height: 40)
                 .background(
                     Circle()
-                        .fill(Color(.systemBackground).opacity(0.95))
-                        .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 2)
+                        .fill(menuBgColor)
+                        .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
                 )
         }
-        .accessibilityLabel(label)
     }
 
     private var bottomControlPanel: some View {
@@ -253,6 +259,7 @@ struct ReadMenu: View {
                 in: 0...Double(max(1, viewModel.totalChapters - 1)),
                 step: 1
             )
+            .tint(isNightMode ? .white : .blue)
             .frame(height: 25)
 
             Button("下一章", action: onNextChapter)
@@ -267,17 +274,30 @@ struct ReadMenu: View {
 
     // 目录 / 朗读 / 界面 / 设置
     private var mainActionRow: some View {
-        HStack(spacing: 0) {
-            Spacer().frame(width: 20)
-            mainActionButton(icon: "list.bullet", title: "目录", action: onChapterList)
-            Spacer()
-            mainActionButton(icon: "speaker.wave.2", title: "朗读", action: onReadAloud)
-            Spacer()
-            mainActionButton(icon: "textformat", title: "界面", action: onStyleConfig)
-            Spacer()
-            mainActionButton(icon: "gearshape", title: "设置", action: onSettings)
-            Spacer().frame(width: 20)
+        GeometryReader { geometry in
+            let totalWeight: CGFloat = 8
+            let buttonWidth: CGFloat = 60
+            let totalButtonWidth = buttonWidth * 4
+            let availableSpace = geometry.size.width - totalButtonWidth
+            let weightUnit = availableSpace / totalWeight
+            
+            HStack(spacing: 0) {
+                Spacer().frame(width: weightUnit * 1)
+                mainActionButton(icon: "list.bullet", title: "目录", action: onChapterList)
+                    .frame(width: buttonWidth)
+                Spacer().frame(width: weightUnit * 2)
+                mainActionButton(icon: "speaker.wave.2", title: "朗读", action: onReadAloud)
+                    .frame(width: buttonWidth)
+                Spacer().frame(width: weightUnit * 2)
+                mainActionButton(icon: "textformat", title: "界面", action: onStyleConfig)
+                    .frame(width: buttonWidth)
+                Spacer().frame(width: weightUnit * 2)
+                mainActionButton(icon: "gearshape", title: "设置", action: onSettings)
+                    .frame(width: buttonWidth)
+                Spacer().frame(width: weightUnit * 1)
+            }
         }
+        .frame(height: 44)
         .padding(.bottom, 7)
     }
 
