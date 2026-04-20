@@ -272,7 +272,7 @@ class EPUBParser {
             if let navElement = navElements.first() {
                 return parseNavList(element: navElement, level: 1)
             }
-        } catch { continue }
+        } catch { }
         
         return parseNavSimple(content: content)
     }
@@ -298,7 +298,7 @@ class EPUBParser {
                 
                 items.append(TOCItem(title: title, href: hrefWithoutFragment, fragmentId: fragmentId, level: level, children: children))
             }
-        } catch { continue }
+        } catch { }
         
         return items
     }
@@ -656,7 +656,7 @@ class EPUBParser {
             if delHTag {
                 try combinedElements.select("h1, h2, h3, h4, h5, h6").remove()
             }
-        } catch { continue }
+        } catch { }
         
         let html = elements.compactMap { try? $0.outerHtml() }.joined()
         return HTMLToTextConverter.formatKeepImg(html: html, baseURL: book.epubDirectory)
@@ -685,7 +685,7 @@ class EPUBParser {
                 if let body = try SwiftSoup.parseBodyFragment("<img src=\"cover.jpeg\" />").body() {
                     return body
                 }
-            } catch { continue }
+            } catch { }
             return createEmptyBody()
         }
         
@@ -694,7 +694,7 @@ class EPUBParser {
                 if let body = try SwiftSoup.parseBodyFragment("").body() {
                     return body
                 }
-            } catch { continue }
+            } catch { }
             return createEmptyBody()
         }
         

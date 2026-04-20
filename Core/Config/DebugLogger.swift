@@ -24,7 +24,7 @@ final class DebugLogger {
     
     func log(_ message: String) {
         queue.async {
-            let timestamp = ISO8601DateFormatter().string(from: Date())
+            let timestamp = ISO8801DateFormatter().string(from: Date())
             let line = "[\(timestamp)] \(message)\n"
             
             guard let data = line.data(using: .utf8) else { return }
@@ -35,6 +35,18 @@ final class DebugLogger {
                 try? fileHandle.close()
             }
         }
+    }
+    
+    func error(_ message: String) {
+        log("ERROR: \(message)")
+    }
+    
+    func warning(_ message: String) {
+        log("WARN: \(message)")
+    }
+    
+    func info(_ message: String) {
+        log("INFO: \(message)")
     }
     
     func coreDataState() -> String {
