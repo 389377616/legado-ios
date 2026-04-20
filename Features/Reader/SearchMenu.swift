@@ -22,8 +22,8 @@ struct SearchMenu: View {
     let onNavigateToSearch: (_ forward: Bool) -> Void
     let onNavigateChapter: (_ forward: Bool) -> Void
     
-    private var primaryText: Color { .primary }
-    private var menuBg: some ShapeStyle { .ultraThinMaterial }
+    private var primaryText: Color { viewModel.textColor }
+    private var menuBgColor: Color { viewModel.backgroundColor }
     
     var body: some View {
         GeometryReader { geo in
@@ -42,7 +42,7 @@ struct SearchMenu: View {
                     
                     bottomSection
                         .padding(.bottom, geo.safeAreaInsets.bottom)
-                        .background(menuBg)
+                        .background(menuBgColor)
                         .transition(.move(edge: .bottom))
                 }
                 .ignoresSafeArea(.container, edges: [.bottom])
@@ -75,8 +75,8 @@ struct SearchMenu: View {
                 .frame(width: 50, height: 50)
                 .background(
                     Circle()
-                        .fill(Color(.systemBackground).opacity(0.95))
-                        .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 2)
+                        .fill(menuBgColor)
+                        .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
                 )
         }
         .accessibilityLabel(label)

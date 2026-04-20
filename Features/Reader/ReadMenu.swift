@@ -36,10 +36,9 @@ struct ReadMenu: View {
 
     @State private var brightness: Double = Double(UIScreen.main.brightness)
 
-    private var primaryText: Color { isNightMode ? .white : .primary }
-    private var menuBgColor: Color {
-        isNightMode ? Color(red: 0.1, green: 0.1, blue: 0.1) : Color(red: 0.95, green: 0.95, blue: 0.95)
-    }
+    private var primaryText: Color { viewModel.textColor }
+    private var menuBgColor: Color { viewModel.backgroundColor }
+    private var menuBgColorSemi: Color { viewModel.backgroundColor.opacity(0.85) }
 
     var body: some View {
         GeometryReader { geo in
@@ -55,8 +54,8 @@ struct ReadMenu: View {
                         .background(menuBgColor)
                         .overlay(
                             Rectangle()
-                                .frame(height: 1)
-                                .foregroundColor(Color.primary.opacity(0.1)),
+                                .frame(height: 0.5)
+                                .foregroundColor(primaryText.opacity(0.15)),
                             alignment: .bottom
                         )
                         .transition(.move(edge: .top))
@@ -65,7 +64,6 @@ struct ReadMenu: View {
 
                     bottomSection
                         .padding(.bottom, geo.safeAreaInsets.bottom)
-                        .background(menuBgColor)
                         .transition(.move(edge: .bottom))
                 }
                 .ignoresSafeArea(.container, edges: [.top, .bottom])
@@ -184,17 +182,17 @@ struct ReadMenu: View {
             }
         }
         .padding(.vertical, 10)
-        .background(menuBgColor.opacity(0.5))
+        .background(menuBgColor.opacity(0.7))
         .cornerRadius(5)
     }
 
     // MARK: - Bottom Section (FAB 行 + 章节控制 + 4 图文按钮)
 
     private var bottomSection: some View {
-        ZStack(alignment: .bottom) {
-            bottomControlPanel
+        VStack(spacing: 0) {
             floatingFabs
-                .offset(y: -56)
+            bottomControlPanel
+                .background(menuBgColor)
         }
     }
 
@@ -229,7 +227,7 @@ struct ReadMenu: View {
                 .background(
                     Circle()
                         .fill(menuBgColor)
-                        .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
+                        .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
                 )
         }
     }
@@ -259,7 +257,7 @@ struct ReadMenu: View {
                 in: 0...Double(max(1, viewModel.totalChapters - 1)),
                 step: 1
             )
-            .tint(isNightMode ? .white : .blue)
+            .tint(primaryText.opacity(0.6))
             .frame(height: 25)
 
             Button("下一章", action: onNextChapter)
