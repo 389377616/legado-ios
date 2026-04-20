@@ -237,6 +237,7 @@ struct RSSArticlesView: View {
     @State private var selectedArticleLink: String?
     @State private var selectedArticleTitle: String?
     @State private var selectedArticleOrigin: String?
+    @State private var selectedArticleAuthor: String?
     @State private var articles: [RSSArticle] = []
     @State private var isLoading = true
     @State private var articleStyle: Int = 0
@@ -279,13 +280,13 @@ struct RSSArticlesView: View {
             .task { await loadArticles() }
             .navigationDestination(isPresented: Binding(
                 get: { selectedArticleLink != nil },
-                set: { if !$0 { selectedArticleLink = nil; selectedArticleTitle = nil; selectedArticleOrigin = nil } }
+                set: { if !$0 { selectedArticleLink = nil; selectedArticleTitle = nil; selectedArticleAuthor = nil } }
             )) {
                 if let link = selectedArticleLink {
                     RssReadView(
                         articleLink: link,
                         articleTitle: selectedArticleTitle ?? "",
-                        articleOrigin: selectedArticleOrigin ?? ""
+                        articleOrigin: selectedArticleAuthor ?? ""
                     )
                 }
             }
@@ -354,7 +355,7 @@ struct RSSArticlesView: View {
         Button {
             selectedArticleLink = article.link
             selectedArticleTitle = article.title
-            selectedArticleOrigin = article.origin
+            selectedArticleAuthor = article.author
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 Text(article.title)

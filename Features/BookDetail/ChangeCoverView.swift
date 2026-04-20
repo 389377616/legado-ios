@@ -230,7 +230,9 @@ struct CoverResultItem: View {
                         self.image = uiImage
                     }
                 }
-            } catch {}
+            } catch {
+                DebugLogger.shared.error("ChangeCover save failed: \(error.localizedDescription)")
+            }
         }
     }
 }

@@ -515,7 +515,9 @@ final class BookOrganizeViewModel: ObservableObject {
                 request.sortDescriptors = [NSSortDescriptor(key: "order", ascending: true)]
                 return try context.fetch(request)
             }
-        } catch {}
+        } catch {
+                DebugLogger.shared.error("BookOrganize fetch failed: \(error.localizedDescription)")
+            }
         self.books = fetchedBooks
         self.groups = fetchedGroups
     }

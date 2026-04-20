@@ -170,7 +170,7 @@ struct WebServicePreferenceItem: View {
 
 struct AboutPreferenceItem: View {
     var body: some View {
-        NavigationLink(destination: Text("关于页面")) {
+        NavigationLink(destination: AboutView()) {
             HStack(spacing: 12) {
                 Image(systemName: "info.circle")
                     .font(.system(size: 20))
