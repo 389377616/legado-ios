@@ -775,9 +775,6 @@ struct BookshelfManagePanel: View {
 struct GroupManagePanel: View {
     @State private var groups: [BookGroup] = []
     @State private var newGroupName = ""
-    @State private var editingGroup: BookGroup?
-    @State private var editingName = ""
-    @State private var showingEditAlert = false
 
     var body: some View {
         List {
@@ -793,88 +790,24 @@ struct GroupManagePanel: View {
 
             Section(header: Text("已有分组")) {
                 ForEach(groups, id: \.groupId) { group in
-                    groupRow(group)
+                    HStack {
+                        Text(group.groupName)
+                        Spacer()
+                        if group.isSystem {
+                            Text("系统")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
                 .onDelete(perform: deleteGroup)
-                .onMove(perform: moveGroup)
             }
         }
         .navigationTitle("分组管理")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                EditButton()
-            }
-        }
         .task {
             loadGroups()
         }
-        .alert("重命名分组", isPresented: $showingEditAlert) {
-            TextField("分组名称", text: $editingName)
-            Button("取消", role: .cancel) { }
-            Button("确定") {
-                renameGroup()
-            }
-            .disabled(editingName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        }
     }
-
-    // MARK: - 分组行（对齐安卓 BookGroupFragment）
-
-    @ViewBuilder
-    private func groupRow(_ group: BookGroup) -> some View {
-        HStack(spacing: 12) {
-            // 分组名称
-            VStack(alignment: .leading, spacing: 2) {
-                Text(group.groupName)
-                    .font(.body)
-                if group.isSystem {
-                    Text("系统分组")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            Spacer()
-
-            // 显示/隐藏开关（对标安卓 show 字段）
-            if !group.isSystem {
-                Toggle("", isOn: Binding(
-                    get: { group.show },
-                    set: { newValue in
-                        group.show = newValue
-                        try? CoreDataStack.shared.viewContext.save()
-                    }
-                ))
-                .labelsHidden()
-                .scaleEffect(0.8)
-            }
-
-            // 启用刷新开关（对标安卓 enableRefresh）
-            if !group.isSystem {
-                Toggle("", isOn: Binding(
-                    get: { group.enableRefresh },
-                    set: { newValue in
-                        group.enableRefresh = newValue
-                        try? CoreDataStack.shared.viewContext.save()
-                    }
-                ))
-                .labelsHidden()
-                .scaleEffect(0.8)
-            }
-        }
-        .contextMenu {
-            Button(action: { startEditing(group) }) {
-                Label("重命名", systemImage: "pencil")
-            }
-            if !group.isSystem {
-                Button(role: .destructive, action: { deleteSingleGroup(group) }) {
-                    Label("删除", systemImage: "trash")
-                }
-            }
-        }
-    }
-
-    // MARK: - 数据操作
 
     private func loadGroups() {
         let context = CoreDataStack.shared.viewContext
@@ -887,8 +820,7 @@ struct GroupManagePanel: View {
         let name = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
         let context = CoreDataStack.shared.viewContext
-        let newGroup = BookGroup.create(in: context, groupName: name)
-        newGroup.order = Int32(groups.filter { !$0.isSystem }.count)
+        _ = BookGroup.create(in: context, groupName: name)
         try? context.save()
         newGroupName = ""
         loadGroups()
@@ -902,40 +834,6 @@ struct GroupManagePanel: View {
             context.delete(group)
         }
         try? context.save()
-        loadGroups()
-    }
-
-    private func deleteSingleGroup(_ group: BookGroup) {
-        guard !group.isSystem else { return }
-        CoreDataStack.shared.viewContext.delete(group)
-        try? CoreDataStack.shared.viewContext.save()
-        loadGroups()
-    }
-
-    private func moveGroup(from source: IndexSet, to destination: Int) {
-        var reordered = groups
-        reordered.move(fromOffsets: source, toOffset: destination)
-        for (index, group) in reordered.enumerated() {
-            group.order = Int32(index)
-        }
-        try? CoreDataStack.shared.viewContext.save()
-        groups = reordered
-    }
-
-    private func startEditing(_ group: BookGroup) {
-        editingGroup = group
-        editingName = group.groupName
-        showingEditAlert = true
-    }
-
-    private func renameGroup() {
-        guard let group = editingGroup else { return }
-        let name = editingName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { return }
-        group.groupName = name
-        try? CoreDataStack.shared.viewContext.save()
-        editingGroup = nil
-        editingName = ""
         loadGroups()
     }
 }
