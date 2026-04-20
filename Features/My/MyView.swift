@@ -4,35 +4,41 @@ import CoreData
 struct MyView: View {
     var body: some View {
         List {
-            PreferenceItem(icon: "doc.text.magnifyingglass", title: "书源管理", summary: "管理书籍来源") {
-                SourceManageView()
-            }
-            
-            PreferenceItem(icon: "list.bullet.indent", title: "TXT目录规则", summary: "TXT文件目录识别规则") {
-                TxtTocRuleView()
-            }
-            
-            PreferenceItem(icon: "arrow.left.arrow.right", title: "替换净化", summary: "内容替换规则") {
-                ReplaceRuleView()
-            }
-            
-            PreferenceItem(icon: "character.book.closed", title: "词典规则", summary: "词典管理") {
-                DictRuleView()
-            }
-            
-            PreferenceItem(icon: "paintbrush", title: "主题模式", summary: "切换应用主题") {
-                AppThemeSettingsView()
-            }
-            
-            WebServicePreferenceItem()
-            
-            PreferenceCategory(title: "设置") {
-                PreferenceItem(icon: "arrow.clockwise", title: "备份与恢复", summary: "WebDAV备份设置") {
-                    BackupRestoreView()
+            // 书源管理区
+            Section {
+                PreferenceItem(icon: "doc.text.magnifyingglass", title: "书源管理", summary: "管理书籍来源") {
+                    SourceManageView()
                 }
                 
-                PreferenceItem(icon: "paintpalette", title: "主题设置", summary: "界面主题详细设置") {
+                PreferenceItem(icon: "list.bullet.indent", title: "TXT目录规则", summary: "TXT文件目录识别规则") {
+                    TxtTocRuleView()
+                }
+                
+                PreferenceItem(icon: "arrow.left.arrow.right", title: "替换净化", summary: "内容替换规则") {
+                    ReplaceRuleView()
+                }
+                
+                PreferenceItem(icon: "character.book.closed", title: "词典规则", summary: "词典管理") {
+                    DictRuleView()
+                }
+            }
+            
+            // 外观区
+            Section {
+                PreferenceItem(icon: "paintbrush", title: "主题模式", summary: "切换应用主题") {
                     AppThemeSettingsView()
+                }
+            }
+            
+            // 服务区
+            Section {
+                WebServicePreferenceItem()
+            }
+            
+            // 数据区
+            Section {
+                PreferenceItem(icon: "arrow.clockwise", title: "备份与恢复", summary: "WebDAV备份设置") {
+                    BackupRestoreView()
                 }
                 
                 PreferenceItem(icon: "gearshape", title: "其他设置", summary: "应用其他配置") {
@@ -40,7 +46,8 @@ struct MyView: View {
                 }
             }
             
-            PreferenceCategory(title: "其他") {
+            // 其他区
+            Section {
                 PreferenceItem(icon: "bookmark", title: "书签", summary: "所有书签") {
                     AllBookmarksView()
                 }
@@ -54,17 +61,19 @@ struct MyView: View {
                 }
                 
                 PreferenceItem(icon: "doc.text", title: "日志", summary: "应用日志") {
-                    Text("日志页面")
+                    DebugLogView()
                 }
                 
                 PreferenceItem(icon: "questionmark.circle", title: "帮助", summary: "使用帮助") {
-                    Text("帮助页面")
+                    HelpView()
                 }
                 
-                AboutPreferenceItem()
+                PreferenceItem(icon: "info.circle", title: "关于", summary: "版本信息") {
+                    AboutView()
+                }
             }
         }
-        .listStyle(.plain)
+        .listStyle(.insetGrouped)
         .navigationTitle("我的")
     }
 }

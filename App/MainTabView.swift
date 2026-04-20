@@ -19,14 +19,14 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             NavigationStack { BookshelfView() }
                 .tabItem {
-                    Label("书架", systemImage: "books.vertical.fill")
+                    Image(systemName: "books.vertical.fill")
                 }
                 .tag(0)
 
             if showDiscoveryPage {
                 NavigationStack { DiscoveryView() }
                     .tabItem {
-                        Label("发现", systemImage: "safari.fill")
+                        Image(systemName: "safari.fill")
                     }
                     .tag(1)
             }
@@ -34,14 +34,14 @@ struct MainTabView: View {
             if showRssPage {
                 NavigationStack { RSSSubscriptionView() }
                     .tabItem {
-                        Label("订阅", systemImage: "antenna.radiowaves.left.and.right")
+                        Image(systemName: "antenna.radiowaves.left.and.right")
                     }
                     .tag(showDiscoveryPage ? 2 : 1)
             }
 
             NavigationStack { MyView() }
                 .tabItem {
-                    Label("我的", systemImage: "person.fill")
+                    Image(systemName: "person.fill")
                 }
                 .tag(computeMyTabTag)
         }
