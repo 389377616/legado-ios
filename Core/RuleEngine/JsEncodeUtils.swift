@@ -231,7 +231,7 @@ class AsymmetricCrypto {
         let attributes: [String: Any] = [
             kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
             kSecAttrKeySizeInBits as String: 2048,
-            kSecAttrTag as String: tag.data(using: .utf8)!
+            kSecAttrApplicationTag as String: tag.data(using: .utf8)!
         ]
 
         var pubKey: SecKey?
@@ -295,7 +295,7 @@ class AsymmetricCrypto {
             kSecAttrKeyClass as String: kSecAttrKeyClassPrivate,
             kSecAttrKeySizeInBits as String: 2048
         ]
-        return SecKeyCreateWithData(data as CFDictionary, attributes as CFDictionary, nil)
+        return SecKeyCreateWithData(data as CFData, attributes as CFDictionary, nil)
     }
 }
 

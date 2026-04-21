@@ -152,17 +152,19 @@ class JSBridge: JsEncodeUtils {
         javaObject?.setObject(timeFormatBlock, forKeyedSubscript: "timeFormat" as NSString)
 
         // ====== 中文转换 ======
+        // 注意：kCFStringTransformTraditionalChineseSimplified / kCFStringTransformSimplifiedChineseTraditional
+        // 在 iOS 上不可用（仅 macOS），使用 CFStringTransform 的 Unicode 标识符名称替代
 
         let t2sBlock: @convention(block) (String) -> String = { text in
             let str = NSMutableString(string: text)
-            CFStringTransform(str, nil, kCFStringTransformTraditionalChineseSimplified, false)
+            CFStringTransform(str, nil, "zh-Hant-Hanzi zh-Hans-Hanzi" as CFString, false)
             return str as String
         }
         javaObject?.setObject(t2sBlock, forKeyedSubscript: "t2s" as NSString)
 
         let s2tBlock: @convention(block) (String) -> String = { text in
             let str = NSMutableString(string: text)
-            CFStringTransform(str, nil, kCFStringTransformSimplifiedChineseTraditional, false)
+            CFStringTransform(str, nil, "zh-Hans-Hanzi zh-Hant-Hanzi" as CFString, false)
             return str as String
         }
         javaObject?.setObject(s2tBlock, forKeyedSubscript: "s2t" as NSString)

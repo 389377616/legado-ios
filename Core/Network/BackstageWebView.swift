@@ -96,7 +96,7 @@ class BackstageWebView {
     private static let defaultJS = "document.documentElement.outerHTML"
 
     /// 重试间隔递增序列（对应 Android intervals）
-    private static let retryIntervals: [Int64] = [200, 400, 600, 800, 1000]
+    static let retryIntervals: [Int64] = [200, 400, 600, 800, 1000]
     /// 最大重试次数
     private static let maxRetry = 30
 
@@ -232,7 +232,9 @@ private class WebViewHandler: NSObject, WKNavigationDelegate {
         webView.customUserAgent = ua
 
         // 如果有 sourceRegex 或 overrideUrlRegex，使用嗅探模式
-        if let sr = sourceRegex, !sr.isEmpty || let our = overrideUrlRegex, !our.isEmpty {
+        let hasSourceRegex = sourceRegex != nil && !sourceRegex!.isEmpty
+        let hasOverrideRegex = overrideUrlRegex != nil && !overrideUrlRegex!.isEmpty
+        if hasSourceRegex || hasOverrideRegex {
             // 嗅探需要不阻止图片加载以便嗅探资源
         } else {
             // 非嗅探模式阻止图片加载

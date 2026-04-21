@@ -170,6 +170,8 @@ class ConcurrentRateLimiter {
                 return try fetchStart()
             } catch let error as ConcurrentError {
                 try await Task.sleep(nanoseconds: UInt64(error.waitTime) * 1_000_000)
+            } catch {
+                throw error
             }
         }
     }
@@ -181,7 +183,11 @@ class ConcurrentRateLimiter {
                 return try fetchStart()
             } catch let error as ConcurrentError {
                 Thread.sleep(forTimeInterval: Double(error.waitTime) / 1000.0)
+            } catch {
+                return nil
             }
+        }
+    }
         }
     }
 

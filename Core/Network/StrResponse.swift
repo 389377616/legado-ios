@@ -75,7 +75,7 @@ class StrResponse {
 
     /// 获取状态消息
     func message() -> String {
-        return raw?.localizedDescription ?? ""
+        return HTTPURLResponse.localizedString(forStatusCode: raw?.statusCode ?? 0)
     }
 
     /// 获取响应头
