@@ -39,14 +39,14 @@ final class CoreDataEntityTests: XCTestCase {
     
     // MARK: - 实体注册验证（19 个实体）
     
-    /// 验证所有 19 个实体在 NSManagedObjectModel 中注册
+    /// 验证所有 20 个实体在 NSManagedObjectModel 中注册
     func testAllEntitiesRegistered() {
         let entityNames = [
             "Book", "BookSource", "BookChapter", "Bookmark", "ReplaceRule",
             "BookGroup", "SearchBook", "SearchKeyword",
             "RssSource", "RssArticle", "RssReadRecord", "RssStar",
             "CacheEntry", "Cookie", "ReadRecord",
-            "HttpTTS", "DictRule", "RuleSub", "TxtTocRule"
+            "HttpTTS", "DictRule", "RuleSub", "TxtTocRule", "Server"
         ]
         
         for name in entityNames {
@@ -55,11 +55,11 @@ final class CoreDataEntityTests: XCTestCase {
         }
     }
     
-    /// 验证实体总数为 19
+    /// 验证实体总数为 20
     func testEntityCount() {
         let model = context.persistentStoreCoordinator?.managedObjectModel
         XCTAssertNotNil(model)
-        XCTAssertEqual(model?.entities.count, 19, "应有 19 个 CoreData 实体")
+        XCTAssertEqual(model?.entities.count, 20, "应有 20 个 CoreData 实体")
     }
     
     // MARK: - fetchRequest 验证
@@ -430,5 +430,42 @@ final class CoreDataEntityTests: XCTestCase {
         
         let chaptersAfter = try context.fetch(BookChapter.fetchRequest())
         XCTAssertEqual(chaptersAfter.count, 0, "删除 Book 后其章节应级联删除")
+    }
+    
+    // MARK: - Server 实体测试
+    
+    func testServerFetchRequest() throws {
+        let request = Server.fetchRequest()
+        let results = try context.fetch(request)
+        XCTAssertNotNil(results)
+    }
+    
+    func testServerCRUD() throws {
+        let server = Server.create(in: context)
+        server.name = "WebDAV测试"
+        server.configUrl = "https://dav.test.com"
+        server.type = 0
+        try context.save()
+        
+        let fetched = try context.fetch(Server.fetchRequest())
+        XCTAssertEqual(fetched.count, 1)
+        XCTAssertEqual(fetched.first?.name, "WebDAV测试")
+        XCTAssertEqual(fetched.first?.serverType, .webDav)
+        
+        // 更新
+        fetched.first?.name = "WebDAV更新"
+        try context.save()
+        
+        let afterUpdate = try context.fetch(Server.fetchRequest())
+        XCTAssertEqual(afterUpdate.first?.name, "WebDAV更新")
+        
+        // 删除
+        if let toDelete = afterUpdate.first {
+            context.delete(toDelete)
+            try context.save()
+        }
+        
+        let afterDelete = try context.fetch(Server.fetchRequest())
+        XCTAssertEqual(afterDelete.count, 0)
     }
 }
