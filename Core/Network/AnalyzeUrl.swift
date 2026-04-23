@@ -161,9 +161,9 @@ class AnalyzeUrl {
 
         self.concurrentRateLimiter = ConcurrentRateLimiter(source: source)
 
-        // 解析 URL
-        initUrl()
+        // 解析 URL（domain 先初始化，initUrl 才能安全使用 self）
         self.domain = Self.getSubDomain(from: source?.bookSourceUrl ?? url)
+        initUrl()
     }
 
     /// 便捷初始化
