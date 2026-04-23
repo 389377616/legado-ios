@@ -11,7 +11,7 @@ enum WebDAVSyncError: LocalizedError {
         case .noBackups:
             return "云端没有可用备份"
         case .invalidBackup:
-            return "备份文件格式不正确"
+            return "备份文件格式不正确或解压失败"
         }
     }
 }
@@ -42,33 +42,7 @@ enum WebDAVSettingsStore {
     }
 }
 
-struct LegadoBackup: Codable {
-    let version: String
-    let timestamp: Date
-    let deviceName: String
-    let bookSources: [BookSourceJSON]
-    let books: [BookJSON]
-    let replaceRules: [ReplaceRuleJSON]
-    let readProgress: [ReadProgressJSON]
-
-    init(
-        timestamp: Date,
-        deviceName: String,
-        bookSources: [BookSourceJSON],
-        books: [BookJSON],
-        replaceRules: [ReplaceRuleJSON],
-        readProgress: [ReadProgressJSON],
-        version: String = "1.0"
-    ) {
-        self.version = version
-        self.timestamp = timestamp
-        self.deviceName = deviceName
-        self.bookSources = bookSources
-        self.books = books
-        self.replaceRules = replaceRules
-        self.readProgress = readProgress
-    }
-}
+// 移除了原本的 LegadoBackup 巨型结构体，直接使用各个子模型的 JSON 结构
 
 struct BookSourceJSON: Codable {
     let sourceId: UUID
@@ -333,7 +307,6 @@ class WebDAVSyncManager: ObservableObject {
     @Published var syncProgress: Double = 0
 
     let client: WebDAVClient
-
     private let context = CoreDataStack.shared.viewContext
 
     init(client: WebDAVClient) {
@@ -352,48 +325,133 @@ class WebDAVSyncManager: ObservableObject {
         }
     }
 
+    // MARK: - 全新重构的 ZIP 备份逻辑
     func backup() async throws {
         syncProgress = 0
-        let backupData = try makeBackupData()
-        syncProgress = 0.35
-
-        try await ensureBackupDirectoryExists()
-        syncProgress = 0.55
+        
+        // 1. 分别获取各模块数据
+        let books: [Book] = try context.fetch(Book.fetchRequest())
+        let sources: [BookSource] = try context.fetch(BookSource.fetchRequest())
+        let rules: [ReplaceRule] = try context.fetch(ReplaceRule.fetchRequest())
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let payload = try encoder.encode(backupData)
 
-        let fileName = buildBackupFileName(timestamp: backupData.timestamp, deviceName: backupData.deviceName)
+        syncProgress = 0.35
+        
+        // 2. 分别序列化为 Data
+        let booksData = try encoder.encode(books.map(BookJSON.init(book:)))
+        let sourcesData = try encoder.encode(sources.map(BookSourceJSON.init(source:)))
+        let rulesData = try encoder.encode(rules.map(ReplaceRuleJSON.init(rule:)))
+        let progressData = try encoder.encode(books.map(ReadProgressJSON.init(book:)))
+
+        try await ensureBackupDirectoryExists()
+        syncProgress = 0.55
+
+        // 3. 构建适配安卓的独立 JSON 文件映射
+        let zipFiles: [String: Data] = [
+            "books.json": booksData,
+            "bookSources.json": sourcesData,
+            "replaceRules.json": rulesData,
+            "readRecord.json": progressData // 安卓通常使用 readRecord.json 保存进度
+        ]
+
+        // 4. 调用项目的 ZipBuilder 将字典打包为 ZIP Data
+        // 注意：如果你的 ZipBuilder API 略有不同，请在此处微调（例如有的 Zip 工具需要传入文件路径而不是 Data）
+        let payload = try ZipBuilder.createZip(from: zipFiles)
+
+        // 5. 修改上传文件名为 .zip
+        let fileName = buildBackupFileName(timestamp: Date(), deviceName: UIDevice.current.name)
         let uploadPath = "\(WebDAVSettingsStore.backupPath)/\(fileName)"
+        
         try await client.upload(path: uploadPath, data: payload)
 
         syncProgress = 1
         lastSyncTime = Date()
     }
 
+    // MARK: - 全新重构的 ZIP 恢复逻辑
     func restore() async throws {
         syncProgress = 0
 
+        // 获取线上最新的 ZIP 文件
         let backups = try await listBackups()
         guard let latestBackup = backups.first else {
             throw WebDAVSyncError.noBackups
         }
 
         syncProgress = 0.25
-        let data = try await client.download(path: latestBackup.path)
+        
+        // 下载 ZIP 文件流
+        let zipData = try await client.download(path: latestBackup.path)
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        guard let backup = try? decoder.decode(LegadoBackup.self, from: data) else {
+        syncProgress = 0.45
+        
+        // 调用 ZipBuilder 解压文件流，返回文件名与数据的字典
+        guard let extractedFiles = try? ZipBuilder.extractZip(data: zipData) else {
             throw WebDAVSyncError.invalidBackup
         }
 
         syncProgress = 0.55
-        try restoreFromBackup(backup)
+        
+        // 分发解析独立的 JSON 文件
+        try restoreFromExtractedFiles(extractedFiles)
+        
         syncProgress = 1
         lastSyncTime = Date()
+    }
+
+    // 新增：处理解压后的独立文件映射字典
+    private func restoreFromExtractedFiles(_ files: [String: Data]) throws {
+        clearAllData() // 恢复前先清空本地
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        var sourceMap: [String: BookSource] = [:]
+
+        // 1. 恢复书源 (bookSources.json)
+        if let sourcesData = files["bookSources.json"] ?? files["bookSource.json"],
+           let sourcesJSON = try? decoder.decode([BookSourceJSON].self, from: sourcesData) {
+            for sourceJSON in sourcesJSON {
+                let source = BookSource.create(in: context)
+                sourceJSON.apply(to: source)
+                sourceMap[source.bookSourceUrl] = source
+            }
+        }
+
+        // 2. 恢复书架书籍 (books.json)
+        var bookMap: [UUID: Book] = [:]
+        if let booksData = files["books.json"],
+           let booksJSON = try? decoder.decode([BookJSON].self, from: booksData) {
+            for bookJSON in booksJSON {
+                let book = Book.create(in: context)
+                bookJSON.apply(to: book, sourceMap: sourceMap)
+                bookMap[book.bookId] = book
+            }
+        }
+
+        // 3. 恢复阅读进度 (readRecord.json)
+        if let progressData = files["readRecord.json"] ?? files["readProgress.json"],
+           let progressJSON = try? decoder.decode([ReadProgressJSON].self, from: progressData) {
+            for progress in progressJSON {
+                if let book = bookMap[progress.bookId] {
+                    progress.apply(to: book)
+                }
+            }
+        }
+
+        // 4. 恢复替换规则 (replaceRules.json)
+        if let rulesData = files["replaceRules.json"],
+           let rulesJSON = try? decoder.decode([ReplaceRuleJSON].self, from: rulesData) {
+            for ruleJSON in rulesJSON {
+                let rule = ReplaceRule.create(in: context)
+                ruleJSON.apply(to: rule)
+            }
+        }
+
+        try CoreDataStack.shared.save()
     }
 
     func incrementalSync() async throws {
@@ -419,6 +477,7 @@ class WebDAVSyncManager: ObservableObject {
         syncProgress = 1
     }
 
+    // MARK: - 辅助方法：已将过滤和解析后缀改为 .zip
     func listBackups() async throws -> [BackupInfo] {
         let backupPath = WebDAVSettingsStore.backupPath
         guard try await client.exists(path: backupPath) else {
@@ -427,7 +486,8 @@ class WebDAVSyncManager: ObservableObject {
 
         let files = try await client.list(path: backupPath)
         return files
-            .filter { !$0.isDirectory && $0.name.lowercased().hasSuffix(".json") }
+            // 关键修改：过滤 .zip 文件而不是 .json
+            .filter { !$0.isDirectory && $0.name.lowercased().hasSuffix(".zip") }
             .map { file in
                 let parsedDate = parseBackupDate(from: file.name)
                 let date = file.lastModified ?? parsedDate ?? Date.distantPast
@@ -439,52 +499,6 @@ class WebDAVSyncManager: ObservableObject {
                 )
             }
             .sorted { $0.date > $1.date }
-    }
-
-    private func makeBackupData() throws -> LegadoBackup {
-        let books: [Book] = try context.fetch(Book.fetchRequest())
-        let sources: [BookSource] = try context.fetch(BookSource.fetchRequest())
-        let rules: [ReplaceRule] = try context.fetch(ReplaceRule.fetchRequest())
-
-        return LegadoBackup(
-            timestamp: Date(),
-            deviceName: UIDevice.current.name,
-            bookSources: sources.map(BookSourceJSON.init(source:)),
-            books: books.map(BookJSON.init(book:)),
-            replaceRules: rules.map(ReplaceRuleJSON.init(rule:)),
-            readProgress: books.map(ReadProgressJSON.init(book:))
-        )
-    }
-
-    private func restoreFromBackup(_ backup: LegadoBackup) throws {
-        clearAllData()
-
-        var sourceMap: [String: BookSource] = [:]
-        for sourceJSON in backup.bookSources {
-            let source = BookSource.create(in: context)
-            sourceJSON.apply(to: source)
-            sourceMap[source.bookSourceUrl] = source
-        }
-
-        var bookMap: [UUID: Book] = [:]
-        for bookJSON in backup.books {
-            let book = Book.create(in: context)
-            bookJSON.apply(to: book, sourceMap: sourceMap)
-            bookMap[book.bookId] = book
-        }
-
-        for progress in backup.readProgress {
-            if let book = bookMap[progress.bookId] {
-                progress.apply(to: book)
-            }
-        }
-
-        for ruleJSON in backup.replaceRules {
-            let rule = ReplaceRule.create(in: context)
-            ruleJSON.apply(to: rule)
-        }
-
-        try CoreDataStack.shared.save()
     }
 
     private func clearAllData() {
@@ -521,15 +535,17 @@ class WebDAVSyncManager: ObservableObject {
 
         let safeDevice = sanitizedDeviceName(deviceName)
         let datePart = formatter.string(from: timestamp)
-        return "legado_backup_\(safeDevice)_\(datePart).json"
+        // 关键修改：生成 .zip 后缀
+        return "legado_backup_\(safeDevice)_\(datePart).zip"
     }
 
     private func parseBackupDate(from fileName: String) -> Date? {
-        guard fileName.hasPrefix("legado_backup_"), fileName.hasSuffix(".json") else {
+        // 关键修改：识别 .zip
+        guard fileName.hasPrefix("legado_backup_"), fileName.hasSuffix(".zip") else {
             return nil
         }
 
-        let raw = String(fileName.dropFirst("legado_backup_".count).dropLast(".json".count))
+        let raw = String(fileName.dropFirst("legado_backup_".count).dropLast(".zip".count))
         let parts = raw.split(separator: "_")
         guard parts.count >= 3 else {
             return nil
@@ -544,10 +560,11 @@ class WebDAVSyncManager: ObservableObject {
     }
 
     private func parseDeviceName(from fileName: String) -> String? {
-        guard fileName.hasPrefix("legado_backup_"), fileName.hasSuffix(".json") else {
+        // 关键修改：识别 .zip
+        guard fileName.hasPrefix("legado_backup_"), fileName.hasSuffix(".zip") else {
             return nil
         }
-        let raw = String(fileName.dropFirst("legado_backup_".count).dropLast(".json".count))
+        let raw = String(fileName.dropFirst("legado_backup_".count).dropLast(".zip".count))
         let parts = raw.split(separator: "_")
         guard parts.count >= 3 else {
             return nil
