@@ -320,35 +320,14 @@ class ZipBuilder {
     
     // MARK: - DEFLATE 压缩
     
-    /// 使用 Apple Compression 框架进行 DEFLATE 压缩
-    private func deflateData(_ sourceData: Data) -> Data? {
-        guard sourceData.count > 0 else { return nil }
-        
-        let sourceBufferSize = sourceData.count
-        let destBufferSize = sourceBufferSize + sourceBufferSize / 2 + 64
-        var destBuffer = [UInt8](repeating: 0, count: destBufferSize)
-        let algorithm: compression_algorithm = COMPRESSION_DEFLATE
-        
-        let result: Int = sourceData.withUnsafeBytes { sourcePtr in
-            guard let sourceAddress = sourcePtr.baseAddress else { return 0 }
-            let sourcePtrBound = sourceAddress.assumingMemoryBound(to: UInt8.self)
-            
-            return destBuffer.withUnsafeMutableBufferPointer { destPtr in
-                guard let destAddress = destPtr.baseAddress else { return 0 }
-                return compression_encode_buffer(
-                    destAddress,
-                    destBufferSize,
-                    sourcePtrBound,
-                    sourceBufferSize,
-                    nil,
-                    algorithm
-                )
-            }
-        }
-        
-        if result > 0 {
-            return Data(destBuffer[0..<result])
-        }
+    /// 使用 Apple Compression 框架进行 zlib 压缩
+    /// 注意：ZIP DEFLATE 需要 raw deflate（无 zlib header），Apple Compression 框架
+    /// 的 COMPRESSION_ZLIB 会添加 zlib header，不兼容 ZIP。
+    /// EPUB 阅读器完全支持 STORE 方式（无压缩），所以这里回退到 STORE。
+    /// 如需真正的 DEFLATE，可使用 zlib 系统 C 库。
+    private func deflateData(_ data: Data) -> Data? {
+        // EPUB 内容通常不大，STORE 方式完全可以接受
+        // 保留方法签名以便将来替换为真正的 DEFLATE 实现
         return nil
     }
 }
