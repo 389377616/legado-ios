@@ -45,9 +45,10 @@ enum BitmapUtils {
 
     static func stackBlur(_ image: UIImage, radius: Double = 8) -> UIImage? {
         guard let ciImage = CIImage(image: image) else { return image }
-        let filter = CIFilter.gaussianBlur()
-        filter.inputImage = ciImage
-        filter.radius = Float(radius)
+        guard let filter = CIFilter(name: "CIGaussianBlur", parameters: [
+            kCIInputImageKey: ciImage,
+            kCIInputRadiusKey: NSNumber(value: Float(radius))
+        ]) else { return image }
         guard let output = filter.outputImage,
               let cgImage = ciContext.createCGImage(output, from: ciImage.extent) else {
             return image

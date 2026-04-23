@@ -60,11 +60,12 @@ enum StringUtils {
 
     static func halfToFull(_ input: String) -> String {
         String(input.map { character in
-            switch character.unicodeScalars.first?.value {
+            guard let scalar = character.unicodeScalars.first else { return character }
+            switch scalar.value {
             case 32:
                 return Character(UnicodeScalar(12_288)!)
             case 33...126:
-                return Character(UnicodeScalar(character.unicodeScalars.first!.value + 65_248)!)
+                return Character(UnicodeScalar(scalar.value + 65_248)!)
             default:
                 return character
             }
@@ -73,11 +74,12 @@ enum StringUtils {
 
     static func fullToHalf(_ input: String) -> String {
         String(input.map { character in
-            switch character.unicodeScalars.first?.value {
+            guard let scalar = character.unicodeScalars.first else { return character }
+            switch scalar.value {
             case 12_288:
                 return Character(" ")
             case 65_281...65_374:
-                return Character(UnicodeScalar(character.unicodeScalars.first!.value - 65_248)!)
+                return Character(UnicodeScalar(scalar.value - 65_248)!)
             default:
                 return character
             }
@@ -178,7 +180,7 @@ enum StringUtils {
     static func compress(_ string: String) -> Result<String, Error> {
         Result {
             let data = Data(string.utf8)
-            let compressed = try CompressionCodec.process(data: data, operation: COMPRESSION_STREAM_ENCODE)
+            let compressed = try CompressionCodec.compress(data)
             return compressed.base64EncodedString()
         }
     }
@@ -186,7 +188,7 @@ enum StringUtils {
     static func unCompress(_ string: String) -> Result<String, Error> {
         Result {
             let data = Data(base64Encoded: string) ?? Data()
-            let decompressed = try CompressionCodec.process(data: data, operation: COMPRESSION_STREAM_DECODE)
+            let decompressed = try CompressionCodec.decompress(data)
             return String(data: decompressed, encoding: .utf8) ?? ""
         }
     }
@@ -216,19 +218,65 @@ private extension String {
 }
 
 private enum CompressionCodec {
-    static func process(data: Data, operation: compression_stream_operation) throws -> Data {
+    static func compress(_ data: Data) throws -> Data {
         guard !data.isEmpty else { return Data() }
-
-        let algorithm = COMPRESSION_ZLIB
-        let destinationBufferSize = 64 * 1_024
-        let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: destinationBufferSize)
-        defer { destinationBuffer.deallocate() }
-
-        var stream = compression_stream()
-        var status = compression_stream_init(&stream, operation, algorithm)
-        guard status != COMPRESSION_STATUS_ERROR else {
-            throw NSError(domain: "StringUtils", code: 1001, userInfo: [NSLocalizedDescriptionKey: "压缩流初始化失败"])
+        let result = data.withUnsafeBytes { sourceBuffer -> Data? in
+            guard let sourcePointer = sourceBuffer.bindMemory(to: UInt8.self).baseAddress else { return nil }
+            let destCapacity = data.count
+            let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: destCapacity)
+            defer { destinationBuffer.deallocate() }
+            let compressedSize = compression_encode_buffer(
+                destinationBuffer, destCapacity,
+                sourcePointer, data.count,
+                nil, COMPRESSION_ZLIB
+            )
+            guard compressedSize > 0 else { return nil }
+            return Data(bytes: destinationBuffer, count: compressedSize)
         }
+        guard let result else {
+            throw NSError(domain: "StringUtils", code: 1002, userInfo: [NSLocalizedDescriptionKey: "压缩失败"])
+        }
+        return result
+    }
+
+    static func decompress(_ data: Data) throws -> Data {
+        guard !data.isEmpty else { return Data() }
+        let destCapacity = data.count * 10 // heuristic
+        let result = data.withUnsafeBytes { sourceBuffer -> Data? in
+            guard let sourcePointer = sourceBuffer.bindMemory(to: UInt8.self).baseAddress else { return nil }
+            let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: destCapacity)
+            defer { destinationBuffer.deallocate() }
+            let decompressedSize = compression_decode_buffer(
+                destinationBuffer, destCapacity,
+                sourcePointer, data.count,
+                nil, COMPRESSION_ZLIB
+            )
+            guard decompressedSize > 0 else { return nil }
+            return Data(bytes: destinationBuffer, count: decompressedSize)
+        }
+        guard let result else {
+            throw NSError(domain: "StringUtils", code: 1003, userInfo: [NSLocalizedDescriptionKey: "解压失败"])
+        }
+        return result
+    }
+}
+
+// MARK: - 数据压缩/解压 (公开 API)
+
+extension StringUtils {
+    static func compress(_ string: String) throws -> Data {
+        guard let data = string.data(using: .utf8) else { throw NSError(domain: "StringUtils", code: 1000) }
+        return try CompressionCodec.compress(data)
+    }
+
+    static func decompress(_ data: Data) throws -> String {
+        let decompressed = try CompressionCodec.decompress(data)
+        guard let string = String(data: decompressed, encoding: .utf8) else {
+            throw NSError(domain: "StringUtils", code: 1004, userInfo: [NSLocalizedDescriptionKey: "解压后字符串解码失败"])
+        }
+        return string
+    }
+}
         defer { compression_stream_destroy(&stream) }
 
         return try data.withUnsafeBytes { rawBuffer in
