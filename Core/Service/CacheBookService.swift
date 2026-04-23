@@ -35,12 +35,23 @@ class CacheBookService: ObservableObject {
         var totalChapters: Int = 0
         var status: Status = .waiting
         
-        enum Status {
+        enum Status: Equatable {
             case waiting
             case loading
             case caching
             case completed
             case failed(String)
+            
+            static func == (lhs: Status, rhs: Status) -> Bool {
+                switch (lhs, rhs) {
+                case (.waiting, .waiting), (.loading, .loading), (.caching, .caching), (.completed, .completed):
+                    return true
+                case (.failed(let a), .failed(let b)):
+                    return a == b
+                default:
+                    return false
+                }
+            }
         }
         
         var progress: Double {
@@ -85,14 +96,14 @@ class CacheBookService: ObservableObject {
             do {
                 try await mutex.withLock {
                     // 尝试获取详情
-                    if book.tocUrl == nil || book.tocUrl!.isEmpty {
+                    if book.tocUrl.isEmpty {
                         if let source = book.source {
-                            _ = try await WebBook.getBookInfoAwait(source: source, book: book)
+                            try await WebBook.getBookInfo(source: source, book: book)
                         }
                     }
                     // 获取目录
                     if let source = book.source {
-                        let chapters = try await WebBook.getChapterListAwait(source: source, book: book)
+                        let chapters = try await WebBook.getChapterList(source: source, book: book)
                         saveChapters(chapters, for: bookUrl)
                     }
                 }
@@ -152,8 +163,9 @@ class CacheBookService: ObservableObject {
                 guard progress.status == .caching else { continue }
                 
                 // 获取章节列表
+                guard let book = fetchBook(bookUrl: bookUrl) else { continue }
                 let request: NSFetchRequest<BookChapter> = BookChapter.fetchRequest()
-                request.predicate = NSPredicate(format: "bookUrl == %@", bookUrl)
+                request.predicate = NSPredicate(format: "bookId == %@", book.bookId as CVarArg)
                 request.sortDescriptors = [NSSortDescriptor(key: "index", ascending: true)]
                 
                 guard let chapters = try? context.fetch(request) else { continue }
@@ -194,18 +206,18 @@ class CacheBookService: ObservableObject {
     // MARK: - 缓存单章节（对应 Android CacheBook 下载+保存）
     
     private func cacheChapter(_ chapter: BookChapter, bookUrl: String) async throws {
-        guard let source = chapter.source else {
+        guard let book = fetchBook(bookUrl: bookUrl),
+              let source = book.source else {
             throw CacheBookError.noSource
         }
         
         // 尚未缓存才下载
         if chapter.isCached { return }
         
-        let content = try await WebBook.getContentAwait(
+        let content = try await WebBook.getContent(
             source: source,
-            book: fetchBook(bookUrl: bookUrl)!,
-            chapter: chapter,
-            nextChapterUrl: nil
+            book: book,
+            chapter: chapter
         )
         
         // 保存到缓存目录
@@ -214,7 +226,7 @@ class CacheBookService: ObservableObject {
         
         try FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
         let fileURL = cacheDir.appendingPathComponent("\(chapter.chapterId.uuidString).txt")
-        try content.write(to: fileURL, atomically: true, encoding: .utf8)
+        try content.write(to: fileURL, atomically: true, encoding: String.Encoding.utf8)
         
         // 更新章节缓存状态
         chapter.cachePath = fileURL.path
@@ -234,8 +246,9 @@ class CacheBookService: ObservableObject {
     
     private func getChapterCount(bookUrl: String) -> Int {
         let context = CoreDataStack.shared.viewContext
+        guard let book = fetchBook(bookUrl: bookUrl) else { return 0 }
         let request: NSFetchRequest<BookChapter> = BookChapter.fetchRequest()
-        request.predicate = NSPredicate(format: "bookUrl == %@", bookUrl)
+        request.predicate = NSPredicate(format: "bookId == %@", book.bookId as CVarArg)
         return (try? context.count(for: request)) ?? 0
     }
     

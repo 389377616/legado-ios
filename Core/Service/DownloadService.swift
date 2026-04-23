@@ -85,8 +85,8 @@ class DownloadService: ObservableObject {
             return
         }
         
-        let task = urlSession.downloadTask(with: requestUrl) { [weak self] tempUrl, response, error in
-            Task { @MainActor in
+        let task = urlSession.downloadTask(with: requestUrl) { tempUrl, response, error in
+            Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 
                 if let error = error {
@@ -137,7 +137,7 @@ class DownloadService: ObservableObject {
         
         // 监控进度
         let observation = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 self?.downloads[id]?.progress = progress.fractionCompleted
                 self?.downloads[id]?.status = .downloading
             }

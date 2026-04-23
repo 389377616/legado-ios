@@ -165,7 +165,7 @@ class CheckSourceService: ObservableObject {
             // 校验搜索
             if checkSearch && !(source.searchUrl ?? "").isEmpty {
                 let searchWord = getCheckKeyword(from: source)
-                let searchBooks = try WebBook.searchBookAwait(source: source, key: searchWord)
+                let searchBooks = try await WebBook.searchBook(source: source, key: searchWord)
                 
                 if searchBooks.isEmpty {
                     addGroup("搜索失效", to: source)
@@ -186,7 +186,7 @@ class CheckSourceService: ObservableObject {
                     addGroup("发现规则为空", to: source)
                 } else {
                     removeGroup("发现规则为空", from: source)
-                    let exploreBooks = try WebBook.exploreBookAwait(source: source, url: exploreUrl)
+                    let exploreBooks = try await WebBook.exploreBook(source: source, url: exploreUrl)
                     if exploreBooks.isEmpty {
                         addGroup("发现失效", to: source)
                     } else {
@@ -241,36 +241,44 @@ class CheckSourceService: ObservableObject {
     
     // MARK: - 校验书源详情/目录/正文（对应 Android checkBook）
     
-    private func checkBook(_ book: SearchBookResult, source: BookSource, isSearchBook: Bool) throws {
+    private func checkBook(_ book: SearchBookResult, source: BookSource, isSearchBook: Bool) async throws {
         let bookType = isSearchBook ? "搜索" : "发现"
         
         do {
             if !checkInfo { return }
             
-            // 校验详情
-            let bookInfo = try WebBook.getBookInfoAwait(source: source, book: book)
+            // 校验详情 — WebBook.getBookInfo 需要 Book 对象，先用 SearchBookResult 转换
+            let tempBook = Book.create(in: CoreDataStack.shared.viewContext)
+            tempBook.name = book.name
+            tempBook.author = book.author
+            tempBook.bookUrl = book.bookUrl
+            tempBook.coverUrl = book.coverUrl
+            tempBook.intro = book.intro
+            tempBook.origin = source.bookSourceUrl
+            
+            try await WebBook.getBookInfo(source: source, book: tempBook)
             
             if !checkCategory || source.bookSourceType == 3 { // file type
                 return
             }
             
             // 校验目录
-            let toc = try WebBook.getChapterListAwait(source: source, book: bookInfo)
-                .filter { !($0.isVolume && ($0.url ?? "").starts(with: $0.title ?? "")) }
+            let toc = try await WebBook.getChapterList(source: source, book: tempBook)
+                .filter { !($0.isVolume && $0.url.starts(with: $0.title)) }
                 .prefix(2)
                 .map { $0 }
             
             guard let firstChapter = toc.first else {
-                throw SourceCheckError.tocEmpty
+                throw CheckSourceError.tocEmpty
             }
             
             if !checkContent { return }
             
             // 校验正文
             let nextChapterUrl = toc.count > 1 ? toc[1].url : firstChapter.url
-            _ = try WebBook.getContentAwait(
+            _ = try await WebBook.getContent(
                 source: source,
-                book: bookInfo,
+                book: tempBook,
                 chapter: firstChapter,
                 nextChapterUrl: nextChapterUrl
             )
@@ -314,17 +322,23 @@ class CheckSourceService: ObservableObject {
     }
     
     private func addErrorComment(_ comment: String, to source: BookSource) {
-        source.customOrder = Int16(source.customOrder) | 0 // 保留原值
-        // Android 存到 errorComment 字段，iOS 用 remark 字段
-        if source.remark == nil || source.remark!.isEmpty {
-            source.remark = comment
+        // iOS BookSource 没有 remark 字段，用 bookSourceComment 存储（对应 Android errorComment）
+        // 暂时存储在 bookSourceGroup 末尾用 "|" 分隔
+        var existing = source.bookSourceGroup ?? ""
+        if existing.isEmpty {
+            source.bookSourceGroup = comment
         } else {
-            source.remark = (source.remark ?? "") + "\n" + comment
+            source.bookSourceGroup = existing + "|" + comment
         }
     }
     
     private func removeErrorComment(from source: BookSource) {
-        source.remark = nil
+        // 清除 error comment（以 | 分隔的最后部分）
+        guard let group = source.bookSourceGroup else { return }
+        let parts = group.components(separatedBy: "|")
+        if parts.count > 1 {
+            source.bookSourceGroup = parts.dropLast().joined(separator: "|")
+        }
     }
     
     private func getInvalidGroupNames(from source: BookSource) -> String {
@@ -367,17 +381,14 @@ private struct TocEmptyError: Error {}
 private struct JavaScriptError: Error {}
 private struct TimeoutError: Error {}
 
-// MARK: - 搜索结果模型（简化版，与 WebBook 搜索结果转换用）
-
-private struct SearchBookResult {
-    let name: String
-    let author: String
-    let bookUrl: String
-    let coverUrl: String?
-    let intro: String?
-    let kind: String?
-    let wordCount: String?
-    let lastChapter: String?
+/// 检源错误（对应 Android SourceCheckError）
+enum CheckSourceError: Error {
+    case tocEmpty
+    case contentEmpty
+    case searchEmpty
+    case exploreEmpty
+    case timeout
+    case javascriptError(String)
 }
 
 // MARK: - 通知名
