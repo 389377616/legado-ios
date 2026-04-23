@@ -1075,21 +1075,31 @@ class AnalyzeUrl {
         // 使用 UnsafeMutablePointer 实现线程安全的值传递
         let resultPointer = UnsafeMutablePointer<T?>.allocate(capacity: 1)
         resultPointer.initialize(to: nil)
-        var caughtError: Error?
+        let errorPointer = UnsafeMutablePointer<Error?>.allocate(capacity: 1)
+        errorPointer.initialize(to: nil)
 
         Task {
             do {
                 resultPointer.pointee = try await block()
             } catch let e {
-                caughtError = e
+                errorPointer.pointee = e
             }
             semaphore.signal()
         }
 
         semaphore.wait()
-        if let error = caughtError { fatalError("同步等待失败: \(error)") }
-        guard let value = resultPointer.pointee else { fatalError("同步等待结果为空") }
+        if let error = errorPointer.pointee {
+            resultPointer.deallocate()
+            errorPointer.deallocate()
+            fatalError("同步等待失败: \(error)")
+        }
+        guard let value = resultPointer.pointee else {
+            resultPointer.deallocate()
+            errorPointer.deallocate()
+            fatalError("同步等待结果为空")
+        }
         resultPointer.deallocate()
+        errorPointer.deallocate()
         return value
     }
 }
