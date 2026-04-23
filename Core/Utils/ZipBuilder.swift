@@ -204,16 +204,16 @@ class ZipBuilder {
     private func dosDateTime(from date: Date) -> (time: UInt16, date: UInt16) {
         let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
         
-        let dosTime = UInt16(
-            (components.hour ?? 0) << 11 |
-            (components.minute ?? 0) << 5 |
-            (components.second ?? 0) / 2
-        )
-        let dosDate = UInt16(
-            ((components.year ?? 1980) - 1980) << 9 |
-            (components.month ?? 1) << 5 |
-            (components.day ?? 1)
-        )
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        let second = components.second ?? 0
+        let dosTime = UInt16((hour << 11) | (minute << 5) | (second / 2))
+        
+        let year = (components.year ?? 1980) - 1980
+        let month = components.month ?? 1
+        let day = components.day ?? 1
+        let dosDate = UInt16((year << 9) | (month << 5) | day)
+        
         return (dosTime, dosDate)
     }
     
@@ -321,23 +321,28 @@ class ZipBuilder {
     // MARK: - DEFLATE 压缩
     
     /// 使用 Apple Compression 框架进行 DEFLATE 压缩
-    private func deflateData(_ data: Data) -> Data? {
-        guard data.count > 0 else { return nil }
+    private func deflateData(_ sourceData: Data) -> Data? {
+        guard sourceData.count > 0 else { return nil }
         
-        // 使用 zlib deflate（去除 zlib header，保留 raw deflate）
-        let sourceBufferSize = data.count
+        let sourceBufferSize = sourceData.count
         let destBufferSize = sourceBufferSize + sourceBufferSize / 2 + 64
         var destBuffer = [UInt8](repeating: 0, count: destBufferSize)
         
-        let result = data.withUnsafeBytes { sourcePtr in
-            compression_encode_buffer(
-                destBuffer,
-                destBufferSize,
-                sourcePtr.baseAddress!.assumingMemoryBound(to: UInt8.self),
-                sourceBufferSize,
-                nil,
-                COMPRESSION_DEFLATE
-            )
+        let result: Int = sourceData.withUnsafeBytes { sourcePtr in
+            guard let sourceAddress = sourcePtr.baseAddress else { return 0 }
+            let sourcePtrBound = sourceAddress.assumingMemoryBound(to: UInt8.self)
+            
+            return destBuffer.withUnsafeMutableBufferPointer { destPtr in
+                guard let destAddress = destPtr.baseAddress else { return 0 }
+                return compression_encode_buffer(
+                    destAddress,
+                    destBufferSize,
+                    sourcePtrBound,
+                    sourceBufferSize,
+                    nil,
+                    COMPRESSION_DEFLATE
+                )
+            }
         }
         
         if result > 0 {

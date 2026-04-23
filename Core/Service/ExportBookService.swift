@@ -22,14 +22,14 @@ struct ExportConfig {
 // MARK: - 内部数据结构
 
 /// 图片数据引用（对应 Android SrcData）
-private struct SrcData {
+struct SrcData {
     let chapterTitle: String
     let index: Int
     let src: String
 }
 
 /// EPUB 资源（对应 Android epublib Resource）
-private struct EpubResource {
+struct EpubResource {
     let data: Data
     let href: String
     let mediaType: String
@@ -63,10 +63,12 @@ extension ExportConfig {
 // MARK: - 自定义分割导出器（对应 Android CustomExporter）
 
 /// 对应 Android ExportBookService.CustomExporter
-private class CustomExporter {
+/// 标记 @MainActor 以访问 ExportBookService 的 @MainActor 属性
+@MainActor
+class CustomExporter {
     let scopeStr: String
     let size: Int
-    weak var service: ExportBookService?
+    let service: ExportBookService
     
     init(scopeStr: String, size: Int, service: ExportBookService) {
         self.scopeStr = scopeStr
@@ -75,28 +77,26 @@ private class CustomExporter {
     }
     
     func export(path: String, book: Book) async throws {
-        guard let service = service else { return }
-        
         service.exportProgress[book.bookUrl] = 0
         service.exportMessages.removeValue(forKey: book.bookUrl)
         NotificationCenter.default.post(name: .exportBook, object: book.bookUrl)
         
-        var scope = ExportBookService.parseScope(scopeStr)
+        var scope = Self.parseScope(scopeStr)
         let chapterCount = service.getChapterCount(bookUrl: book.bookUrl)
         scope = scope.filter { $0 < chapterCount }
         
-        let numOfEpubs = ExportBookService.paresNumOfEpub(total: scope.count, size: size)
+        let numOfEpubs = Self.paresNumOfEpub(total: scope.count, size: size)
         let exportDir = URL(fileURLWithPath: path)
         try FileManager.default.createDirectory(at: exportDir, withIntermediateDirectories: true)
         
-        let contentProcessor = ContentProcessor.get(book.name, book.origin)
+        let contentProcessor = ContentProcessor.get(bookName: book.name, bookOrigin: book.origin)
         let useReplace = ExportConfig.exportUseReplace
         let contentModel = service.generateChapterTemplate()
         
         for epubIndex in 0..<numOfEpubs {
             guard !Task.isCancelled else { break }
             
-            let filename = ExportBookService.getExportFileName(book: book, ext: "epub", index: epubIndex + 1)
+            let filename = Self.getExportFileName(book: book, ext: "epub", index: epubIndex + 1)
             let fileUrl = exportDir.appendingPathComponent(filename)
             if FileManager.default.fileExists(atPath: fileUrl.path) {
                 try FileManager.default.removeItem(at: fileUrl)
@@ -135,7 +135,7 @@ private class CustomExporter {
                 let chapterIndex = sortedScope[i]
                 guard chapterIndex < chapters.count else { continue }
                 let chapter = chapters[chapterIndex]
-                // 不导出VIP标识（对应 Android chapter.isVip = false）
+                // 不导出VIP标识
                 var chapterForExport = chapter
                 chapterForExport.isVIP = false
                 
@@ -156,9 +156,8 @@ private class CustomExporter {
                     chineseConvert: false
                 )
                 
-                // 对应 Android chapter.getDisplayTitle()
                 let title = chapterForExport.displayTitle
-                    .replacingOccurrences(of: "\u{1F512}", with: "")  // 移除VIP锁图标
+                    .replacingOccurrences(of: "\u{1F512}", with: "")
                 
                 let chapterHtml = contentModel
                     .replacingOccurrences(of: "{{title}}", with: title)
@@ -173,6 +172,17 @@ private class CustomExporter {
             let epubData = try service.buildEpub(book: book, sections: sections, resources: resources)
             try epubData.write(to: fileUrl)
         }
+    }
+    
+    // 委托给 ExportBookService 的 static 方法
+    static func parseScope(_ scope: String) -> Set<Int> {
+        ExportBookService.parseScope(scope)
+    }
+    static func paresNumOfEpub(total: Int, size: Int) -> Int {
+        ExportBookService.paresNumOfEpub(total: total, size: size)
+    }
+    static func getExportFileName(book: Book, ext: String, index: Int? = nil) -> String {
+        ExportBookService.getExportFileName(book: book, ext: ext, index: index)
     }
 }
 
@@ -282,11 +292,11 @@ class ExportBookService: ObservableObject {
     
     // MARK: - TXT 导出（对应 Android exportTxt）
     
-    private func exportTxt(path: String, book: Book) async throws {
+    func exportTxt(path: String, book: Book) async throws {
         exportMessages.removeValue(forKey: book.bookUrl)
         NotificationCenter.default.post(name: .exportBook, object: book.bookUrl)
         
-        let filename = getExportFileName(book: book, ext: "txt")
+        let filename = Self.getExportFileName(book: book, ext: "txt")
         let exportDir = URL(fileURLWithPath: path)
         try FileManager.default.createDirectory(at: exportDir, withIntermediateDirectories: true)
         
@@ -305,7 +315,7 @@ class ExportBookService: ObservableObject {
         
         let chapters = getChapterList(bookUrl: book.bookUrl)
         let useReplace = ExportConfig.exportUseReplace
-        let contentProcessor = ContentProcessor.get(book.name, book.origin)
+        let contentProcessor = ContentProcessor.get(bookName: book.name, bookOrigin: book.origin)
         
         if ExportConfig.exportPictureFile {
             // TXT + 图片导出模式
@@ -396,11 +406,11 @@ class ExportBookService: ObservableObject {
     
     // MARK: - EPUB 导出（对应 Android exportEpub）
     
-    private func exportEpub(path: String, book: Book) async throws {
+    func exportEpub(path: String, book: Book) async throws {
         exportMessages.removeValue(forKey: book.bookUrl)
         NotificationCenter.default.post(name: .exportBook, object: book.bookUrl)
         
-        let filename = getExportFileName(book: book, ext: "epub")
+        let filename = Self.getExportFileName(book: book, ext: "epub")
         let exportDir = URL(fileURLWithPath: path)
         try FileManager.default.createDirectory(at: exportDir, withIntermediateDirectories: true)
         
@@ -431,7 +441,7 @@ class ExportBookService: ObservableObject {
         // 章节（对应 Android setEpubContent）
         let chapters = getChapterList(bookUrl: book.bookUrl)
         let useReplace = ExportConfig.exportUseReplace
-        let contentProcessor = ContentProcessor.get(book.name, book.origin)
+        let contentProcessor = ContentProcessor.get(bookName: book.name, bookOrigin: book.origin)
         
         for (index, chapter) in chapters.enumerated() {
             guard !Task.isCancelled else { break }
@@ -517,7 +527,7 @@ class ExportBookService: ObservableObject {
     
     // MARK: - 图片修复（对应 Android fixPic）
     
-    private func fixPic(book: Book, content: String, chapter: BookChapter) -> (String, [EpubResource]) {
+    func fixPic(book: Book, content: String, chapter: BookChapter) -> (String, [EpubResource]) {
         var data = ""
         var resources: [EpubResource] = []
         
@@ -557,7 +567,7 @@ class ExportBookService: ObservableObject {
     
     // MARK: - EPUB 构建（ZIP 合成，对应 Android EpubWriter）
     
-    private func buildEpub(
+    func buildEpub(
         book: Book,
         sections: [(String, String)],
         resources: [EpubResource],
@@ -581,7 +591,7 @@ class ExportBookService: ObservableObject {
           </rootfiles>
         </container>
         """
-        zipBuilder.addFile(name: "META-INF/container.xml", content: containerXml)
+        zipBuilder.addFile(name: "META-INF/container.xml", data: containerXml.data(using: .utf8)!)
         
         // 3. 资源文件
         for resource in resources {
@@ -606,7 +616,7 @@ class ExportBookService: ObservableObject {
             <link rel="stylesheet" type="text/css" href="../Styles/main.css"/>
             </head><body>\(html)</body></html>
             """
-            zipBuilder.addFileAuto(name: "OEBPS/\(filename)", content: xhtml)
+            zipBuilder.addFileAuto(name: "OEBPS/\(filename)", data: xhtml.data(using: .utf8)!)
             
             let id = "chapter_\(index)"
             manifestItems.append("<item id=\"\(id)\" href=\"\(filename)\" media-type=\"application/xhtml+xml\"/>")
@@ -662,7 +672,7 @@ class ExportBookService: ObservableObject {
           </spine>
         </package>
         """
-        zipBuilder.addFileAuto(name: "OEBPS/content.opf", content: contentOpf)
+        zipBuilder.addFileAuto(name: "OEBPS/content.opf", data: contentOpf.data(using: .utf8)!)
         
         // 6. toc.ncx
         let tocNcx = """
@@ -673,7 +683,7 @@ class ExportBookService: ObservableObject {
           <navMap>\(navPoints.joined(separator: "\n"))</navMap>
         </ncx>
         """
-        zipBuilder.addFileAuto(name: "OEBPS/toc.ncx", content: tocNcx)
+        zipBuilder.addFileAuto(name: "OEBPS/toc.ncx", data: tocNcx.data(using: .utf8)!)
         
         return zipBuilder.build()
     }
@@ -796,7 +806,7 @@ class ExportBookService: ObservableObject {
     // MARK: - HTML 模板（对应 Android assets/epub/*.html）
     
     /// 对应 Android assets/epub/main.css
-    private func generateMainCSS() -> String {
+    func generateMainCSS() -> String {
         return """
         @charset "UTF-8";
         body { font-family: serif; margin: 1em; line-height: 1.6; word-break: break-all; }
@@ -810,7 +820,7 @@ class ExportBookService: ObservableObject {
     }
     
     /// 对应 Android assets/epub/fonts.css
-    private func generateFontsCSS() -> String {
+    func generateFontsCSS() -> String {
         return """
         @charset "UTF-8";
         /* fonts.css - 字体定义占位 */
@@ -818,7 +828,7 @@ class ExportBookService: ObservableObject {
     }
     
     /// 对应 Android assets/epub/cover.html
-    private func generateCoverHTML(book: Book) -> String {
+    func generateCoverHTML(book: Book) -> String {
         return """
         <div class="cover" style="text-align:center;">
           <img src="../Images/cover.jpg" alt="cover" style="max-width:100%;"/>
@@ -830,7 +840,7 @@ class ExportBookService: ObservableObject {
     }
     
     /// 对应 Android assets/epub/intro.html
-    private func generateIntroHTML(book: Book) -> String {
+    func generateIntroHTML(book: Book) -> String {
         let introText = book.displayIntro ?? book.intro ?? ""
         return """
         <h2>简介</h2>
@@ -839,7 +849,7 @@ class ExportBookService: ObservableObject {
     }
     
     /// 对应 Android assets/epub/chapter.html
-    private func generateChapterTemplate() -> String {
+    func generateChapterTemplate() -> String {
         return """
         <h2>{{title}}</h2>
         <div>{{content}}</div>
