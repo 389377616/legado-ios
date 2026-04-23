@@ -233,7 +233,7 @@ final class TxtFileParser {
             EncodingCandidate(encoding: .utf8, name: "UTF-8"),
             EncodingCandidate(encoding: gb18030Encoding(), name: "GBK"),
             EncodingCandidate(encoding: gb2312Encoding(), name: "GB2312"),
-            EncodingCandidate(encoding: .big5, name: "BIG5"),
+            EncodingCandidate(encoding: big5Encoding(), name: "BIG5"),
             EncodingCandidate(encoding: .ascii, name: "ASCII")
         ]
 
@@ -339,6 +339,14 @@ final class TxtFileParser {
         String.Encoding(
             rawValue: CFStringConvertEncodingToNSStringEncoding(
                 CFStringEncoding(CFStringEncodings.GB_2312_80.rawValue)
+            )
+        )
+    }
+
+    private static func big5Encoding() -> String.Encoding {
+        String.Encoding(
+            rawValue: CFStringConvertEncodingToNSStringEncoding(
+                CFStringEncoding(CFStringEncoding.big5.rawValue)
             )
         )
     }

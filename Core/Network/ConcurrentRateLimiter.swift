@@ -188,8 +188,6 @@ class ConcurrentRateLimiter {
             }
         }
     }
-        }
-    }
 
     /// 带频率限制执行异步闭包（对应 Android withLimit）
     func withLimit<T>(block: () async throws -> T) async throws -> T {

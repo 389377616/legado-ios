@@ -571,8 +571,8 @@ class AnalyzeUrl {
                         url: res.url,
                         html: res.body,
                         tag: source?.bookSourceUrl,
-                        sourceRegex: sourceRegex,
                         headerMap: headerMap,
+                        sourceRegex: sourceRegex,
                         javaScript: webJs ?? jsStr,
                         delayTime: webViewDelayTime
                     )
@@ -583,8 +583,8 @@ class AnalyzeUrl {
                     let bwv = BackstageWebView(
                         url: url,
                         tag: source?.bookSourceUrl,
-                        sourceRegex: effectiveSourceRegex,
                         headerMap: headerMap,
+                        sourceRegex: effectiveSourceRegex,
                         javaScript: webJs ?? jsStr,
                         delayTime: webViewDelayTime
                     )
@@ -1069,36 +1069,28 @@ class AnalyzeUrl {
         return vars
     }
 
-    // MARK: - 线程安全盒子（解决并发捕获 var 问题）
-
-    /// 线程安全的值容器，用于在 async 上下文中安全修改捕获的值
-    private class LockedBox<T> {
-        private var _value: T?
-        private let lock = NSLock()
-        var value: T? {
-            get { lock.withLock { _value } }
-            set { lock.withLock { _value = newValue } }
-        }
-    }
-
     /// 同步等待异步结果
     private func waitForAsync<T>(_ block: @escaping () async throws -> T) -> T {
         let semaphore = DispatchSemaphore(value: 0)
-        let resultBox = LockedBox<T?>()
-        let errorBox = LockedBox<Error?>()
+        var result: T?
+        var caughtError: Error?
+        let lock = NSLock()
 
         Task {
             do {
-                resultBox.value = try await block()
+                let value = try await block()
+                lock.withLock { result = value }
             } catch let e {
-                errorBox.value = e
+                lock.withLock { caughtError = e }
             }
             semaphore.signal()
         }
 
         semaphore.wait()
-        if let error = errorBox.value { fatalError("同步等待失败: \(error)") }
-        return resultBox.value!
+        if let error = caughtError { fatalError("同步等待失败: \(error)") }
+        guard let value = result else { fatalError("同步等待结果为空") }
+        return value
+    }
     }
 }
 

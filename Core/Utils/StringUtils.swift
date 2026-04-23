@@ -277,30 +277,3 @@ extension StringUtils {
         return string
     }
 }
-        defer { compression_stream_destroy(&stream) }
-
-        return try data.withUnsafeBytes { rawBuffer in
-            guard let sourcePointer = rawBuffer.bindMemory(to: UInt8.self).baseAddress else { return Data() }
-
-            stream.src_ptr = sourcePointer
-            stream.src_size = data.count
-
-            var output = Data()
-            repeat {
-                stream.dst_ptr = destinationBuffer
-                stream.dst_size = destinationBufferSize
-
-                status = compression_stream_process(&stream, Int32(COMPRESSION_STREAM_FINALIZE))
-                let produced = destinationBufferSize - stream.dst_size
-                if produced > 0 {
-                    output.append(destinationBuffer, count: produced)
-                }
-            } while status == COMPRESSION_STATUS_OK
-
-            guard status == COMPRESSION_STATUS_END else {
-                throw NSError(domain: "StringUtils", code: 1002, userInfo: [NSLocalizedDescriptionKey: "压缩流处理失败"])
-            }
-            return output
-        }
-    }
-}
