@@ -1,49 +1,83 @@
+# === macOS ===
 .DS_Store
+.Spotlight-V100
+.Trashes
+.fsvents/
+
+# === Xcode ===
 *.xcworkspace
 !*.xcworkspace/contents.xcworkspacedata
-*.xcuserdata
-DerivedData/
-build/
+xcuserdata/
+*.xcuserstate
 *.hmap
 *.ipa
 *.dSYM.zip
 *.dSYM
+DerivedData/
+build/
 PlaygroundCache/
 .swiftpm/
 Packages/
-.podspec
+*.podspec
 Pods/
-*.xcuserstate
 *.scmblueprint
 *.scm
 *.playground
+
+# === AI / IDE 工作目录 ===
+.ace-tool/
+.sisyphus/
+.augment/
+.claude/
+.cursor/
+.opencode/
+.codeium/
+.copilot/
+
+# === Node / Python ===
+node_modules/
 __pycache__/
 *.pyc
+*.pyo
+
+# === 环境变量 ===
 .env
 .env.local
 .env.*.local
-*.log
-.ace-tool/
-.sisyphus/
-node_modules/
 
-# Binary/media files - never commit
+# === 日志 ===
+*.log
+ci_error.txt
+gherr.txt
+
+# === 二进制 / 媒体文件（永不提交）===
 *.epub
 *.pdf
 *.mobi
 *.umd
+*.zip
+*.rar
+*.7z
+*.tar.gz
+*.mp3
+*.mp4
+*.avi
+*.mkv
+*.wav
+*.flac
+*.exe
+*.msi
 
-# Temp/build artifacts
+# === 临时 / 备份文件 ===
 *.tmp
 *.bak
 *.old
+*.swp
 *~
 Thumbs.db
+Desktop.ini
 
-# CI error logs
-ci_error.txt
-gherr.txt
-
-# AI agent workspace (keep local only)
+# === AI 生成脚本（本地保留）===
 inventory/
 docs/archive/
+cleanup_*.py
