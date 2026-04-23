@@ -77,7 +77,8 @@ gherr.txt
 Thumbs.db
 Desktop.ini
 
-# === AI 生成脚本（本地保留）===
+# === 辅助脚本/工具（本地保留）===
+.test_tools/
 inventory/
 docs/archive/
 cleanup_*.py
