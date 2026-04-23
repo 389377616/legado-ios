@@ -1072,23 +1072,24 @@ class AnalyzeUrl {
     /// 同步等待异步结果
     private func waitForAsync<T>(_ block: @escaping () async throws -> T) -> T {
         let semaphore = DispatchSemaphore(value: 0)
-        final class Box<T> { var value: T? }
-        let resultBox = Box<T?>()
-        final class ErrBox { var value: Error? }
-        let errorBox = ErrBox()
+        // 使用 UnsafeMutablePointer 实现线程安全的值传递
+        let resultPointer = UnsafeMutablePointer<T?>.allocate(capacity: 1)
+        resultPointer.initialize(to: nil)
+        var caughtError: Error?
 
         Task {
             do {
-                resultBox.value = try await block()
+                resultPointer.pointee = try await block()
             } catch let e {
-                errorBox.value = e
+                caughtError = e
             }
             semaphore.signal()
         }
 
         semaphore.wait()
-        if let error = errorBox.value { fatalError("同步等待失败: \(error)") }
-        guard let value = resultBox.value else { fatalError("同步等待结果为空") }
+        if let error = caughtError { fatalError("同步等待失败: \(error)") }
+        guard let value = resultPointer.pointee else { fatalError("同步等待结果为空") }
+        resultPointer.deallocate()
         return value
     }
 }

@@ -344,11 +344,7 @@ final class TxtFileParser {
     }
 
     private static func big5Encoding() -> String.Encoding {
-        String.Encoding(
-            rawValue: CFStringConvertEncodingToNSStringEncoding(
-                CFStringEncoding(kCFStringEncodingBig5)
-            )
-        )
+        String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(0x0620))
     }
 
     private static func contentRange(from metadataTag: String?) -> NSRange? {
