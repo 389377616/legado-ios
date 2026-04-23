@@ -201,12 +201,22 @@ enum SourceType: Int {
     case rss = 1
 }
 
+struct SourceExploreKind {
+    let title: String
+    let url: String?
+    
+    /// 转换为 DiscoveryView 使用的 ExploreKind
+    func toExploreKind() -> ExploreKind {
+        ExploreKind(title: title, url: url ?? "")
+    }
+}
+
 // MARK: - BookSource 扩展（对标 Android BookSourceExtensions.kt）
 
 extension BookSource {
     
     /// 获取发现分类 — 对标 Android BookSource.exploreKinds()
-    func exploreKinds() -> [ExploreKind] {
+    func exploreKinds() -> [SourceExploreKind] {
         guard let exploreUrl = exploreUrl, !exploreUrl.isEmpty else {
             return []
         }
@@ -258,7 +268,7 @@ extension BookSource {
                 let title = components[0].trimmingCharacters(in: .whitespaces)
                 let url = components[1].trimmingCharacters(in: .whitespaces)
                 if !title.isEmpty && !url.isEmpty {
-                    kinds.append(ExploreKind(title: title, url: url))
+                    kinds.append(SourceExploreKind(title: title, url: url))
                 }
             }
         }
@@ -267,13 +277,9 @@ extension BookSource {
     }
 }
 
-// MARK: - 发现分类模型（对标 Android ExploreKind）
-
-struct ExploreKind: Identifiable {
-    let id = UUID()
-    let title: String
-    let url: String?
-}
+// MARK: - 发现分类模型
+// ExploreKind 已在 Features/Discovery/DiscoveryView.swift 中定义
+// 此处使用 SourceExploreKind 以避免冲突，核心层可转化为 DiscoveryView 的 ExploreKind
 
 // MARK: - RssSource 扩展（对标 Android RssSourceExtensions.kt）
 
