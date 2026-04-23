@@ -24,4 +24,26 @@ __pycache__/
 .env.*.local
 *.log
 .ace-tool/
+.sisyphus/
 node_modules/
+
+# Binary/media files - never commit
+*.epub
+*.pdf
+*.mobi
+*.umd
+
+# Temp/build artifacts
+*.tmp
+*.bak
+*.old
+*~
+Thumbs.db
+
+# CI error logs
+ci_error.txt
+gherr.txt
+
+# AI agent workspace (keep local only)
+inventory/
+docs/archive/
