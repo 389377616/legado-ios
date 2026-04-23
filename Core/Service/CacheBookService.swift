@@ -103,8 +103,19 @@ class CacheBookService: ObservableObject {
                     }
                     // 获取目录
                     if let source = book.source {
-                        let chapters = try await WebBook.getChapterList(source: source, book: book)
-                        saveChapters(chapters, for: bookUrl)
+                        let webChapters = try await WebBook.getChapterList(source: source, book: book)
+                        // 将 WebChapter 转换为 BookChapter 并保存
+                        let context = CoreDataStack.shared.viewContext
+                        for webChapter in webChapters {
+                            let chapter = BookChapter.create(in: context)
+                            chapter.chapterUrl = webChapter.url
+                            chapter.title = webChapter.title
+                            chapter.index = Int32(webChapter.index)
+                            chapter.isVIP = webChapter.isVip
+                            chapter.bookId = book.bookId
+                            chapter.book = book
+                        }
+                        try? context.save()
                     }
                 }
             } catch {

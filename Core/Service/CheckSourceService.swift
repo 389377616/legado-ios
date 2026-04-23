@@ -152,7 +152,7 @@ class CheckSourceService: ObservableObject {
     
     // MARK: - 单个书源校验（对应 Android checkSource + doCheckSource）
     
-    private func checkSource(_ source: BookSource) -> SourceCheckResult {
+    private func checkSource(_ source: BookSource) async -> SourceCheckResult {
         let startTime = Date()
         let sourceUrl = source.bookSourceUrl ?? ""
         let sourceName = source.bookSourceName ?? ""
@@ -172,7 +172,7 @@ class CheckSourceService: ObservableObject {
                 } else {
                     removeGroup("搜索失效", from: source)
                     if checkInfo, let firstBook = searchBooks.first {
-                        try checkBook(firstBook, source: source, isSearchBook: true)
+                        try await checkBook(firstBook, source: source, isSearchBook: true)
                     }
                 }
             } else if checkSearch && (source.searchUrl ?? "").isEmpty {
@@ -192,7 +192,7 @@ class CheckSourceService: ObservableObject {
                     } else {
                         removeGroup("发现失效", from: source)
                         if checkInfo, let firstBook = exploreBooks.first {
-                            try checkBook(firstBook, source: source, isSearchBook: false)
+                            try await checkBook(firstBook, source: source, isSearchBook: false)
                         }
                     }
                 }
@@ -247,7 +247,7 @@ class CheckSourceService: ObservableObject {
         do {
             if !checkInfo { return }
             
-            // 校验详情 — WebBook.getBookInfo 需要 Book 对象，先用 SearchBookResult 转换
+            // 校验详情 — WebBook.getBookInfo 需要 Book 对象
             let tempBook = Book.create(in: CoreDataStack.shared.viewContext)
             tempBook.name = book.name
             tempBook.author = book.author
@@ -264,24 +264,32 @@ class CheckSourceService: ObservableObject {
             
             // 校验目录
             let toc = try await WebBook.getChapterList(source: source, book: tempBook)
-                .filter { !($0.isVolume && $0.url.starts(with: $0.title)) }
-                .prefix(2)
-                .map { $0 }
             
-            guard let firstChapter = toc.first else {
+            guard !toc.isEmpty else {
                 throw CheckSourceError.tocEmpty
             }
             
+            // 取前几个章节校验
+            let firstChapters = Array(toc.prefix(2))
+            
             if !checkContent { return }
             
-            // 校验正文
-            let nextChapterUrl = toc.count > 1 ? toc[1].url : firstChapter.url
-            _ = try await WebBook.getContent(
-                source: source,
-                book: tempBook,
-                chapter: firstChapter,
-                nextChapterUrl: nextChapterUrl
-            )
+            // 校验正文 — 需要将 WebChapter 转为 BookChapter 来调用 getContent
+            // 简化：只要目录有结果就认为目录可用，正文仅在有章节时尝试
+            if let firstChapter = firstChapters.first {
+                // 将 WebChapter 转换为 BookChapter 用于 getContent
+                let chapter = BookChapter.create(in: CoreDataStack.shared.viewContext)
+                chapter.chapterUrl = firstChapter.url
+                chapter.title = firstChapter.title
+                chapter.index = Int32(firstChapter.index)
+                chapter.isVIP = firstChapter.isVip
+                
+                _ = try await WebBook.getContent(
+                    source: source,
+                    book: tempBook,
+                    chapter: chapter
+                )
+            }
             
             removeGroup("\(bookType)目录失效", from: source)
             removeGroup("\(bookType)正文失效", from: source)

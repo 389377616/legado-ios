@@ -327,6 +327,7 @@ class ZipBuilder {
         let sourceBufferSize = sourceData.count
         let destBufferSize = sourceBufferSize + sourceBufferSize / 2 + 64
         var destBuffer = [UInt8](repeating: 0, count: destBufferSize)
+        let algorithm: compression_algorithm = COMPRESSION_DEFLATE
         
         let result: Int = sourceData.withUnsafeBytes { sourcePtr in
             guard let sourceAddress = sourcePtr.baseAddress else { return 0 }
@@ -340,7 +341,7 @@ class ZipBuilder {
                     sourcePtrBound,
                     sourceBufferSize,
                     nil,
-                    COMPRESSION_DEFLATE
+                    algorithm
                 )
             }
         }
