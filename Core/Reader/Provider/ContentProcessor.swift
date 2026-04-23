@@ -221,18 +221,10 @@ enum Pattern {
 }
 
 enum ContentHelp {
+    /// 段落重排 — 简化版（Android 正版在 ContentHelp.swift）
     static func reSegment(_ content: String, title: String) -> String {
-        var paragraphs = content.components(separatedBy: .newlines)
-        var result: [String] = []
-        
-        for paragraph in paragraphs {
-            let trimmed = paragraph.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty {
-                result.append(trimmed)
-            }
-        }
-        
-        return result.joined(separator: "\n")
+        // 委托给完整版 ContentHelp.reSegment
+        return ContentHelpEngine.reSegment(content: content, chapterName: title)
     }
 }
 

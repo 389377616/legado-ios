@@ -10,7 +10,7 @@ import Foundation
 
 // MARK: - 内容排版帮助（对标 Android ContentHelp）
 
-enum ContentHelp {
+enum ContentHelpEngine {
     
     // MARK: - 常量（对标 Android）
     
@@ -108,7 +108,7 @@ enum ContentHelp {
     
     /// 强制切分，减少段落内句子
     private static func reduceLength(str: [Character]) -> [Character] {
-        let p = String(str).split(separator: "\n", omittingEmptySubsequences: false).map { String($0) }
+        var p = String(str).split(separator: "\n", omittingEmptySubsequences: false).map { String($0) }
         let l = p.count
         var b = [Bool](repeating: false, count: l)
         
