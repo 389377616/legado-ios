@@ -332,58 +332,12 @@ enum LocalBook {
     }
     
     private static func parseTXTContent(fileURL: URL, chapter: BookChapter, book: Book) -> String? {
-        guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else {
-            let encodings: [String.Encoding] = [.utf8, .utf16, .isoLatin1, .ascii]
-            for encoding in encodings {
-                if let content = try? String(contentsOf: fileURL, encoding: encoding) {
-                    return extractChapter(content: content, chapter: chapter)
-                }
-            }
-            
-            let gb18030 = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)))
-            if let content = try? String(contentsOf: fileURL, encoding: gb18030) {
-                return extractChapter(content: content, chapter: chapter)
-            }
-            
-            return nil
-        }
-        
-        return extractChapter(content: content, chapter: chapter)
-    }
-    
-    private static func extractChapter(content: String, chapter: BookChapter) -> String? {
-        let lines = content.components(separatedBy: .newlines)
-        var startIndex = -1
-        var endIndex = lines.count
-        
-        let chapterPattern = chapter.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        for (index, line) in lines.enumerated() {
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.contains(chapterPattern) || chapterPattern.contains(trimmed) {
-                if startIndex == -1 {
-                    startIndex = index
-                } else {
-                    endIndex = index
-                    break
-                }
-            }
-        }
-        
-        if startIndex >= 0 {
-            let chapterLines = Array(lines[startIndex..<min(endIndex, lines.count)])
-            return chapterLines.joined(separator: "\n")
-        }
-        
-        let linesPerChapter = 500
-        let startLine = Int(chapter.index) * linesPerChapter
-        let endLine = min(startLine + linesPerChapter, lines.count)
-        
-        if startLine < lines.count {
-            return Array(lines[startLine..<endLine]).joined(separator: "\n")
-        }
-        
-        return nil
+        try? TxtFileParser.readChapter(
+            file: fileURL,
+            chapterIndex: Int(chapter.index),
+            metadataTag: chapter.tag,
+            preferredPattern: book.tocUrl.isEmpty ? nil : book.tocUrl
+        )
     }
     
     private static func parseEPUBContent(fileURL: URL, chapter: BookChapter, book: Book) -> String? {

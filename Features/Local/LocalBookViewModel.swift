@@ -63,26 +63,33 @@ class LocalBookViewModel: ObservableObject {
                 var epubDirectory: String?
 
                 if fileExtension == "txt" {
-                    let content = try Self.readText(fileURL: url)
-                    let chapters = Self.splitChapters(content: content)
-                    book.totalChapterNum = Int32(chapters.count)
+                    let parsedBook = try TxtFileParser.parse(file: url)
+                    book.totalChapterNum = Int32(parsedBook.chapters.count)
+                    book.charset = parsedBook.encodingName
+                    book.tocUrl = parsedBook.tocPattern ?? ""
+                    book.wordCount = "\(parsedBook.wordCount)"
+                    if let intro = parsedBook.intro, !intro.isEmpty {
+                        book.intro = intro
+                    }
 
                     book.durChapterIndex = 0
-                    book.durChapterTitle = chapters.first?.title
+                    book.durChapterTitle = parsedBook.chapters.first?.title
 
-                    for (index, chapter) in chapters.enumerated() {
+                    for chapter in parsedBook.chapters {
                         let chapterObj = BookChapter.create(
                             in: context,
                             bookId: book.bookId,
-                            url: "local:\(index)",
-                            index: Int32(index),
+                            url: "local:\(chapter.index)",
+                            index: Int32(chapter.index),
                             title: chapter.title
                         )
                         chapterObj.book = book
-                        chapterObj.wordCount = Int32(chapter.content.count)
+                        chapterObj.wordCount = Int32(min(chapter.wordCount, Int(Int32.max)))
                         chapterObj.isCached = true
+                        chapterObj.cachePath = url.path
+                        chapterObj.tag = chapter.metadataTag
                     }
-                    DebugLogger.shared.log("TXT 解析完成: \(chapters.count) 章")
+                    DebugLogger.shared.log("TXT 解析完成: \(parsedBook.chapters.count) 章")
                 } else if fileExtension == "epub" {
                     let epubBook = try EPUBParser.parseSync(file: url, bookId: book.bookId)
                     book.name = epubBook.title

@@ -60,36 +60,62 @@ class SearchViewModel: ObservableObject {
             isSearching = false
             return
         }
-        
-        isSearching = true
-        searchResults.removeAll()
-        errorMessage = nil
 
-        let enabledSources = sources.filter { $0.enabled && $0.searchUrl != nil }
-        var partialBuckets: [(Int, [SearchResult])] = []
+        searchTask?.cancel()
+        searchTask = Task { [keyword] in
+            isSearching = true
+            searchResults.removeAll()
+            errorMessage = nil
 
-        await withTaskGroup(of: (Int, [SearchResult]).self) { group in
-            for (index, source) in enabledSources.enumerated() {
-                group.addTask { [keyword] in
-                    do {
-                        return (index, try await self.searchInSource(keyword: keyword, source: source))
-                    } catch {
-                        return (index, [])
+            defer {
+                isSearching = false
+                searchTask = nil
+            }
+
+            let enabledSources = sources.filter { $0.enabled && $0.searchUrl != nil }
+            var partialBuckets: [(Int, [SearchResult])] = []
+            var sourceErrors: [(Int, String)] = []
+
+            await withTaskGroup(of: (Int, [SearchResult], String?).self) { group in
+                for (index, source) in enabledSources.enumerated() {
+                    group.addTask { [keyword] in
+                        do {
+                            let results = try await self.searchInSource(keyword: keyword, source: source)
+                            return (index, results, nil)
+                        } catch is CancellationError {
+                            return (index, [], nil)
+                        } catch {
+                            let message = "\(source.bookSourceName)：\(error.localizedDescription)"
+                            return (index, [], message)
+                        }
+                    }
+                }
+
+                for await (index, results, error) in group {
+                    partialBuckets.append((index, results))
+                    if let error {
+                        sourceErrors.append((index, error))
                     }
                 }
             }
 
-            for await partial in group {
-                partialBuckets.append(partial)
+            guard !Task.isCancelled else { return }
+
+            let merged = partialBuckets
+                .sorted { $0.0 < $1.0 }
+                .flatMap { $0.1 }
+
+            searchResults = aggregateResults(merged)
+
+            if !sourceErrors.isEmpty {
+                errorMessage = sourceErrors
+                    .sorted { $0.0 < $1.0 }
+                    .map(\.1)
+                    .joined(separator: "\n")
             }
         }
 
-        let merged = partialBuckets
-            .sorted { $0.0 < $1.0 }
-            .flatMap { $0.1 }
-
-        searchResults = aggregateResults(merged)
-        isSearching = false
+        await searchTask?.value
     }
     
     private func searchInSource(keyword: String, source: BookSource) async throws -> [SearchResult] {

@@ -38,6 +38,16 @@
 		1A000000000000A3 /* CookieManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A3 /* CookieManager.swift */; };
 		1A000000000000A5 /* HTTPClient+Retry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A5 /* HTTPClient+Retry.swift */; };
 		1A000000000000A7 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A100000000000A7 /* Logger.swift */; };
+		1A00000000000110 /* StringUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000110 /* StringUtils.swift */; };
+		1A00000000000111 /* NetworkUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000111 /* NetworkUtils.swift */; };
+		1A00000000000112 /* MD5Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000112 /* MD5Utils.swift */; };
+		1A00000000000113 /* FileUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000113 /* FileUtils.swift */; };
+		1A00000000000114 /* BitmapUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000114 /* BitmapUtils.swift */; };
+		1A00000000000115 /* ScreenUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000115 /* ScreenUtils.swift */; };
+		1A00000000000116 /* TimeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000116 /* TimeUtils.swift */; };
+		1A00000000000117 /* IOUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000117 /* IOUtils.swift */; };
+		1A00000000000118 /* GSONUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000118 /* GSONUtils.swift */; };
+		1A00000000000119 /* NumberUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000119 /* NumberUtils.swift */; };
 		1A00000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A10000000000003 /* Assets.xcassets */; };
 		1A00000000000004 /* Legado.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 1A10000000000004 /* Legado.xcdatamodeld */; };
 		
@@ -361,6 +371,16 @@
 		1A100000000000A3 /* CookieManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieManager.swift; sourceTree = "<group>"; };
 		1A100000000000A5 /* HTTPClient+Retry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HTTPClient+Retry.swift"; sourceTree = "<group>"; };
 		1A100000000000A7 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		1A10000000000110 /* StringUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringUtils.swift; sourceTree = "<group>"; };
+		1A10000000000111 /* NetworkUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkUtils.swift; sourceTree = "<group>"; };
+		1A10000000000112 /* MD5Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MD5Utils.swift; sourceTree = "<group>"; };
+		1A10000000000113 /* FileUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileUtils.swift; sourceTree = "<group>"; };
+		1A10000000000114 /* BitmapUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitmapUtils.swift; sourceTree = "<group>"; };
+		1A10000000000115 /* ScreenUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenUtils.swift; sourceTree = "<group>"; };
+		1A10000000000116 /* TimeUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeUtils.swift; sourceTree = "<group>"; };
+		1A10000000000117 /* IOUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOUtils.swift; sourceTree = "<group>"; };
+		1A10000000000118 /* GSONUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSONUtils.swift; sourceTree = "<group>"; };
+		1A10000000000119 /* NumberUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumberUtils.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -414,6 +434,7 @@
 			1A30000000000014 /* Cache */,
 			1A30000000000015 /* Config */,
 			1A30000000000012 /* Network */,
+			1A30000000000018 /* Utils */,
 			1A30000000000065 /* WebServer */,
 			1A30000000000016 /* Parser */,
 			1A30000000000013 /* RuleEngine */,
@@ -428,6 +449,23 @@
 		path = Core;
 		sourceTree = "<group>";
 	};
+		1A30000000000018 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				1A10000000000110 /* StringUtils.swift */,
+				1A10000000000111 /* NetworkUtils.swift */,
+				1A10000000000112 /* MD5Utils.swift */,
+				1A10000000000113 /* FileUtils.swift */,
+				1A10000000000114 /* BitmapUtils.swift */,
+				1A10000000000115 /* ScreenUtils.swift */,
+				1A10000000000116 /* TimeUtils.swift */,
+				1A10000000000117 /* IOUtils.swift */,
+				1A10000000000118 /* GSONUtils.swift */,
+				1A10000000000119 /* NumberUtils.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
 		1A30000000000011 /* Persistence */ = {
 			isa = PBXGroup;
 			children = (
@@ -922,6 +960,16 @@
 				1A000000000000A3 /* CookieManager.swift in Sources */,
 				1A000000000000A5 /* HTTPClient+Retry.swift in Sources */,
 				1A000000000000A7 /* Logger.swift in Sources */,
+				1A00000000000110 /* StringUtils.swift in Sources */,
+				1A00000000000111 /* NetworkUtils.swift in Sources */,
+				1A00000000000112 /* MD5Utils.swift in Sources */,
+				1A00000000000113 /* FileUtils.swift in Sources */,
+				1A00000000000114 /* BitmapUtils.swift in Sources */,
+				1A00000000000115 /* ScreenUtils.swift in Sources */,
+				1A00000000000116 /* TimeUtils.swift in Sources */,
+				1A00000000000117 /* IOUtils.swift in Sources */,
+				1A00000000000118 /* GSONUtils.swift in Sources */,
+				1A00000000000119 /* NumberUtils.swift in Sources */,
 				1A00000000000030 /* MainTabView.swift in Sources */,
 				1A00000000000010 /* Book+CoreDataClass.swift in Sources */,
 				1A00000000000011 /* BookSource+CoreDataClass.swift in Sources */,

@@ -71,7 +71,6 @@ final class BookshelfViewModel: ObservableObject {
         
         return try await context.perform {
             let request: NSFetchRequest<Book> = Book.fetchRequest()
-            request.fetchLimit = self.pageSize
             request.returnsObjectsAsFaults = false
             
             switch sortMode {
