@@ -23,34 +23,22 @@ extension Book {
         return isType(bookType: .image)
     }
     
-    /// 本地 TXT
-    var isLocalTxt: Bool {
-        return isLocal && originName.lowercased().hasSuffix(".txt")
-    }
+    /// 本地 TXT（isLocalTxt 已在 Book+CoreDataClass.swift 中定义）
+    // var isLocalTxt: Bool { isLocal && originName.lowercased().hasSuffix(".txt") }
     
-    /// 本地 EPUB
-    var isEpub: Bool {
-        return isLocal && originName.lowercased().hasSuffix(".epub")
-    }
+    /// 本地 EPUB（isEpub 已在 Book+CoreDataClass.swift 中定义）
+    // var isEpub: Bool { isLocal && originName.lowercased().hasSuffix(".epub") }
     
     /// 本地 UMD
     var isUmd: Bool {
         return isLocal && originName.lowercased().hasSuffix(".umd")
     }
     
-    /// 本地 PDF
-    var isPdf: Bool {
-        return isLocal && originName.lowercased().hasSuffix(".pdf")
-    }
+    /// 本地 PDF（isPdf 已在 Book+CoreDataClass.swift 中定义）
+    // var isPdf: Bool { isLocal && originName.lowercased().hasSuffix(".pdf") }
     
-    /// 本地 Mobi/AZW3/AZW
-    var isMobi: Bool {
-        return isLocal && (
-            originName.lowercased().hasSuffix(".mobi") ||
-            originName.lowercased().hasSuffix(".azw3") ||
-            originName.lowercased().hasSuffix(".azw")
-        )
-    }
+    /// 本地 Mobi/AZW3/AZW（isMobi 已在 Book+CoreDataClass.swift 中定义）
+    // var isMobi: Bool { isLocal && (originName.lowercased().hasSuffix(".mobi") || ...) }
     
     /// 在线 TXT
     var isOnLineTxt: Bool {
@@ -99,22 +87,18 @@ extension Book {
     }
     
     /// 添加类型标记
-    func addType(bookTypes: Book.BookType...) {
-        for bt in bookTypes {
-            type = type | bt.rawValue
-        }
+    func addType(bookType: Book.BookType) {
+        type = type | bookType.rawValue
     }
     
     /// 移除类型标记
-    func removeType(bookTypes: Book.BookType...) {
-        for bt in bookTypes {
-            type = type & ~bt.rawValue
-        }
+    func removeType(bookType: Book.BookType) {
+        type = type & ~bookType.rawValue
     }
     
     /// 移除所有书籍类型
     func removeAllBookType() {
-        removeType(bookTypes: .text, .audio, .image, .local, .webFile, .updateError, .archive, .notShelf)
+        type = 0
     }
     
     /// 清空类型
