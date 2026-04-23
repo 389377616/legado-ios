@@ -346,7 +346,7 @@ final class TxtFileParser {
     private static func big5Encoding() -> String.Encoding {
         String.Encoding(
             rawValue: CFStringConvertEncodingToNSStringEncoding(
-                CFStringEncoding(CFStringEncoding.big5.rawValue)
+                CFStringEncoding(kCFStringEncodingBig5)
             )
         )
     }

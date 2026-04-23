@@ -1072,25 +1072,24 @@ class AnalyzeUrl {
     /// 同步等待异步结果
     private func waitForAsync<T>(_ block: @escaping () async throws -> T) -> T {
         let semaphore = DispatchSemaphore(value: 0)
-        var result: T?
-        var caughtError: Error?
-        let lock = NSLock()
+        final class Box<T> { var value: T? }
+        let resultBox = Box<T?>()
+        final class ErrBox { var value: Error? }
+        let errorBox = ErrBox()
 
         Task {
             do {
-                let value = try await block()
-                lock.withLock { result = value }
+                resultBox.value = try await block()
             } catch let e {
-                lock.withLock { caughtError = e }
+                errorBox.value = e
             }
             semaphore.signal()
         }
 
         semaphore.wait()
-        if let error = caughtError { fatalError("同步等待失败: \(error)") }
-        guard let value = result else { fatalError("同步等待结果为空") }
+        if let error = errorBox.value { fatalError("同步等待失败: \(error)") }
+        guard let value = resultBox.value else { fatalError("同步等待结果为空") }
         return value
-    }
     }
 }
 
