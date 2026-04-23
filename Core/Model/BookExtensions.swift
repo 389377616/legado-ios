@@ -81,9 +81,8 @@ extension Book {
     }
     
     /// 设置书籍类型
-    func setType(bookTypes: Book.BookType...) {
-        type = 0
-        addType(bookTypes: bookTypes)
+    func setType(bookType: Book.BookType) {
+        type = bookType.rawValue
     }
     
     /// 添加类型标记
