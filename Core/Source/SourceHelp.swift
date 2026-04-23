@@ -239,8 +239,8 @@ extension BookSource {
     
     // MARK: - Private
     
-    private func parseExploreKinds(from exploreUrl: String) -> [ExploreKind] {
-        var kinds: [ExploreKind] = []
+    private func parseExploreKinds(from exploreUrl: String) -> [SourceExploreKind] {
+        var kinds: [SourceExploreKind] = []
         
         // JSON 格式
         if exploreUrl.hasPrefix("[") {
@@ -248,7 +248,7 @@ extension BookSource {
                let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: String]] {
                 for item in jsonArray {
                     if let title = item["title"], let url = item["url"] {
-                        kinds.append(ExploreKind(title: title, url: url))
+                        kinds.append(SourceExploreKind(title: title, url: url))
                     }
                 }
                 return kinds
